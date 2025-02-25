@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Proforma {{ proforma.number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        .document-info {
+            float: right;
+            width: 40%;
+            text-align: right;
+        }
+        .clear {
+            clear: both;
+        }
+        .client-info {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f8f8;
+        }
+        .totals {
+            float: right;
+            width: 300px;
+        }
+        .totals table {
+            width: 100%;
+        }
+        .totals th {
+            width: 60%;
+        }
+        .footer {
+            margin-top: 50px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .notes {
+            margin-top: 30px;
+            padding: 10px;
+            background-color: #f8f8f8;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .document-title {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-info">
+            <div class="company-name">NOMBRE DE TU EMPRESA</div>
+            <div>RUC: XXX-XXXXXXX</div>
+            <div>Dirección: Tu dirección completa</div>
+            <div>Teléfono: (XXX) XXX-XXXX</div>
+            <div>Email: contacto@tuempresa.com</div>
+        </div>
+        <div class="document-info">
+            <div class="document-title">PROFORMA</div>
+            <div><strong>Nº {{ proforma.number }}</strong></div>
+            <div>Fecha: {{ proforma.date|date:"d/m/Y" }}</div>
+            <div>Válido hasta: {{ proforma.expiry_date|date:"d/m/Y" }}</div>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="client-info">
+        <h3>DATOS DEL CLIENTE</h3>
+        <div><strong>Cliente:</strong> {{ proforma.client.name }}</div>
+        <div><strong>RUC/DNI:</strong> {{ proforma.client.document_number }}</div>
+        <div><strong>Dirección:</strong> {{ proforma.client.address }}</div>
+        <div><strong>Teléfono:</strong> {{ proforma.client.phone }}</div>
+        <div><strong>Email:</strong> {{ proforma.client.email }}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>CÓDIGO</th>
+                <th>DESCRIPCIÓN</th>
+                <th class="text-right">CANTIDAD</th>
+                <th class="text-right">PRECIO UNIT.</th>
+                <th class="text-right">DCTO %</th>
+                <th class="text-right">SUBTOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detail in proforma.details.all %}
+            <tr>
+                <td>{{ detail.product.code }}</td>
+                <td>{{ detail.product.name }}</td>
+                <td class="text-right">{{ detail.quantity }}</td>
+                <td class="text-right">{{ detail.unit_price|floatformat:2 }}</td>
+                <td class="text-right">{{ detail.discount_percentage|floatformat:2 }}%</td>
+                <td class="text-right">{{ detail.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <th>Subtotal</th>
+                <td class="text-right">{{ proforma.subtotal|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th>IGV ({{ proforma.tax_percentage }}%)</th>
+                <td class="text-right">{{ proforma.tax_amount|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th><strong>TOTAL</strong></th>
+                <td class="text-right"><strong>{{ proforma.total|floatformat:2 }}</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="clear"></div>
+
+    {% if proforma.notes %}
+    <div class="notes">
+        <h3>OBSERVACIONES</h3>
+        <p>{{ proforma.notes|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p><strong>Condiciones de la proforma:</strong></p>
+        <ul>
+            <li>Validez de la proforma: {{ proforma.validity_days }} días</li>
+            <li>Precios sujetos a variación sin previo aviso</li>
+            <li>Precios incluyen IGV</li>
+            <li>Forma de pago: Según lo acordado</li>
+        </ul>
+        
+        <div class="text-center">
+            <p>¡Gracias por su interés en nuestros productos!</p>
+            <p>Para cualquier consulta, no dude en contactarnos</p>
+        </div>
+    </div>
+</body>
+</html>

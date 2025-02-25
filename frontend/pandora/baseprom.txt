@@ -1,0 +1,4575 @@
+Eres un asistente experto en desarrollo y revisión de proyectos tecnológicos, y como un experto en adminsitracion de empresas para un proyecto especializado en soluciones lógicas e informáticas. Tu labor es analizar y dar soporte en un proyecto cuyo objetivo es almacenar una cartera de productos y facilitar la generación de ofertas (proformas) de forma rápida y profesional.
+Por favor, asume el siguiente contexto y cumpla con las directrices indicadas:
+
+Nobmre del proyecto appclc
+Nombre de las aplicaciones del proyecto:
+pandora
+products
+proformas
+Nombre de la base de datos mysql: appclcdb
+
+
+
+1. Contexto y Tecnologías Principales
+Objetivo del proyecto: Administrar la información de productos y generar proformas profesionales de forma ágil.
+Tecnologías:
+Backend: Django (v5.1.4) con:
+Django Apps: django.contrib.admin, django.contrib.auth, django.contrib.contenttypes, django.contrib.sessions, django.contrib.messages, django.contrib.staticfiles
+rest_framework
+corsheaders
+drf_yasg
+rest_framework_simplejwt
+django_filters
+entre otras configuraciones de caché con Redis y MySQL.
+Frontend: React usando Vite, junto con Node, JavaScript, Axios.
+Base de datos: MySQL.
+Dependencias y versiones clave (listado extenso con bibliotecas Python y otras).
+2. Estructura de Código
+El proyecto se compone de:
+
+settings.py: Configuraciones de Django (BASE_DIR, ALLOWED_HOSTS, INSTALLED_APPS, MIDDLEWARE, DATABASES, etc.).
+Módulos y apps internas en Django:
+pandora (modelo base, clases abstractas, modelos de auditoría, categorías, proveedores, entre otros).
+products (modelos para los productos principales y lógica de inventario, historial de precios, documentos asociados).
+proformas (modelos y lógica para generar, modificar y aprobar proformas).
+Serializers con DRF (pandora/serializers.py, products/serializers.py, proformas/serializers.py).
+Vistas basadas en ViewSets (pandora/views.py, products/views.py, proformas/views.py).
+URLs principales (appclc/urls.py) que incluyen las rutas de pandora, products y proformas.
+Frontend: Rutas (React Router), store de autenticación (Zustand), configuración de Axios, etc.
+3. Directrices para cada Sesión
+Referencia de Proyecto: Comienza cada respuesta indicando:
+Referencia del Proyecto: [Nombre o Código del Proyecto]
+(Si no se suministra, pide amablemente el nombre/código antes de continuar).
+
+Análisis Integral: Al revisar o analizar cualquier duda, incluye en tu respuesta:
+
+Descripción general y objetivos relacionados con la pregunta.
+Tecnologías y dependencias involucradas.
+Metodologías de desarrollo o estructura del proyecto que apliquen.
+Integración entre backend y frontend cuando sea relevante.
+Observaciones o recomendaciones de mejora.
+Estilo y tono: Usa un tono profesional y técnico, con explicaciones claras y referencias a la documentación oficial o a fuentes confiables cuando sea apropiado.
+
+Preguntas Adicionales: Si el usuario no provee información suficiente (por ejemplo, el nombre del proyecto o datos específicos del modelo), pide de forma cortés que complemente la información antes de proseguir.
+
+4. Archivos y Código Relevantes
+Considera los siguientes archivos como parte del contexto (solo se listan, no es necesario repetir su contenido completo a menos que la pregunta lo requiera):
+
+backend/appclc/appclc/settings.py
+backend/appclc/pandora/models.py
+backend/appclc/products/models.py
+backend/appclc/proformas/models.py
+backend/appclc/pandora/views.py
+backend/appclc/products/views.py
+backend/appclc/proformas/views.py
+backend/appclc/pandora/urls.py
+backend/appclc/products/urls.py
+src/config/axios.js
+src/routes/routes.jsx
+src/services/api.js
+src/store/authStore.js
+5. Qué espero de tu respuesta
+Incluir siempre la cabecera: Referencia del Proyecto: [Nombre o Código del Proyecto].
+Adaptar el grado de detalle según la pregunta, sin perder la claridad técnica.
+Indicar posibles mejoras o mejores prácticas cuando detectes una oportunidad.
+Mantener la coherencia con los archivos y la configuración compartida en este contexto.
+
+Archivos bases iniciales:
+
+# /backend/appclc/appclc/settings.py
+
+from pathlib import Path
+from datetime import timedelta
+import os  # Añadido import de os
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = 'django-insecure-yf4bg$hvffz3790u6*#a6el)%*f#16*qx73**@tx!2cu5m-*@h'
+DEBUG = True
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'corsheaders',
+    'drf_yasg',
+    'rest_framework_simplejwt',
+    'pandora.apps.PandoraConfig',
+    'django_filters',  
+    'products',
+    'proformas'
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'appclc.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'proformas' / 'templates'],  # Modificado para usar Path
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'appclc.wsgi.application'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'appclcdb',
+        'USER': 'clc',
+        'PASSWORD': 'Ws112244QQ+',
+        'HOST': '192.168.50.202',
+        'PORT': '3306',
+    }
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'pandora.pagination.CustomPagination',
+    'PAGE_SIZE': 50,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'burst': '60/min',
+        'sustained': '1000/day'
+    },
+    'EXCEPTION_HANDLER': 'pandora.exceptions.custom_exception_handler'
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "RETRY_ON_TIMEOUT": True,
+            "MAX_CONNECTIONS": 100,
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 100
+            },
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+            "IGNORE_EXCEPTIONS": True,
+        }
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
+CACHE_TTL = 60 * 15  # 15 min
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=240),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = 'static/'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# appclc/urls.py
+from django.contrib import admin
+from django.urls import path, include, re_path
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView
+)
+
+# Configuración de Swagger/OpenAPI
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Pandora API",
+        default_version='v1',
+        description="API para el sistema Pandora",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="contact@pandora.local"),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
+
+# URLs principales
+urlpatterns = [
+    # Admin
+    path('admin/', admin.site.urls),
+
+    # API URLs
+    path('api/v1/', include([
+        path('pandora/', include('pandora.urls')),
+        path('products/', include('products.urls')),
+        path('proformas/', include('proformas.urls', namespace='proformas')),
+    ])),
+
+    # Autenticación
+    path('api/auth/', include([
+        path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+        path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    ])),
+    path('api-auth/', include('rest_framework.urls')),
+
+    # Documentación API
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+]
+
+# Configuración para servir archivos estáticos y media en desarrollo
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Configuraciones adicionales de administrador
+admin.site.site_header = "Pandora Admin"
+admin.site.site_title = "Portal de Administración Pandora"
+admin.site.index_title = "Bienvenido al Portal de Administración de Pandora"
+
+
+# Register your models here.
+from django.contrib import admin
+from .models import (
+    Categorias,
+    Ciudades,
+    EmpresaClc,
+    Especialidades,
+    Marca,
+    Procedencia,
+    TipoCliente,
+    TipoContratacion,
+    Unidades,
+    Zonas,
+    Pandora,
+    Clientes,
+    PreciosSie,
+    MsPref,
+    Proveedores,
+    CostosPandora,
+    Procesos_auditados,
+    Vendedores
+)
+
+# Registra cada uno de tus modelos:
+admin.site.register(Categorias)
+admin.site.register(Ciudades,)
+admin.site.register(EmpresaClc)
+admin.site.register(Procesos_auditados)
+admin.site.register(Especialidades)
+admin.site.register(Marca)
+admin.site.register(Procedencia)
+admin.site.register(TipoCliente)
+admin.site.register(TipoContratacion)
+admin.site.register(Unidades)
+admin.site.register(Zonas)
+admin.site.register(Pandora)
+admin.site.register(Clientes)
+admin.site.register(PreciosSie)
+admin.site.register(MsPref)
+admin.site.register(Proveedores)
+admin.site.register(CostosPandora)
+admin.site.register(Vendedores)
+
+
+
+# pandora/exceptions.py
+
+from rest_framework.views import exception_handler
+from rest_framework.response import Response
+from rest_framework import status
+
+def custom_exception_handler(exc, context):
+    response = exception_handler(exc, context)
+
+    if response is not None:
+        response.data = {
+            'success': False,
+            'status_code': response.status_code,
+            'message': response.data.get('detail', str(exc)),
+            'errors': response.data if not response.data.get('detail') else None
+        }
+
+    return response
+
+    # backend/appclc/pandora/models.py
+from django.db import models
+
+class TimeStampedModel(models.Model):
+    """Abstract model to add created and modified timestamps"""
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+class Procesos_auditados(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    objeto = models.CharField(max_length=200)
+
+    class Meta:
+        verbose_name_plural = "Procesos Auditados"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Categorias(TimeStampedModel):
+    nombre = models.CharField(max_length=255, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    level = models.IntegerField(default=0)
+    path = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Categorías"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+    
+    def save(self, *args, **kwargs):
+        if self.parent:
+            self.level = self.parent.level + 1
+            self.path = f"{self.parent.path}/{self.code}"
+        else:
+            self.level = 0
+            self.path = self.code
+        super().save(*args, **kwargs)
+
+class Ciudades(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    provincia = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Ciudades"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class EmpresaClc(TimeStampedModel):
+    nombre = models.CharField(max_length=150, unique=True)
+    razon_social = models.CharField(max_length=150, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+    ruc = models.CharField(max_length=13, unique=True)
+    direccion = models.CharField(max_length=255)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    correo = models.EmailField(max_length=100)
+    representante_legal = models.CharField(max_length=150)
+
+    class Meta:
+        verbose_name = "Empresa CLC"
+        verbose_name_plural = "Empresas CLC"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Especialidades(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Especialidades"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Marca(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    proveedores = models.CharField(max_length=100, blank=True)
+    country_origin = models.CharField(max_length=50, blank=True)
+    website = models.URLField(blank=True)
+    contact_info = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Procedencia(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Procedencias"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class TipoCliente(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name = "Tipo de Cliente"
+        verbose_name_plural = "Tipos de Cliente"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class TipoContratacion(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name = "Tipo de Contratación"
+        verbose_name_plural = "Tipos de Contratación"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Unidades(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Unidades"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Zonas(TimeStampedModel):
+    nombre = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    cobertura = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name_plural = "Zonas"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Pandora(TimeStampedModel):
+    nombre = models.CharField(max_length=250, unique=True)
+    code = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class Clientes(TimeStampedModel):
+    zona = models.ForeignKey(Zonas, on_delete=models.CASCADE)
+    ciudad = models.ForeignKey(Ciudades, on_delete=models.CASCADE)
+    tipo_cliente = models.ForeignKey(TipoCliente, on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=80, unique=True)
+    alias = models.CharField(max_length=30, unique=True)
+    razon_social = models.CharField(max_length=255)
+    ruc = models.CharField(max_length=13)
+    email = models.EmailField(max_length=50)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    direccion = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Clientes"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class PreciosSie(TimeStampedModel):
+    pandora = models.ForeignKey(Pandora, on_delete=models.CASCADE)
+    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE)
+    detalle_sie = models.ForeignKey(Procesos_auditados, on_delete=models.CASCADE)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    nota = models.TextField(blank=True, null=True)
+    fecha_sie = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Precio SIE"
+        verbose_name_plural = "Precios SIE"
+        ordering = ['-fecha_sie', 'pandora']
+
+    def __str__(self):
+        return f"{self.pandora} - {self.cliente} - {self.precio} - {self.detalle_sie}"
+
+class MsPref(TimeStampedModel):
+    sku = models.CharField(max_length=50)
+    nombre_generico = models.CharField(max_length=250)
+    categoria = models.ForeignKey(Categorias, on_delete=models.CASCADE)
+    especialidad = models.ForeignKey(Especialidades, on_delete=models.CASCADE)
+    normada = models.BooleanField()
+    referencias_tecnica = models.TextField()
+    aplicaciones = models.TextField()
+
+    class Meta:
+        verbose_name = "MS Pref"
+        verbose_name_plural = "MS Prefs"
+        ordering = ['sku']
+
+    def __str__(self):
+        return f"{self.sku} - {self.nombre_generico}"
+
+class Proveedores(TimeStampedModel):
+    ruc = models.CharField(max_length=20, unique=True)
+    razon_social = models.CharField(max_length=255)
+    nombre = models.CharField(max_length=255, unique=True)
+    direccion1 = models.TextField()
+    direccion2 = models.TextField(blank=True, null=True)
+    correo = models.EmailField(blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    tipo_primario = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Proveedores"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+class CostosPandora(TimeStampedModel):
+    pandora = models.ForeignKey(Pandora, on_delete=models.CASCADE)
+    proveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
+    marca = models.ForeignKey(Marca, on_delete=models.CASCADE)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    nota = models.TextField(blank=True, null=True)
+    fecha = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Costo Pandora"
+        verbose_name_plural = "Costos Pandora"
+        ordering = ['-fecha', 'pandora']
+
+    def __str__(self):
+        return f"{self.pandora} - {self.proveedor} - {self.precio}"
+
+class Vendedores(TimeStampedModel):
+    proveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=100)
+    correo = models.EmailField(max_length=50, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    observacion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+# pandora/pagination.py
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+class CustomPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
+    def get_paginated_response(self, data):
+        return Response({
+            'links': {
+                'next': self.get_next_link(),
+                'previous': self.get_previous_link()
+            },
+            'total_pages': self.page.paginator.num_pages,
+            'count': self.page.paginator.count,
+            'current_page': self.page.number,  # (1) añadir info de página actual si deseas
+            'results': data
+        })
+    
+ 
+ # backend/pandora/serializers.py
+from rest_framework import serializers
+from .models import (
+    Zonas, Ciudades, TipoCliente, Clientes, Pandora,
+    Categorias, Especialidades, Marca, Procedencia,
+    TipoContratacion, Unidades, EmpresaClc, Procesos_auditados,
+    PreciosSie, MsPref, Proveedores, CostosPandora, Vendedores
+)
+from .utils import get_history  # Asegúrate de que este archivo exista y defina get_history
+
+
+class BaseModelSerializer(serializers.ModelSerializer):
+    """
+    Serializer base que incluye el campo 'history'
+    a través de SerializerMethodField.
+    """
+    history = serializers.SerializerMethodField()
+
+    def get_history(self, obj):
+        return get_history(obj)
+
+
+class ZonasSerializer(BaseModelSerializer):
+    class Meta:
+        model = Zonas
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'cobertura',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class CiudadesSerializer(BaseModelSerializer):
+    class Meta:
+        model = Ciudades
+        fields = [
+            'id',
+            'nombre',
+            'provincia',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class TipoClienteSerializer(BaseModelSerializer):
+    class Meta:
+        model = TipoCliente
+        fields = [
+            'id',
+            'nombre',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class ClientesSerializer(BaseModelSerializer):
+    # Campos extra de solo lectura para mostrar los nombres
+    zona_nombre = serializers.ReadOnlyField(source='zona.nombre')
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    tipo_cliente_nombre = serializers.ReadOnlyField(source='tipo_cliente.nombre')
+
+    class Meta:
+        model = Clientes
+        fields = [
+            'id',
+            'zona',
+            'zona_nombre',
+            'ciudad',
+            'ciudad_nombre',
+            'tipo_cliente',
+            'tipo_cliente_nombre',
+            'nombre',
+            'alias',
+            'razon_social',
+            'ruc',
+            'email',
+            'telefono',
+            'direccion',
+            'activo',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class PandoraSerializer(BaseModelSerializer):
+    class Meta:
+        model = Pandora
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class CategoriasSerializer(BaseModelSerializer):
+    class Meta:
+        model = Categorias
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'parent',
+            'level',
+            'path',
+            'is_active',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class EspecialidadesSerializer(BaseModelSerializer):
+    class Meta:
+        model = Especialidades
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class MarcaSerializer(BaseModelSerializer):
+    class Meta:
+        model = Marca
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'description',
+            'proveedores',
+            'country_origin',
+            'website',
+            'contact_info',
+            'is_active',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class ProcedenciaSerializer(BaseModelSerializer):
+    class Meta:
+        model = Procedencia
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class TipoContratacionSerializer(BaseModelSerializer):
+    class Meta:
+        model = TipoContratacion
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class UnidadesSerializer(BaseModelSerializer):
+    class Meta:
+        model = Unidades
+        fields = [
+            'id',
+            'nombre',
+            'code',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class EmpresaClcSerializer(BaseModelSerializer):
+    class Meta:
+        model = EmpresaClc
+        fields = [
+            'id',
+            'nombre',
+            'razon_social',
+            'code',
+            'ruc',
+            'direccion',
+            'telefono',
+            'correo',
+            'representante_legal',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class Procesos_auditadosSerializer(BaseModelSerializer):
+    class Meta:
+        model = Procesos_auditados
+        fields = [
+            'id',
+            'nombre',
+            'description',
+            'objeto',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class PreciosSieSerializer(BaseModelSerializer):
+    pandora_nombre = serializers.ReadOnlyField(source='pandora.nombre')
+    cliente_nombre = serializers.ReadOnlyField(source='cliente.nombre')
+    detalle_sie_nombre = serializers.ReadOnlyField(source='detalle_sie.nombre')
+
+    class Meta:
+        model = PreciosSie
+        fields = [
+            'id',
+            'pandora',
+            'pandora_nombre',
+            'cliente',
+            'cliente_nombre',
+            'detalle_sie',
+            'detalle_sie_nombre',
+            'precio',
+            'nota',
+            'fecha_sie',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class MsPrefSerializer(BaseModelSerializer):
+    categoria_nombre = serializers.ReadOnlyField(source='categoria.nombre')
+    especialidad_nombre = serializers.ReadOnlyField(source='especialidad.nombre')
+
+    class Meta:
+        model = MsPref
+        fields = [
+            'id',
+            'sku',
+            'nombre_generico',
+            'categoria',
+            'categoria_nombre',
+            'especialidad',
+            'especialidad_nombre',
+            'normada',
+            'referencias_tecnica',
+            'aplicaciones',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class ProveedoresSerializer(BaseModelSerializer):
+    class Meta:
+        model = Proveedores
+        fields = [
+            'id',
+            'ruc',
+            'razon_social',
+            'nombre',
+            'direccion1',
+            'direccion2',
+            'correo',
+            'telefono',
+            'tipo_primario',
+            'activo',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class CostosPandoraSerializer(BaseModelSerializer):
+    pandora_nombre = serializers.ReadOnlyField(source='pandora.nombre')
+    proveedor_nombre = serializers.ReadOnlyField(source='proveedor.nombre')
+    marca_nombre = serializers.ReadOnlyField(source='marca.nombre')
+
+    class Meta:
+        model = CostosPandora
+        fields = [
+            'id',
+            'pandora',
+            'pandora_nombre',
+            'proveedor',
+            'proveedor_nombre',
+            'marca',
+            'marca_nombre',
+            'precio',
+            'nota',
+            'fecha',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class VendedoresSerializer(BaseModelSerializer):
+    proveedor_nombre = serializers.ReadOnlyField(source='proveedor.nombre')
+
+    class Meta:
+        model = Vendedores
+        fields = [
+            'id',
+            'proveedor',
+            'proveedor_nombre',
+            'nombre',
+            'correo',
+            'telefono',
+            'observacion',
+            'activo',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+# blackend/pandora/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView
+)
+from . import views
+
+app_name = 'pandora'
+
+# Crear router para la API
+router = DefaultRouter()
+
+# Registrar los viewsets principales que se mencionan en tu proyecto
+router.register(r'zonas', views.ZonasViewSet, basename='zonas')
+router.register(r'ciudades', views.CiudadesViewSet, basename='ciudades')
+router.register(r'unidades', views.UnidadesViewSet, basename='unidades')
+router.register(r'clientes', views.ClientesViewSet, basename='clientes')
+router.register(r'categorias', views.CategoriasViewSet, basename='categorias')
+router.register(r'empresas-clc', views.EmpresaClcViewSet, basename='empresas-clc')
+router.register(r'marcas', views.MarcaViewSet, basename='marcas')
+router.register(r'especialidades', views.EspecialidadesViewSet, basename='especialidades')
+router.register(r'procedencias', views.ProcedenciaViewSet, basename='procedencias')
+router.register(r'pandora', views.PandoraViewSet, basename='pandora')
+router.register(r'tipos-cliente', views.TipoClienteViewSet, basename='tipos-cliente')
+router.register(r'procesos-auditados', views.Procesos_auditadosViewSet, basename='procesos-auditados')
+router.register(r'tipos-contratacion', views.TipoContratacionViewSet, basename='tipos-contratacion')
+router.register(r'proveedores', views.ProveedoresViewSet, basename='proveedores')
+router.register(r'vendedores', views.VendedoresViewSet, basename='vendedores')
+router.register(r'ms-pref', views.MsprefViewSet, basename='ms-pref')
+router.register(r'precios-sie', views.PreciosSieViewSet, basename='precios-sie')
+router.register(r'costos-pandora', views.CostosPandoraViewSet, basename='costos-pandora')
+
+urlpatterns = [
+    # Rutas del router principal
+    path('', include(router.urls)),
+
+    # Rutas de autenticación JWT
+    path('auth/', include([
+        path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+        path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    ])),
+
+    # Rutas adicionales que llaman acciones específicas en tus ViewSets
+    path(
+        'clientes/<int:pk>/historial/',
+        views.ClientesViewSet.as_view({'get': 'historial'}),
+        name='cliente-historial'
+    ),
+    path(
+        'categorias/arbol/',
+        views.CategoriasViewSet.as_view({'get': 'arbol'}),
+        name='categorias-arbol'
+    ),
+    path(
+        'proveedores/<int:pk>/productos/',
+        views.ProveedoresViewSet.as_view({'get': 'productos'}),
+        name='proveedor-productos'
+    ),
+    path(
+        'dashboard/resumen/',
+        views.PandoraViewSet.as_view({'get': 'dashboard_resumen'}),
+        name='dashboard-resumen'
+    ),
+    path(
+        'estadisticas/general/',
+        views.PandoraViewSet.as_view({'get': 'estadisticas_general'}),
+        name='estadisticas-general'
+    ),
+]
+
+# pandora/utils.py
+
+def get_history(obj):
+    """
+    Returns the history of changes for a given object
+    """
+    return {
+        'created_at': obj.created_at,
+        'updated_at': obj.updated_at,
+        'last_modified': obj.updated_at - obj.created_at
+    }
+
+    # backend/appclc/pandora/views.py
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django_filters import rest_framework as django_filters
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
+from django.db.models import Count, Sum, Avg
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+# Importar modelos de la app pandora
+from .models import (
+    Clientes, Zonas, Ciudades, TipoCliente, Pandora,
+    Categorias, Especialidades, Marca, Procedencia,
+    TipoContratacion, Procesos_auditados, Unidades,
+    EmpresaClc, PreciosSie, MsPref, Proveedores,
+    CostosPandora, Vendedores
+)
+
+# Importar serializers de la app pandora
+from .serializers import (
+    ClientesSerializer, ZonasSerializer, CiudadesSerializer,
+    TipoClienteSerializer, PandoraSerializer, CategoriasSerializer,
+    EspecialidadesSerializer, MarcaSerializer, ProcedenciaSerializer,
+    TipoContratacionSerializer, Procesos_auditadosSerializer,
+    UnidadesSerializer, EmpresaClcSerializer, PreciosSieSerializer,
+    MsPrefSerializer, ProveedoresSerializer, CostosPandoraSerializer,
+    VendedoresSerializer
+)
+
+# Importar throttles (si los estás usando)
+from .throttling import BurstRateThrottle, SustainedRateThrottle
+
+# --------------------------------------------------------------------------------
+# Base ViewSet
+# --------------------------------------------------------------------------------
+class BaseModelViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet base con configuraciones comunes de permisos,
+    filtrado, búsqueda y paginación.
+    """
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        django_filters.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    throttle_classes = [BurstRateThrottle, SustainedRateThrottle]
+
+    # Campos por defecto que tal vez quieras filtrar en todos tus modelos
+    filterset_fields = {
+        'created_at': ['gte', 'lte', 'exact', 'gt', 'lt'],
+        'updated_at': ['gte', 'lte', 'exact', 'gt', 'lt'],
+    }
+
+    @method_decorator(cache_page(15))
+    @method_decorator(vary_on_cookie)
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
+
+    @method_decorator(cache_page(15))
+    @method_decorator(vary_on_cookie)
+    def retrieve(self, *args, **kwargs):
+        return super().retrieve(*args, **kwargs)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return self.apply_filters(queryset)
+
+    def apply_filters(self, queryset):
+        return queryset
+
+# --------------------------------------------------------------------------------
+# ViewSets Principales
+# --------------------------------------------------------------------------------
+
+class ClientesViewSet(BaseModelViewSet):
+    """ViewSet para gestión de clientes."""
+    queryset = Clientes.objects.select_related('zona', 'ciudad', 'tipo_cliente').all()
+    serializer_class = ClientesSerializer
+    # Añadimos aquí todos los campos relevantes
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'zona': ['exact'],
+        'ciudad': ['exact'],
+        'tipo_cliente': ['exact'],
+        'activo': ['exact'],
+        'nombre': ['exact', 'icontains'],
+        'alias': ['exact', 'icontains'],
+        'razon_social': ['exact', 'icontains'],
+        'ruc': ['exact', 'icontains'],
+        'email': ['exact', 'icontains'],
+        'telefono': ['exact', 'icontains'],
+        'direccion': ['exact', 'icontains'],
+    }
+    search_fields = [
+        'nombre',
+        'alias',
+        'razon_social',
+        'ruc',
+        'email',
+        'direccion',
+        'telefono'
+    ]
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+    @action(detail=True, methods=['get'])
+    def proformas(self, request, pk=None):
+        """Obtener proformas del cliente."""
+        cliente = self.get_object()
+        from proformas.serializers import ProformaSerializer
+        serializer = ProformaSerializer(cliente.proformas.all(), many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def historial(self, request, pk=None):
+        """Acción extra para el historial del cliente."""
+        cliente = self.get_object()
+        return Response({
+            "cliente_id": cliente.id,
+            "mensaje": f"Historial para el cliente {cliente.nombre}"
+        })
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Estadísticas de clientes."""
+        queryset = self.get_queryset()
+        stats = {
+            'total': queryset.count(),
+            'activos': queryset.filter(activo=True).count(),
+            'por_zona': queryset.values('zona__nombre').annotate(total=Count('id')).order_by('-total'),
+            'por_tipo': queryset.values('tipo_cliente__nombre').annotate(total=Count('id')).order_by('-total')
+        }
+        return Response(stats)
+
+
+class ZonasViewSet(BaseModelViewSet):
+    """ViewSet para gestión de zonas."""
+    queryset = Zonas.objects.all()
+    serializer_class = ZonasSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains'],
+        'cobertura': ['icontains'],
+    }
+    search_fields = ['nombre', 'code', 'cobertura']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+    @action(detail=True, methods=['get'])
+    def clientes(self, request, pk=None):
+        """Obtener clientes de una zona."""
+        zona = self.get_object()
+        serializer = ClientesSerializer(zona.clientes_set.all(), many=True)
+        return Response(serializer.data)
+
+
+class CiudadesViewSet(BaseModelViewSet):
+    """ViewSet para gestión de ciudades."""
+    queryset = Ciudades.objects.all()
+    serializer_class = CiudadesSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'provincia': ['exact', 'icontains'],
+        'code': ['exact', 'icontains'],
+    }
+    search_fields = ['nombre', 'provincia', 'code']
+    ordering_fields = ['nombre', 'provincia', 'created_at', 'updated_at']
+
+
+class PandoraViewSet(BaseModelViewSet):
+    """ViewSet para gestión de productos Pandora."""
+    queryset = Pandora.objects.all()
+    serializer_class = PandoraSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains']
+    }
+    search_fields = ['nombre', 'code']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        """Dashboard básico de Pandora."""
+        queryset = self.get_queryset()
+        stats = {
+            'total_productos': queryset.count(),
+            'precios_sie': PreciosSie.objects.filter(pandora__in=queryset).count(),
+            'costos': CostosPandora.objects.filter(pandora__in=queryset).count(),
+        }
+        return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def dashboard_resumen(self, request):
+        """Dashboard resumen para la ruta 'dashboard/resumen/'."""
+        queryset = self.get_queryset()
+        stats = {
+            'total_pandoras': queryset.count(),
+            'precios_sie': PreciosSie.objects.filter(pandora__in=queryset).count(),
+            'costos_pandora': CostosPandora.objects.filter(pandora__in=queryset).count()
+        }
+        return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def estadisticas_general(self, request):
+        """Estadísticas generales para la ruta 'estadisticas/general/'."""
+        # Ejemplo de respuesta
+        return Response({
+            'ejemplo': 'Estadísticas generales de Pandora'
+        })
+
+
+class CategoriasViewSet(BaseModelViewSet):
+    """ViewSet para gestión de categorías."""
+    queryset = Categorias.objects.all()
+    serializer_class = CategoriasSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains'],
+        'parent': ['exact', 'isnull'],
+        'level': ['exact', 'gte', 'lte'],
+        'path': ['icontains'],
+        'is_active': ['exact']
+    }
+    search_fields = ['nombre', 'code', 'path']
+    ordering_fields = ['nombre', 'level', 'created_at', 'updated_at']
+
+    @action(detail=False, methods=['get'])
+    def arbol(self, request):
+        """Obtener árbol de categorías (ruta 'categorias/arbol/')."""
+        def get_children(category):
+            return {
+                'id': category.id,
+                'nombre': category.nombre,
+                'code': category.code,
+                'level': category.level,
+                'children': [get_children(child) for child in category.children.all()]
+            }
+        root_categories = self.get_queryset().filter(parent=None)
+        tree = [get_children(cat) for cat in root_categories]
+        return Response(tree)
+
+
+class UnidadesViewSet(BaseModelViewSet):
+    """ViewSet para gestión de Unidades."""
+    queryset = Unidades.objects.all()
+    serializer_class = UnidadesSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains']
+    }
+    search_fields = ['nombre', 'code']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class MarcaViewSet(BaseModelViewSet):
+    """ViewSet para gestión de marcas."""
+    queryset = Marca.objects.all()
+    serializer_class = MarcaSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains'],
+        'description': ['icontains'],
+        'proveedores': ['icontains'],
+        'country_origin': ['icontains'],
+        'website': ['icontains'],
+        'contact_info': ['icontains'],
+        'is_active': ['exact']
+    }
+    search_fields = [
+        'nombre', 'code', 'description', 'proveedores',
+        'country_origin', 'website', 'contact_info'
+    ]
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class EspecialidadesViewSet(BaseModelViewSet):
+    """ViewSet para gestión de especialidades."""
+    queryset = Especialidades.objects.all()
+    serializer_class = EspecialidadesSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains']
+    }
+    search_fields = ['nombre', 'code']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class ProcedenciaViewSet(BaseModelViewSet):
+    """ViewSet para gestión de procedencias."""
+    queryset = Procedencia.objects.all()
+    serializer_class = ProcedenciaSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains']
+    }
+    search_fields = ['nombre', 'code']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class TipoClienteViewSet(BaseModelViewSet):
+    """ViewSet para Tipos de Cliente."""
+    queryset = TipoCliente.objects.all()
+    serializer_class = TipoClienteSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains']
+    }
+    search_fields = ['nombre']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class Procesos_auditadosViewSet(BaseModelViewSet):
+    """ViewSet para Procesos Auditados."""
+    queryset = Procesos_auditados.objects.all()
+    serializer_class = Procesos_auditadosSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'description': ['icontains'],
+        'objeto': ['icontains'],
+    }
+    search_fields = ['nombre', 'description', 'objeto']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class TipoContratacionViewSet(BaseModelViewSet):
+    """ViewSet para Tipos de Contratación."""
+    queryset = TipoContratacion.objects.all()
+    serializer_class = TipoContratacionSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'code': ['exact', 'icontains']
+    }
+    search_fields = ['nombre', 'code']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class ProveedoresViewSet(BaseModelViewSet):
+    """ViewSet para gestión de proveedores."""
+    queryset = Proveedores.objects.all()
+    serializer_class = ProveedoresSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'ruc': ['exact', 'icontains'],
+        'razon_social': ['exact', 'icontains'],
+        'nombre': ['exact', 'icontains'],
+        'activo': ['exact'],
+        'tipo_primario': ['exact']
+    }
+    search_fields = ['ruc', 'razon_social', 'nombre', 'telefono']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+    @action(detail=True, methods=['get'])
+    def productos(self, request, pk=None):
+        """Retorna productos relacionados a este proveedor (ruta 'proveedores/<int:pk>/productos/')."""
+        proveedor = self.get_object()
+        costos = CostosPandora.objects.filter(proveedor=proveedor)
+        serializer = CostosPandoraSerializer(costos, many=True)
+        return Response(serializer.data)
+
+
+class VendedoresViewSet(BaseModelViewSet):
+    """ViewSet para gestión de vendedores."""
+    queryset = Vendedores.objects.select_related('proveedor').all()
+    serializer_class = VendedoresSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'proveedor': ['exact'],
+        'activo': ['exact'],
+        'nombre': ['exact', 'icontains'],
+        'correo': ['exact', 'icontains'],
+        'telefono': ['exact', 'icontains'],
+        'observacion': ['icontains'],
+    }
+    search_fields = ['nombre', 'correo', 'telefono', 'observacion']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class MsprefViewSet(BaseModelViewSet):
+    """ViewSet para MsPref."""
+    queryset = MsPref.objects.select_related('categoria', 'especialidad').all()
+    serializer_class = MsPrefSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'sku': ['exact', 'icontains'],
+        'nombre_generico': ['exact', 'icontains'],
+        'categoria': ['exact'],
+        'especialidad': ['exact'],
+        'normada': ['exact'],
+        'referencias_tecnica': ['icontains'],
+        'aplicaciones': ['icontains']
+    }
+    search_fields = ['sku', 'nombre_generico', 'referencias_tecnica', 'aplicaciones']
+    ordering_fields = ['sku', 'created_at', 'updated_at']
+
+
+class PreciosSieViewSet(BaseModelViewSet):
+    """ViewSet para PreciosSie."""
+    queryset = PreciosSie.objects.select_related('pandora', 'cliente', 'detalle_sie').all()
+    serializer_class = PreciosSieSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'pandora': ['exact'],
+        'cliente': ['exact'],
+        'detalle_sie': ['exact'],
+        'fecha_sie': ['gte', 'lte', 'exact', 'gt', 'lt'],
+        'nota': ['icontains'],  # si quieres filtrar por texto en 'nota'
+        'precio': ['gte', 'lte', 'exact', 'gt', 'lt'],
+    }
+    search_fields = ['nota']
+    ordering_fields = ['precio', 'fecha_sie', 'created_at', 'updated_at']
+
+
+class CostosPandoraViewSet(BaseModelViewSet):
+    """ViewSet para Costos de Pandora."""
+    queryset = CostosPandora.objects.select_related('pandora', 'proveedor', 'marca').all()
+    serializer_class = CostosPandoraSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'pandora': ['exact'],
+        'proveedor': ['exact'],
+        'marca': ['exact'],
+        'fecha': ['gte', 'lte', 'exact', 'gt', 'lt'],
+        'nota': ['icontains'],
+        'precio': ['gte', 'lte', 'exact', 'gt', 'lt']
+    }
+    search_fields = ['nota']
+    ordering_fields = ['precio', 'fecha', 'created_at', 'updated_at']
+
+# --------------------------------------------------------------------------------
+# ViewSet adicional para EmpresaClc (si lo requieres)
+# --------------------------------------------------------------------------------
+class EmpresaClcViewSet(BaseModelViewSet):
+    """ViewSet para gestión de Empresas CLC."""
+    queryset = EmpresaClc.objects.all()
+    serializer_class = EmpresaClcSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'razon_social': ['exact', 'icontains'],
+        'code': ['exact', 'icontains'],
+        'ruc': ['exact', 'icontains'],
+        'direccion': ['icontains'],
+        'telefono': ['exact', 'icontains'],
+        'correo': ['exact', 'icontains'],
+        'representante_legal': ['icontains']
+    }
+    search_fields = [
+        'nombre', 'razon_social', 'code', 'ruc',
+        'direccion', 'telefono', 'correo', 'representante_legal'
+    ]
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+# products/admin.py
+from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
+from .models import (
+    Product, ProductoOfertado, ProductoDisponible,
+    PriceList, ProductPrice, StockMovement,
+    PriceHistory, ProductChange, RelatedProduct,
+    ProductDocument
+)
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = [
+        'code', 'nombre', 'categorias', 'marca',
+        'base_price', 'stock', 'status'
+    ]
+    list_filter = ['status', 'categorias', 'marca', 'is_active']
+    search_fields = ['code', 'nombre', 'description', 'sku', 'barcode']
+    fieldsets = (
+        ('Información Básica', {
+            'fields': (
+                'code', 'nombre', 'description',
+                'categorias', 'marca', 'unidades', 'procedencia'
+            )
+        }),
+        ('Información Comercial', {
+            'fields': (
+                'base_price', 'cost_price', 'suggested_price'
+            )
+        }),
+        ('Control de Inventario', {
+            'fields': (
+                'stock', 'min_stock', 'max_stock', 'reorder_point'
+            )
+        }),
+        ('Especificaciones Técnicas', {
+            'fields': ('technical_specs', 'dimensions', 'weight'),
+            'classes': ('collapse',)
+        }),
+        ('Control y Seguimiento', {
+            'fields': ('sku', 'barcode', 'location')
+        }),
+        ('Estado', {
+            'fields': (
+                'is_active', 'is_sellable', 'is_purchasable', 'status'
+            )
+        })
+    )
+
+@admin.register(ProductoOfertado)
+class ProductoOfertadoAdmin(admin.ModelAdmin):
+    list_display = ['code', 'nombre', 'id_categoria', 'cudim', 'especialidad', 'is_active']
+    list_filter = ['id_categoria', 'especialidad', 'is_active']
+    search_fields = ['code', 'cudim', 'nombre', 'descripcion', 'referencias']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    
+    fieldsets = (
+        (_('Basic Information'), {
+            'fields': (
+                'id_categoria',
+                'code',
+                'cudim',
+                'nombre',
+                'descripcion'
+            )
+        }),
+        (_('Additional Information'), {
+            'fields': (
+                'especialidad',
+                'referencias',
+                'is_active'
+            )
+        }),
+        (_('System Information'), {
+            'fields': (
+                'created_at',
+                'updated_at',
+                'created_by',
+                'updated_by'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(ProductoDisponible)
+class ProductoDisponibleAdmin(admin.ModelAdmin):
+    list_display = [
+        'code', 'nombre', 'id_producto_ofertado', 'id_marca',
+        'tz_oferta', 'tz_demanda', 'precio_sie_referencial'
+    ]
+    list_filter = ['id_categoria', 'id_marca', 'is_active']
+    search_fields = ['code', 'nombre', 'modelo', 'referencia']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    
+    fieldsets = (
+        (_('Basic Information'), {
+            'fields': (
+                'id_categoria',
+                'id_producto_ofertado',
+                'code',
+                'nombre',
+                'id_marca',
+                'modelo',
+                'presentacion',
+                'referencia'
+            )
+        }),
+        (_('Ratings'), {
+            'fields': (
+                'tz_oferta',
+                'tz_demanda',
+                'tz_inflacion',
+                'tz_calidad',
+                'tz_eficiencia',
+                'tz_referencial'
+            )
+        }),
+        (_('Pricing'), {
+            'fields': (
+                'costo_referencial',
+                'precio_sie_referencial',
+                'precio_sie_tipob',
+                'precio_venta_privado'
+            )
+        }),
+        (_('Status'), {
+            'fields': ('is_active',)
+        }),
+        (_('System Information'), {
+            'fields': (
+                'created_at',
+                'updated_at',
+                'created_by',
+                'updated_by'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(PriceList)
+class PriceListAdmin(admin.ModelAdmin):
+    list_display = [
+        'code', 'nombre', 'markup_percentage',
+        'is_active', 'valid_from', 'valid_to'
+    ]
+    list_filter = ['is_active']
+    search_fields = ['code', 'nombre', 'description']
+
+@admin.register(ProductPrice)
+class ProductPriceAdmin(admin.ModelAdmin):
+    list_display = ['product', 'price_list', 'price', 'valid_from', 'valid_to']
+    list_filter = ['price_list', 'valid_from', 'valid_to']
+    search_fields = ['product__code', 'product__nombre']
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    list_display = ['product', 'movement_type', 'quantity', 'created_at']
+    list_filter = ['movement_type', 'created_at']
+    search_fields = ['product__code', 'product__nombre', 'notes']
+
+@admin.register(PriceHistory)
+class PriceHistoryAdmin(admin.ModelAdmin):
+    """
+    Se eliminan las referencias a 'change_date'.
+    Usamos 'created_at' (TimeStampedModel) para mostrar la fecha de creación.
+    """
+    list_display = ['product', 'price_type', 'old_price', 'new_price', 'created_at']
+    list_filter = ['price_type', 'created_at']
+    search_fields = ['product__code', 'product__nombre']
+
+@admin.register(ProductChange)
+class ProductChangeAdmin(admin.ModelAdmin):
+    """
+    Se eliminan referencias a 'changed_at'.
+    Usamos 'created_at' en su lugar.
+    También mantenemos 'changed_by' si existe en el modelo.
+    """
+    list_display = ['product', 'field_name', 'created_at', 'changed_by']
+    list_filter = ['field_name', 'created_at']
+    search_fields = ['product__code', 'product__nombre', 'old_value', 'new_value']
+
+@admin.register(RelatedProduct)
+class RelatedProductAdmin(admin.ModelAdmin):
+    list_display = ['product', 'related_product', 'relationship_type']
+    list_filter = ['relationship_type']
+    search_fields = ['product__code', 'related_product__code']
+
+@admin.register(ProductDocument)
+class ProductDocumentAdmin(admin.ModelAdmin):
+    """
+    Se elimina la referencia a 'uploaded_at'.
+    Usamos 'created_at' en su lugar (TimeStampedModel).
+    """
+    list_display = ['product', 'document_type', 'file_name', 'created_at', 'is_active']
+    list_filter = ['document_type', 'is_active', 'created_at']
+    search_fields = ['product__code', 'file_name', 'description']
+
+# backend/appclc/products/models.py
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+from django.core.exceptions import ValidationError
+
+# Importa tu modelo base de timestamps
+from pandora.models import TimeStampedModel, Categorias, Marca, Unidades, Procedencia
+
+
+class Product(TimeStampedModel):
+    """Main product model"""
+    PRODUCT_STATUS = (
+        ('active', _('Active')),
+        ('discontinued', _('Discontinued')),
+        ('out_of_stock', _('Out of Stock')),
+        ('coming_soon', _('Coming Soon')),
+    )
+
+    # Basic Information
+    code = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    categorias = models.ForeignKey(Categorias, on_delete=models.PROTECT)
+    marca = models.ForeignKey(Marca, on_delete=models.PROTECT)
+    unidades = models.ForeignKey(Unidades, on_delete=models.PROTECT)
+    procedencia = models.ForeignKey(Procedencia, on_delete=models.PROTECT)
+
+    # Commercial Information
+    base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    suggested_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Inventory Control
+    stock = models.IntegerField(default=0)
+    min_stock = models.IntegerField(default=0)
+    max_stock = models.IntegerField(null=True, blank=True)
+    reorder_point = models.IntegerField(null=True, blank=True)
+
+    # Technical Specifications
+    technical_specs = models.TextField(blank=True)
+    dimensions = models.CharField(max_length=100, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Control and Tracking
+    sku = models.CharField(max_length=50, blank=True)
+    barcode = models.CharField(max_length=50, blank=True)
+    location = models.CharField(max_length=50, blank=True)
+
+    # Status and Control
+    is_active = models.BooleanField(default=True)
+    is_sellable = models.BooleanField(default=True)
+    is_purchasable = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=PRODUCT_STATUS, default='active')
+
+    # Audit
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='products_created'
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='products_updated'
+    )
+
+    class Meta:
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.code} - {self.nombre}"
+
+
+class ProductoOfertado(TimeStampedModel):
+    """Model for offered products catalog"""
+    id_categoria = models.ForeignKey(
+        Categorias,
+        on_delete=models.PROTECT,
+        verbose_name=_('Category')
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_('Code')
+    )
+    cudim = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name=_('CUDIM')
+    )
+    nombre = models.CharField(
+        max_length=200,
+        verbose_name=_('Name')
+    )
+    descripcion = models.TextField(
+        blank=True,
+        verbose_name=_('Description')
+    )
+    especialidad = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Specialty')
+    )
+    referencias = models.TextField(
+        blank=True,
+        verbose_name=_('References')
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Active')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='productos_ofertados_created',
+        verbose_name=_('Created by')
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='productos_ofertados_updated',
+        verbose_name=_('Updated by')
+    )
+
+    class Meta:
+        verbose_name = _('Offered Product')
+        verbose_name_plural = _('Offered Products')
+        ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['cudim']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.nombre}"
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.upper()
+        if self.cudim:
+            self.cudim = self.cudim.upper()
+        super().save(*args, **kwargs)
+
+
+class ProductoDisponible(TimeStampedModel):
+    """Model for available products with pricing and ratings"""
+    id_categoria = models.ForeignKey(
+        Categorias,
+        on_delete=models.PROTECT,
+        verbose_name=_('Category')
+    )
+    id_producto_ofertado = models.ForeignKey(
+        ProductoOfertado,
+        on_delete=models.PROTECT,
+        related_name='productos_disponibles',
+        verbose_name=_('Offered Product')
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_('Code')
+    )
+    nombre = models.CharField(
+        max_length=200,
+        verbose_name=_('Name')
+    )
+    id_marca = models.ForeignKey(
+        Marca,
+        on_delete=models.PROTECT,
+        verbose_name=_('Brand')
+    )
+    modelo = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Model')
+    )
+    presentacion = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Presentation')
+    )
+    referencia = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Reference')
+    )
+
+    # Calificaciones
+    tz_oferta = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Supply Rating')
+    )
+    tz_demanda = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Demand Rating')
+    )
+    tz_inflacion = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Inflation Rating')
+    )
+    tz_calidad = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Quality Rating')
+    )
+    tz_eficiencia = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Efficiency Rating')
+    )
+    tz_referencial = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name=_('Reference Rating')
+    )
+
+    # Precios
+    costo_referencial = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('Reference Cost')
+    )
+    precio_sie_referencial = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('SIE Reference Price')
+    )
+    precio_sie_tipob = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('SIE Type B Price')
+    )
+    precio_venta_privado = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('Private Sale Price')
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_('Active')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='productos_disponibles_created',
+        verbose_name=_('Created by')
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='productos_disponibles_updated',
+        verbose_name=_('Updated by')
+    )
+
+    class Meta:
+        verbose_name = _('Available Product')
+        verbose_name_plural = _('Available Products')
+        ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['id_categoria']),
+            models.Index(fields=['id_producto_ofertado']),
+            models.Index(fields=['code']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.nombre}"
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.upper()
+        super().save(*args, **kwargs)
+
+
+class PriceList(TimeStampedModel):
+    """Model for price lists"""
+    code = models.CharField(max_length=20, unique=True)
+    nombre = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    markup_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class ProductPrice(TimeStampedModel):
+    """Model for product prices in different price lists"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='prices')
+    price_list = models.ForeignKey(PriceList, on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    min_quantity = models.IntegerField(default=1)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
+
+    class Meta:
+        # unique_together = ['product', 'price_list']  # DEPRECATED
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'price_list'],
+                name='unique_product_price_list'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product.code} - {self.price_list.nombre}"
+
+
+class StockMovement(TimeStampedModel):
+    """Model for stock movements"""
+    MOVEMENT_TYPES = (
+        ('in', _('In')),
+        ('out', _('Out')),
+        ('adjustment', _('Adjustment')),
+    )
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_movements')
+    movement_type = models.CharField(max_length=10, choices=MOVEMENT_TYPES)
+    quantity = models.IntegerField()
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.IntegerField(null=True, blank=True)
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    # Eliminamos el 'created_at' manual para usar el de TimeStampedModel
+
+    def __str__(self):
+        return f"{self.movement_type} - {self.product.code} - {self.quantity}"
+
+
+class PriceHistory(TimeStampedModel):
+    """Model for tracking price changes"""
+    PRICE_TYPES = (
+        ('base', _('Base')),
+        ('cost', _('Cost')),
+        ('list', _('List')),
+    )
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='price_history')
+    price_type = models.CharField(max_length=10, choices=PRICE_TYPES)
+    old_price = models.DecimalField(max_digits=10, decimal_places=2)
+    new_price = models.DecimalField(max_digits=10, decimal_places=2)
+    # change_date = models.DateTimeField(auto_now_add=True)  # Usamos created_at de TimeStampedModel
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    reason = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.product.code} - {self.price_type}"
+
+
+class ProductChange(TimeStampedModel):
+    """Model for tracking product changes"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='changes')
+    field_name = models.CharField(max_length=50)
+    old_value = models.TextField(blank=True)
+    new_value = models.TextField(blank=True)
+    # changed_at = models.DateTimeField(auto_now_add=True)  # Usamos created_at
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.product.code} - {self.field_name}"
+
+
+class RelatedProduct(TimeStampedModel):
+    """Model for related products"""
+    RELATIONSHIP_TYPES = (
+        ('upsell', _('Upsell')),
+        ('cross_sell', _('Cross Sell')),
+        ('substitute', _('Substitute')),
+        ('complement', _('Complement')),
+    )
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='related_products')
+    related_product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='related_to')
+    relationship_type = models.CharField(max_length=20, choices=RELATIONSHIP_TYPES)
+    # created_at = models.DateTimeField(auto_now_add=True) # Se elimina en favor de TimeStampedModel
+
+    class Meta:
+        # unique_together = ['product', 'related_product', 'relationship_type']  # DEPRECATED
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'related_product', 'relationship_type'],
+                name='unique_related_product_relationship'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product.code} - {self.related_product.code} ({self.relationship_type})"
+
+
+class ProductDocument(TimeStampedModel):
+    """Model for product documents"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='documents')
+    document_type = models.CharField(max_length=50)
+    file_name = models.CharField(max_length=255)
+    file_path = models.FileField(upload_to='product_documents/')
+    # uploaded_at = models.DateTimeField(auto_now_add=True)  # Se elimina en favor de TimeStampedModel
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = _('Product Document')
+        verbose_name_plural = _('Product Documents')
+        ordering = ['-created_at']  # Usamos -created_at en lugar de -uploaded_at
+        indexes = [
+            models.Index(fields=['document_type']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.product.code} - {self.document_type}"
+
+    def clean(self):
+        """Validaciones adicionales para documentos"""
+        if self.file_path and self.file_path.size > 10 * 1024 * 1024:  # 10MB limit
+            raise ValidationError(_('El archivo no puede ser mayor a 10MB'))
+
+# products/serializers.py
+from rest_framework import serializers
+from .models import (
+    Product, ProductoOfertado, ProductoDisponible,
+    PriceList, ProductPrice, StockMovement,
+    PriceHistory, ProductChange, RelatedProduct,
+    ProductDocument
+)
+from pandora.serializers import (
+    CategoriasSerializer,
+    MarcaSerializer,
+    UnidadesSerializer,
+    ProcedenciaSerializer
+)
+
+# --------------------------------------------------------------------------------
+# PRODUCT
+# --------------------------------------------------------------------------------
+class ProductSerializer(serializers.ModelSerializer):
+    """Serializer para el modelo Product"""
+    categorias_detail = CategoriasSerializer(source='categorias', read_only=True)
+    marca_detail = MarcaSerializer(source='marca', read_only=True)
+    unidades_detail = UnidadesSerializer(source='unidades', read_only=True)
+    procedencia_detail = ProcedenciaSerializer(source='procedencia', read_only=True)
+
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+        # Suponiendo que no quieres permitir asignarlos vía API
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        """Validaciones generales para el modelo Product."""
+        min_stock = data.get('min_stock')
+        max_stock = data.get('max_stock')
+        if max_stock is not None and min_stock is not None:
+            if max_stock < min_stock:
+                raise serializers.ValidationError({
+                    "max_stock": "El stock máximo debe ser mayor o igual que el stock mínimo."
+                })
+        return data
+
+# --------------------------------------------------------------------------------
+# PRODUCTO OFERTADO
+# --------------------------------------------------------------------------------
+class ProductoOfertadoSerializer(serializers.ModelSerializer):
+    """Serializer para ProductoOfertado"""
+    categoria_detail = CategoriasSerializer(source='id_categoria', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
+
+    class Meta:
+        model = ProductoOfertado
+        fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
+
+    def validate_code(self, value):
+        """Validar código único y convertir a mayúsculas en creación."""
+        if self.instance is None:  # Solo validamos si se trata de un nuevo registro
+            if ProductoOfertado.objects.filter(code=value.upper()).exists():
+                raise serializers.ValidationError("Este código ya existe.")
+        return value.upper()
+
+# --------------------------------------------------------------------------------
+# PRODUCTO DISPONIBLE
+# --------------------------------------------------------------------------------
+class ProductoDisponibleSerializer(serializers.ModelSerializer):
+    """Serializer para ProductoDisponible"""
+    categoria_detail = CategoriasSerializer(source='id_categoria', read_only=True)
+    marca_detail = MarcaSerializer(source='id_marca', read_only=True)
+    producto_ofertado_detail = ProductoOfertadoSerializer(
+        source='id_producto_ofertado',
+        read_only=True
+    )
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
+
+    class Meta:
+        model = ProductoDisponible
+        fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        """Validaciones generales (ej. calificaciones)."""
+        rating_fields = [
+            'tz_oferta', 'tz_demanda', 'tz_inflacion',
+            'tz_calidad', 'tz_eficiencia', 'tz_referencial'
+        ]
+        for field in rating_fields:
+            if field in data and not (0 <= data[field] <= 5):
+                raise serializers.ValidationError({
+                    field: "La calificación debe estar entre 0 y 5."
+                })
+        return data
+
+# --------------------------------------------------------------------------------
+# PRICE LIST
+# --------------------------------------------------------------------------------
+class PriceListSerializer(serializers.ModelSerializer):
+    """Serializer para PriceList"""
+    class Meta:
+        model = PriceList
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+    def validate(self, data):
+        """Validar rango de fechas."""
+        if data.get('valid_from') and data.get('valid_to'):
+            if data['valid_to'] < data['valid_from']:
+                raise serializers.ValidationError({
+                    "valid_to": "La fecha final debe ser posterior a la fecha inicial."
+                })
+        return data
+
+# --------------------------------------------------------------------------------
+# PRODUCT PRICE
+# --------------------------------------------------------------------------------
+class ProductPriceSerializer(serializers.ModelSerializer):
+    """Serializer para ProductPrice"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    price_list_detail = PriceListSerializer(source='price_list', read_only=True)
+
+    class Meta:
+        model = ProductPrice
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+# --------------------------------------------------------------------------------
+# STOCK MOVEMENT
+# --------------------------------------------------------------------------------
+class StockMovementSerializer(serializers.ModelSerializer):
+    """Serializer para StockMovement"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = StockMovement
+        fields = '__all__'
+        # En el modelo no existe updated_by, pero sí tenemos updated_at del TimeStampedModel
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+# --------------------------------------------------------------------------------
+# PRICE HISTORY
+# --------------------------------------------------------------------------------
+class PriceHistorySerializer(serializers.ModelSerializer):
+    """Serializer para PriceHistory"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    changed_by_name = serializers.CharField(source='changed_by.username', read_only=True)
+
+    class Meta:
+        model = PriceHistory
+        fields = '__all__'
+        # No hay updated_by, pero tenemos created_at y updated_at por TimeStampedModel
+        read_only_fields = ['created_at', 'updated_at', 'changed_by']
+
+# --------------------------------------------------------------------------------
+# PRODUCT CHANGE
+# --------------------------------------------------------------------------------
+class ProductChangeSerializer(serializers.ModelSerializer):
+    """Serializer para ProductChange"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    changed_by_name = serializers.CharField(source='changed_by.username', read_only=True)
+
+    class Meta:
+        model = ProductChange
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at', 'changed_by']
+
+# --------------------------------------------------------------------------------
+# RELATED PRODUCT
+# --------------------------------------------------------------------------------
+class RelatedProductSerializer(serializers.ModelSerializer):
+    """Serializer para RelatedProduct"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    related_product_detail = ProductSerializer(source='related_product', read_only=True)
+
+    class Meta:
+        model = RelatedProduct
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+# --------------------------------------------------------------------------------
+# PRODUCT DOCUMENT
+# --------------------------------------------------------------------------------
+class ProductDocumentSerializer(serializers.ModelSerializer):
+    """Serializer para ProductDocument"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True)
+
+    class Meta:
+        model = ProductDocument
+        fields = '__all__'
+        # 'uploaded_at' ya no existe; se sustituye con 'created_at' y 'updated_at'
+        read_only_fields = ['uploaded_by', 'created_at', 'updated_at']
+
+    def validate_file_path(self, value):
+        """Validar tamaño máximo del archivo (10MB)."""
+        if value.size > 10 * 1024 * 1024:  # 10MB limit
+            raise serializers.ValidationError("El archivo no puede ser mayor a 10MB.")
+        return value
+
+# products/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+app_name = 'products'
+
+# Crear router para la API
+router = DefaultRouter()
+
+# Registrar viewsets principales
+router.register(r'products', views.ProductViewSet, basename='product')
+router.register(r'productos-ofertados', views.ProductoOfertadoViewSet, basename='producto-ofertado')
+router.register(r'productos-disponibles', views.ProductoDisponibleViewSet, basename='producto-disponible')
+
+# Registrar viewsets de precios y listas
+router.register(r'price-lists', views.PriceListViewSet, basename='price-list')
+router.register(r'product-prices', views.ProductPriceViewSet, basename='product-price')
+
+# Registrar viewsets de movimientos y cambios
+router.register(r'stock-movements', views.StockMovementViewSet, basename='stock-movement')
+router.register(r'price-history', views.PriceHistoryViewSet, basename='price-history')
+router.register(r'product-changes', views.ProductChangeViewSet, basename='product-change')
+
+# Registrar viewsets adicionales
+router.register(r'related-products', views.RelatedProductViewSet, basename='related-product')
+router.register(r'product-documents', views.ProductDocumentViewSet, basename='product-document')
+
+# URLs adicionales para endpoints específicos
+urlpatterns = [
+    # Rutas del router
+    path('', include(router.urls)),
+
+    # Endpoints para productos
+    path('products/<int:pk>/stock-update/',
+         views.ProductViewSet.as_view({'post': 'update_stock'}),
+         name='product-stock-update'),
+         
+    path('products/<int:pk>/price-update/',
+         views.ProductViewSet.as_view({'post': 'update_price'}),
+         name='product-price-update'),
+
+    # Endpoints para productos ofertados
+    path('productos-ofertados/dashboard/',
+         views.ProductoOfertadoViewSet.as_view({'get': 'dashboard'}),
+         name='productos-ofertados-dashboard'),
+         
+    path('productos-ofertados/<int:pk>/stats/',
+         views.ProductoOfertadoViewSet.as_view({'get': 'stats'}),
+         name='productos-ofertados-stats'),
+
+    # Endpoints para productos disponibles
+    path('productos-disponibles/dashboard/',
+         views.ProductoDisponibleViewSet.as_view({'get': 'dashboard'}),
+         name='productos-disponibles-dashboard'),
+         
+    path('productos-disponibles/<int:pk>/ratings/',
+         views.ProductoDisponibleViewSet.as_view({'get': 'ratings', 'post': 'update_ratings'}),
+         name='productos-disponibles-ratings'),
+
+    # Endpoints para precios
+    path('price-lists/<int:pk>/apply-changes/',
+         views.PriceListViewSet.as_view({'post': 'apply_changes'}),
+         name='price-list-apply-changes'),
+         
+    path('price-history/summary/',
+         views.PriceHistoryViewSet.as_view({'get': 'summary'}),
+         name='price-history-summary'),
+
+    # Endpoints para inventario
+    path('stock-movements/report/',
+         views.StockMovementViewSet.as_view({'get': 'report'}),
+         name='stock-movement-report'),
+         
+    path('stock-movements/summary/',
+         views.StockMovementViewSet.as_view({'get': 'summary'}),
+         name='stock-movement-summary'),
+
+    # Endpoints para documentos
+    path('product-documents/bulk-upload/',
+         views.ProductDocumentViewSet.as_view({'post': 'bulk_upload'}),
+         name='product-document-bulk-upload'),
+         
+    path('product-documents/download/<int:pk>/',
+         views.ProductDocumentViewSet.as_view({'get': 'download'}),
+         name='product-document-download'),
+]
+# products/views.py
+
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q, Sum, Count, Avg, F
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+from .models import (
+    Product, ProductoOfertado, ProductoDisponible,
+    PriceList, ProductPrice, StockMovement,
+    PriceHistory, ProductChange, RelatedProduct,
+    ProductDocument
+)
+from .serializers import (
+    ProductSerializer, ProductoOfertadoSerializer,
+    ProductoDisponibleSerializer, PriceListSerializer,
+    ProductPriceSerializer, StockMovementSerializer,
+    PriceHistorySerializer, ProductChangeSerializer,
+    RelatedProductSerializer, ProductDocumentSerializer
+)
+
+# --------------------------------------------------------------------------------
+# Base ViewSet
+# --------------------------------------------------------------------------------
+class BaseProductViewSet(viewsets.ModelViewSet):
+    """ViewSet base para productos"""
+    permission_classes = [IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+
+    @method_decorator(cache_page(60))
+    @method_decorator(vary_on_cookie)
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
+
+    @method_decorator(cache_page(60))
+    @method_decorator(vary_on_cookie)
+    def retrieve(self, *args, **kwargs):
+        return super().retrieve(*args, **kwargs)
+
+
+# --------------------------------------------------------------------------------
+# ViewSets Principales
+# --------------------------------------------------------------------------------
+
+class ProductViewSet(BaseProductViewSet):
+    """ViewSet para el modelo Product"""
+    queryset = Product.objects.select_related(
+        'categorias', 'marca', 'unidades', 'procedencia',
+        'created_by', 'updated_by'
+    ).all()
+    serializer_class = ProductSerializer
+    
+    filterset_fields = {
+        'status': ['exact'],
+        'categorias': ['exact'],
+        'marca': ['exact'],
+        'is_active': ['exact'],
+        'is_sellable': ['exact'],
+        'is_purchasable': ['exact'],
+        # Filtrado por rangos de fechas de creación/actualización
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['code', 'nombre', 'description', 'sku', 'barcode']
+    ordering_fields = ['nombre', 'created_at', 'updated_at', 'stock', 'base_price']
+
+    def perform_create(self, serializer):
+        serializer.save(
+            created_by=self.request.user,
+            updated_by=self.request.user
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        """Endpoint para estadísticas del dashboard"""
+        queryset = self.get_queryset()
+        stats = {
+            'total_products': queryset.count(),
+            'active_products': queryset.filter(is_active=True).count(),
+            'low_stock_products': queryset.filter(stock__lte=F('min_stock')).count(),
+            'total_stock_value': queryset.aggregate(
+                value=Sum(F('stock') * F('cost_price'))
+            )['value'] or 0,
+            'by_category': queryset.values('categorias__nombre').annotate(
+                count=Count('id')
+            ).order_by('-count'),
+            'by_status': queryset.values('status').annotate(
+                count=Count('id')
+            ).order_by('-count')
+        }
+        return Response(stats)
+
+    @action(detail=True, methods=['post'])
+    def update_stock(self, request, pk=None):
+        """Actualizar stock de un producto"""
+        product = self.get_object()
+        quantity = int(request.data.get('quantity', 0))
+        movement_type = request.data.get('type', 'adjustment')
+        notes = request.data.get('notes', '')
+
+        # Crear movimiento de stock
+        StockMovement.objects.create(
+            product=product,
+            movement_type=movement_type,
+            quantity=quantity,
+            notes=notes,
+            created_by=request.user
+        )
+
+        # Ajustar stock en el producto
+        product.stock += quantity
+        product.save()
+
+        return Response({
+            'status': 'success',
+            'new_stock': product.stock
+        })
+
+
+class ProductoOfertadoViewSet(BaseProductViewSet):
+    """ViewSet para ProductoOfertado"""
+    queryset = ProductoOfertado.objects.select_related(
+        'id_categoria', 'created_by', 'updated_by'
+    ).all()
+    serializer_class = ProductoOfertadoSerializer
+    
+    filterset_fields = {
+        'id_categoria': ['exact'],
+        'is_active': ['exact'],
+        'especialidad': ['exact', 'icontains'],
+        # TimeStampedModel => created_at, updated_at
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['code', 'cudim', 'nombre', 'descripcion', 'especialidad']
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Estadísticas de productos ofertados"""
+        queryset = self.get_queryset()
+        return Response({
+            'total': queryset.count(),
+            'activos': queryset.filter(is_active=True).count(),
+            'por_categoria': queryset.values('id_categoria__nombre').annotate(
+                count=Count('id')
+            ).order_by('-count'),
+            'por_especialidad': queryset.values('especialidad').annotate(
+                count=Count('id')
+            ).order_by('-count')
+        })
+
+
+class ProductoDisponibleViewSet(BaseProductViewSet):
+    """ViewSet para ProductoDisponible"""
+    queryset = ProductoDisponible.objects.select_related(
+        'id_categoria',
+        'id_producto_ofertado',
+        'id_marca',
+        'created_by',
+        'updated_by'
+    ).all()
+    serializer_class = ProductoDisponibleSerializer
+    
+    filterset_fields = {
+        'id_categoria': ['exact'],
+        'id_marca': ['exact'],
+        'is_active': ['exact'],
+        # Campos de calificaciones:
+        'tz_oferta': ['gte', 'lte'],
+        'tz_demanda': ['gte', 'lte'],
+        'tz_inflacion': ['gte', 'lte'],
+        'tz_calidad': ['gte', 'lte'],
+        'tz_eficiencia': ['gte', 'lte'],
+        'tz_referencial': ['gte', 'lte'],
+
+        # TimeStampedModel => created_at, updated_at
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['code', 'nombre', 'modelo', 'referencia']
+    ordering_fields = [
+        'nombre', 'created_at', 'updated_at',
+        'precio_sie_referencial', 'tz_oferta', 'tz_demanda'
+    ]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Estadísticas de productos disponibles"""
+        queryset = self.get_queryset()
+        return Response({
+            'total_count': queryset.count(),
+            'active_count': queryset.filter(is_active=True).count(),
+            'avg_ratings': {
+                'oferta': queryset.aggregate(avg=Avg('tz_oferta'))['avg'],
+                'demanda': queryset.aggregate(avg=Avg('tz_demanda'))['avg'],
+                'calidad': queryset.aggregate(avg=Avg('tz_calidad'))['avg'],
+                'eficiencia': queryset.aggregate(avg=Avg('tz_eficiencia'))['avg']
+            },
+            'por_marca': queryset.values('id_marca__nombre').annotate(
+                count=Count('id')
+            ).order_by('-count')
+        })
+
+
+class PriceListViewSet(BaseProductViewSet):
+    """ViewSet para PriceList"""
+    queryset = PriceList.objects.all()
+    serializer_class = PriceListSerializer
+    
+    filterset_fields = {
+        'is_active': ['exact'],
+        'valid_from': ['gte', 'lte'],
+        'valid_to': ['gte', 'lte'],
+        # TimeStampedModel
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['code', 'nombre', 'description']
+    ordering_fields = ['nombre', 'valid_from', 'valid_to', 'created_at', 'updated_at']
+
+    @action(detail=True, methods=['post'])
+    def apply_markup(self, request, pk=None):
+        """Aplicar markup a todos los precios de la lista"""
+        price_list = self.get_object()
+        markup = price_list.markup_percentage or 0
+
+        for price in price_list.productprice_set.all():
+            base_price = price.product.base_price or 0
+            price.price = base_price * (1 + markup/100)
+            price.save()
+
+        return Response({'status': 'markup applied'})
+
+
+class ProductPriceViewSet(BaseProductViewSet):
+    """ViewSet para ProductPrice"""
+    queryset = ProductPrice.objects.select_related('product', 'price_list').all()
+    serializer_class = ProductPriceSerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'price_list': ['exact'],
+        'valid_from': ['gte', 'lte'],
+        'valid_to': ['gte', 'lte'],
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'price_list__nombre']
+    ordering_fields = ['price', 'valid_from', 'valid_to', 'created_at', 'updated_at']
+
+
+class StockMovementViewSet(BaseProductViewSet):
+    """ViewSet para StockMovement"""
+    queryset = StockMovement.objects.select_related('product', 'created_by').all()
+    serializer_class = StockMovementSerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'movement_type': ['exact'],
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'notes']
+    ordering_fields = ['created_at', 'updated_at', 'quantity']
+
+    def perform_create(self, serializer):
+        movement = serializer.save(created_by=self.request.user)
+        # Actualizar stock en el Product (in / out)
+        product = movement.product
+        if movement.movement_type == 'in':
+            product.stock += movement.quantity
+        elif movement.movement_type == 'out':
+            product.stock -= movement.quantity
+        # Para 'adjustment', podrías definir tu propia lógica
+        product.save()
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Resumen de movimientos"""
+        today = timezone.now().date()
+        queryset = self.get_queryset()
+        return Response({
+            'today': {
+                'in': queryset.filter(
+                    movement_type='in',
+                    created_at__date=today
+                ).aggregate(total=Sum('quantity'))['total'] or 0,
+                'out': queryset.filter(
+                    movement_type='out',
+                    created_at__date=today
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+            },
+            'by_type': queryset.values('movement_type').annotate(
+                count=Count('id'),
+                total_quantity=Sum('quantity')
+            )
+        })
+
+
+class PriceHistoryViewSet(BaseProductViewSet):
+    """ViewSet para PriceHistory"""
+    queryset = PriceHistory.objects.select_related('product', 'changed_by').all()
+    serializer_class = PriceHistorySerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'price_type': ['exact'],
+        # Reemplazamos "change_date" por los timestamps heredados
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'reason']
+    ordering_fields = ['created_at', 'updated_at', 'new_price']
+
+    def perform_create(self, serializer):
+        serializer.save(changed_by=self.request.user)
+
+
+class ProductChangeViewSet(BaseProductViewSet):
+    """ViewSet para ProductChange"""
+    queryset = ProductChange.objects.select_related('product', 'changed_by').all()
+    serializer_class = ProductChangeSerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'field_name': ['exact', 'icontains'],
+        # Reemplazamos "changed_at" por timestamps
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'field_name', 'old_value', 'new_value']
+    ordering_fields = ['created_at', 'updated_at']
+
+    def perform_create(self, serializer):
+        serializer.save(changed_by=self.request.user)
+
+
+class RelatedProductViewSet(BaseProductViewSet):
+    """ViewSet para RelatedProduct"""
+    queryset = RelatedProduct.objects.select_related('product', 'related_product').all()
+    serializer_class = RelatedProductSerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'related_product': ['exact'],
+        'relationship_type': ['exact'],
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'related_product__code']
+    ordering_fields = ['created_at', 'updated_at']
+
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Agrupar por tipo de relación"""
+        return Response(
+            self.get_queryset()
+            .values('relationship_type')
+            .annotate(count=Count('id'))
+            .order_by('relationship_type')
+        )
+
+
+class ProductDocumentViewSet(BaseProductViewSet):
+    """ViewSet para ProductDocument"""
+    queryset = ProductDocument.objects.select_related('product', 'uploaded_by').all()
+    serializer_class = ProductDocumentSerializer
+    
+    filterset_fields = {
+        'product': ['exact'],
+        'document_type': ['exact', 'icontains'],
+        'is_active': ['exact'],
+        # 'uploaded_at' ya no existe; usamos created_at/updated_at:
+        'created_at': ['gte', 'lte'],
+        'updated_at': ['gte', 'lte'],
+    }
+    search_fields = ['product__code', 'file_name', 'description']
+    # 'uploaded_at' ya no existe; usamos 'created_at'
+    ordering_fields = ['created_at', 'updated_at', 'file_name']
+
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Agrupar documentos por tipo"""
+        return Response(
+            self.get_queryset()
+            .values('document_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+# proformas/admin.py
+from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
+from .models import Proforma, ProformaItem, ProformaHistory
+
+class ProformaItemInline(admin.TabularInline):
+    model = ProformaItem
+    extra = 1
+    fields = ['product', 'description', 'quantity', 'unit_price', 'discount_percentage', 'total']
+    readonly_fields = ['total']
+
+class ProformaHistoryInline(admin.TabularInline):
+    model = ProformaHistory
+    extra = 0
+    readonly_fields = ['created_at', 'user', 'action', 'details']
+    can_delete = False
+    max_num = 0
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+@admin.register(Proforma)
+class ProformaAdmin(admin.ModelAdmin):
+    list_display = ['number', 'client', 'created_at', 'valid_until', 'status', 'total']
+    list_filter = ['status', 'created_at', 'sales_person']
+    search_fields = ['number', 'client__nombre', 'notes']
+    inlines = [ProformaItemInline, ProformaHistoryInline]
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('client', 'valid_until', 'status')
+        }),
+        ('Información Comercial', {
+            'fields': ('payment_terms', 'delivery_time', 'sales_person')
+        }),
+        ('Notas y Términos', {
+            'fields': ('notes', 'terms_conditions'),
+            'classes': ('collapse',)
+        }),
+        ('Información del Sistema', {
+            'fields': ('number', 'subtotal', 'tax', 'total'),
+            'classes': ('collapse',),
+        })
+    )
+    
+    readonly_fields = ['number', 'subtotal', 'tax', 'total']
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # Si es una nueva proforma
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(ProformaHistory)
+class ProformaHistoryAdmin(admin.ModelAdmin):
+    list_display = ['proforma', 'action', 'user', 'created_at']
+    list_filter = ['action', 'created_at', 'user']
+    search_fields = ['proforma__number', 'details']
+    readonly_fields = ['proforma', 'user', 'action', 'details', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+        # //backend/appclc/proformas/models.py
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+from products.models import Product
+from pandora.models import TimeStampedModel, Clientes
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+class Proforma(TimeStampedModel):
+    """Modelo principal para proformas"""
+    STATUS_CHOICES = [
+        ('draft', _('Draft')),
+        ('sent', _('Sent')),
+        ('approved', _('Approved')),
+        ('rejected', _('Rejected')),
+        ('expired', _('Expired')),
+    ]
+
+    number = models.CharField(_('Number'), max_length=20, unique=True, editable=False)
+    client = models.ForeignKey(
+        Clientes,
+        on_delete=models.PROTECT,
+        related_name='proformas',
+        verbose_name=_('Client')
+    )
+    date = models.DateField(_('Date'), auto_now_add=True)
+    valid_until = models.DateField(_('Valid Until'))
+    
+    # Información comercial
+    payment_terms = models.CharField(_('Payment Terms'), max_length=200)
+    delivery_time = models.CharField(_('Delivery Time'), max_length=100)
+    sales_person = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='sales_proformas'
+    )
+
+    # Totales
+    subtotal = models.DecimalField(
+        _('Subtotal'),
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        editable=False
+    )
+    tax = models.DecimalField(
+        _('Tax'),
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        editable=False
+    )
+    total = models.DecimalField(
+        _('Total'),
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        editable=False
+    )
+
+    # Estado y notas
+    status = models.CharField(
+        _('Status'),
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft'
+    )
+    notes = models.TextField(_('Notes'), blank=True)
+    terms_conditions = models.TextField(_('Terms and Conditions'), blank=True)
+
+    # Seguimiento
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='created_proformas'
+    )
+
+    class Meta:
+        verbose_name = _('Proforma')
+        verbose_name_plural = _('Proformas')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['number']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"Proforma #{self.number} - {self.client.nombre}"
+
+    def clean(self):
+        """Validaciones adicionales del modelo"""
+        if self.valid_until and self.valid_until < timezone.now().date():
+            raise ValidationError({
+                'valid_until': _('La fecha de validez debe ser posterior a hoy')
+            })
+
+    def save(self, *args, **kwargs):
+        """Método save personalizado"""
+        # Generar número de proforma si es nuevo
+        if not self.number:
+            last_proforma = Proforma.objects.order_by('-number').first()
+            if last_proforma:
+                last_number = int(last_proforma.number[3:])
+                self.number = f'PRO{str(last_number + 1).zfill(6)}'
+            else:
+                self.number = 'PRO000001'
+
+        if not self.pk:  # Si es nuevo
+            self.calculate_totals()
+        
+        super().save(*args, **kwargs)
+
+    def calculate_totals(self):
+        """Calcular totales de la proforma"""
+        items_total = sum(item.total for item in self.items.all())
+        self.subtotal = items_total
+        self.tax = self.subtotal * 0.18  # IGV 18%
+        self.total = self.subtotal + self.tax
+
+    def is_editable(self):
+        """Determina si la proforma puede ser editada"""
+        return self.status == 'draft'
+
+    def can_approve(self, user):
+        """Verifica si un usuario puede aprobar la proforma"""
+        return (self.status == 'draft' and 
+                (user.is_superuser or user == self.sales_person))
+
+class ProformaItem(TimeStampedModel):
+    """Modelo para items de la proforma"""
+    proforma = models.ForeignKey(
+        Proforma,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+    description = models.TextField(blank=True)
+    quantity = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text=_('Cantidad debe ser mayor a 0')
+    )
+    unit_price = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        help_text=_('Precio unitario debe ser mayor o igual a 0')
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text=_('Porcentaje de descuento entre 0 y 100')
+    )
+    total = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        editable=False
+    )
+
+    class Meta:
+        verbose_name = _('Proforma Item')
+        verbose_name_plural = _('Proforma Items')
+
+    def clean(self):
+        """Validaciones adicionales"""
+        if self.discount_percentage > 100:
+            raise ValidationError({
+                'discount_percentage': _('El descuento no puede ser mayor a 100%')
+            })
+
+    def save(self, *args, **kwargs):
+        """Calcular total del item y actualizar totales de la proforma"""
+        self.total = self.quantity * self.unit_price * (1 - self.discount_percentage / 100)
+        super().save(*args, **kwargs)
+        self.proforma.calculate_totals()
+        self.proforma.save()
+
+class ProformaHistory(TimeStampedModel):
+    """Modelo para el historial de cambios en proformas"""
+    proforma = models.ForeignKey(
+        Proforma,
+        on_delete=models.CASCADE,
+        related_name='history'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT
+    )
+    action = models.CharField(max_length=100)
+    details = models.TextField()
+
+    class Meta:
+        verbose_name = _('Proforma History')
+        verbose_name_plural = _('Proforma History')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['action']),
+        ]
+
+    def __str__(self):
+        return f"{self.created_at} - {self.action}"
+
+
+# backend/proformas/permissions.py
+from rest_framework import permissions
+from django.utils import timezone
+
+class BaseProformaPermission(permissions.BasePermission):
+    """Permiso base para operaciones de proforma"""
+    
+    def has_permission(self, request, view):
+        # Verificar que el usuario esté autenticado y activo
+        return bool(request.user and request.user.is_authenticated and request.user.is_active)
+
+class IsProformaUser(BaseProformaPermission):
+    """
+    Permiso principal para proformas que implementa las siguientes reglas:
+    
+    1. Permisos de Lectura:
+       - Superusuarios: Pueden ver todas las proformas
+       - Vendedores: Pueden ver sus proformas asignadas
+       - Creadores: Pueden ver las proformas que crearon
+       - Usuarios normales: Solo pueden ver proformas donde son creadores o vendedores
+    
+    2. Permisos de Creación:
+       - Cualquier usuario autenticado puede crear proformas
+       - Se verifica que el usuario tenga permisos para los clientes seleccionados
+    
+    3. Permisos de Edición:
+       - Solo se pueden editar proformas en estado 'draft'
+       - Solo el creador o el vendedor asignado pueden editar
+       - Superusuarios pueden editar cualquier proforma
+    
+    4. Permisos de Eliminación:
+       - Solo se pueden eliminar proformas en estado 'draft'
+       - Solo el creador puede eliminar
+       - Superusuarios pueden eliminar cualquier proforma
+    
+    5. Permisos para Acciones Especiales:
+       - Aprobar: Solo vendedores asignados o supervisores
+       - Rechazar: Solo vendedores asignados o supervisores
+       - Enviar: Creadores o vendedores asignados
+       - Expirar: Sistema automático o supervisores
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Superusuarios tienen acceso total
+        if request.user.is_superuser:
+            return True
+
+        # Acceso de solo lectura
+        if request.method in permissions.SAFE_METHODS:
+            return (obj.created_by == request.user or 
+                   obj.sales_person == request.user)
+
+        # Verificar si la proforma está expirada
+        if obj.valid_until and obj.valid_until < timezone.now().date():
+            if view.action != 'expire':
+                return False
+
+        # Acciones de modificación
+        if request.method in ['PUT', 'PATCH']:
+            # Solo se pueden modificar proformas en borrador
+            if obj.status != 'draft':
+                return False
+            # Solo el creador o vendedor pueden modificar
+            return (obj.created_by == request.user or 
+                   obj.sales_person == request.user)
+
+        # Eliminación
+        if request.method == 'DELETE':
+            # Solo se pueden eliminar proformas en borrador
+            if obj.status != 'draft':
+                return False
+            # Solo el creador puede eliminar
+            return obj.created_by == request.user
+
+        # Acciones especiales
+        if view.action in ['approve', 'reject']:
+            # Solo vendedores asignados o supervisores pueden aprobar/rechazar
+            return (obj.sales_person == request.user or 
+                   request.user.has_perm('proformas.can_approve_proforma'))
+
+        if view.action == 'send':
+            # Solo creadores o vendedores pueden enviar
+            return (obj.created_by == request.user or 
+                   obj.sales_person == request.user)
+
+        if view.action == 'expire':
+            # Solo supervisores pueden expirar manualmente
+            return request.user.has_perm('proformas.can_expire_proforma')
+
+        return False
+
+class CanManageProformaItems(BaseProformaPermission):
+    """
+    Permiso específico para gestionar items de proforma:
+    - Solo se pueden modificar items de proformas en borrador
+    - Solo creadores o vendedores pueden modificar items
+    - Superusuarios pueden modificar cualquier item
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+
+        proforma = obj.proforma
+        
+        # Solo lectura para todos los autorizados
+        if request.method in permissions.SAFE_METHODS:
+            return (proforma.created_by == request.user or 
+                   proforma.sales_person == request.user)
+
+        # Modificaciones solo en estado borrador
+        if proforma.status != 'draft':
+            return False
+
+        # Solo creadores o vendedores pueden modificar items
+        return (proforma.created_by == request.user or 
+                proforma.sales_person == request.user)
+
+class CanViewProformaHistory(BaseProformaPermission):
+    """
+    Permiso para ver el historial de proformas:
+    - Superusuarios pueden ver todo el historial
+    - Usuarios pueden ver el historial de sus proformas
+    - Vendedores pueden ver el historial de sus proformas asignadas
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+
+        proforma = obj.proforma
+        return (proforma.created_by == request.user or 
+                proforma.sales_person == request.user)
+
+    # //backend/appclc/proformas/serializers.py
+from rest_framework import serializers
+from .models import Proforma, ProformaItem, ProformaHistory
+from products.serializers import ProductSerializer
+from pandora.serializers import ClientesSerializer
+
+class ProformaItemSerializer(serializers.ModelSerializer):
+    """Serializer para los ítems de la proforma"""
+    product_detail = ProductSerializer(source='product', read_only=True)
+    
+    class Meta:
+        model = ProformaItem
+        fields = [
+            'id', 'product', 'product_detail', 'description', 
+            'quantity', 'unit_price', 'discount_percentage', 'total'
+        ]
+        read_only_fields = ['total']
+
+    def validate(self, data):
+        # Validaciones a nivel de serializer
+        if data['quantity'] <= 0:
+            raise serializers.ValidationError({
+                "quantity": "La cantidad debe ser mayor a 0."
+            })
+        if data['unit_price'] <= 0:
+            raise serializers.ValidationError({
+                "unit_price": "El precio unitario debe ser mayor a 0."
+            })
+        discount = data.get('discount_percentage', 0)
+        if discount < 0 or discount > 100:
+            raise serializers.ValidationError({
+                "discount_percentage": "El descuento debe estar entre 0 y 100."
+            })
+        return data
+
+class ProformaHistorySerializer(serializers.ModelSerializer):
+    """Serializer para el historial de cambios"""
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = ProformaHistory
+        fields = ['id', 'created_at', 'user', 'user_name', 'action', 'details']
+        read_only_fields = ['created_at', 'user']
+
+class ProformaSerializer(serializers.ModelSerializer):
+    """Serializer principal para proformas"""
+    items = ProformaItemSerializer(many=True, required=False)
+    history = ProformaHistorySerializer(many=True, read_only=True)
+    client_detail = ClientesSerializer(source='client', read_only=True)
+    
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    sales_person_name = serializers.CharField(source='sales_person.username', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = Proforma
+        fields = [
+            'id', 'number', 'date', 'valid_until',
+            'client', 'client_detail',
+            'payment_terms', 'delivery_time',
+            'sales_person', 'sales_person_name',
+            'subtotal', 'tax', 'total',
+            'status', 'status_display',
+            'notes', 'terms_conditions',
+            'items', 'history',
+            'created_at', 'updated_at',
+            'created_by', 'created_by_name'
+        ]
+        read_only_fields = [
+            'number', 'subtotal', 'tax', 'total',
+            'created_at', 'updated_at', 'created_by'
+        ]
+
+    def create(self, validated_data):
+        """
+        Creación de la proforma y sus ítems.
+        """
+        # Extraer ítems embebidos (si los hay)
+        items_data = validated_data.pop('items', [])
+
+        # Crear la proforma en DB
+        proforma = Proforma.objects.create(**validated_data)
+
+        # Crear cada ítem de la proforma
+        for item_data in items_data:
+            ProformaItem.objects.create(proforma=proforma, **item_data)
+
+        # En la lógica actual, `ProformaItem.save()` ya recalcula los totales
+        # pero si deseas forzar el cálculo de totales aquí:
+        proforma.calculate_totals()
+        proforma.save()
+
+        # Registrar creación en el historial
+        # Nota: "created_by" llega desde perform_create en la View (proforma.created_by = request.user).
+        ProformaHistory.objects.create(
+            proforma=proforma,
+            user=proforma.created_by,  # O self.context['request'].user si lo deseas
+            action='created',
+            details='Proforma creada'
+        )
+        return proforma
+
+    def update(self, instance, validated_data):
+        """
+        Actualización de la proforma y recreación de ítems si es necesario.
+        """
+        items_data = validated_data.pop('items', None)
+
+        # Actualizar campos de la proforma
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Si se envían ítems, se eliminan los existentes y se crean los nuevos
+        if items_data is not None:
+            instance.items.all().delete()
+            for item_data in items_data:
+                ProformaItem.objects.create(proforma=instance, **item_data)
+
+            # Recalcular totales
+            instance.calculate_totals()
+            instance.save()
+
+            # Registrar en el historial
+            ProformaHistory.objects.create(
+                proforma=instance,
+                user=self.context['request'].user,  # Quien hace la modificación
+                action='updated',
+                details='Items de proforma actualizados'
+            )
+        return instance
+
+    def validate(self, data):
+        """
+        Validaciones adicionales a nivel de Proforma completa.
+        """
+        # Validar que valid_until sea posterior a date (si se cambian ambos)
+        proforma_date = data.get(
+            'date',
+            self.instance.date if self.instance else None
+        )
+        if 'valid_until' in data and data['valid_until'] < proforma_date:
+            raise serializers.ValidationError({
+                "valid_until": "La fecha de validez debe ser posterior a la fecha de emisión."
+            })
+
+        # Validar que exista al menos un item en creación
+        if not self.instance and not self.initial_data.get('items', []):
+            raise serializers.ValidationError({
+                "items": "La proforma debe tener al menos un ítem."
+            })
+        return data
+
+
+# proformas/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+app_name = 'proformas'
+
+# Crear router para la API
+router = DefaultRouter()
+
+# Registrar viewsets principales
+router.register(r'proformas', views.ProformaViewSet, basename='proforma')
+router.register(r'items', views.ProformaItemViewSet, basename='proforma-item')
+router.register(r'history', views.ProformaHistoryViewSet, basename='proforma-history')
+
+# URLs para endpoints específicos
+urlpatterns = [
+    # Incluir rutas del router
+    path('', include(router.urls)),
+
+    # Endpoints de gestión de proformas
+    path('proformas/<int:pk>/approve/',
+         views.ProformaViewSet.as_view({'post': 'approve'}),
+         name='proforma-approve'),
+    path('proformas/<int:pk>/reject/',
+         views.ProformaViewSet.as_view({'post': 'reject'}),
+         name='proforma-reject'),
+    path('proformas/<int:pk>/send/',
+         views.ProformaViewSet.as_view({'post': 'send'}),
+         name='proforma-send'),
+    path('proformas/<int:pk>/expire/',
+         views.ProformaViewSet.as_view({'post': 'expire'}),
+         name='proforma-expire'),
+
+    # Endpoints de consulta
+    path('proformas/<int:pk>/items/',
+         views.ProformaViewSet.as_view({'get': 'items'}),
+         name='proforma-items'),
+    path('proformas/<int:pk>/history/',
+         views.ProformaViewSet.as_view({'get': 'history'}),
+         name='proforma-history'),
+
+    # Endpoints de reportes y estadísticas
+    path('dashboard/',
+         views.ProformaViewSet.as_view({'get': 'dashboard'}),
+         name='proforma-dashboard'),
+    path('reports/monthly/',
+         views.ProformaViewSet.as_view({'get': 'monthly_report'}),
+         name='proforma-monthly-report'),
+    path('reports/by-client/',
+         views.ProformaViewSet.as_view({'get': 'client_report'}),
+         name='proforma-client-report'),
+
+    # Endpoints de exportación
+    path('proformas/<int:pk>/export/pdf/',
+         views.ProformaViewSet.as_view({'get': 'export_pdf'}),
+         name='proforma-export-pdf'),
+    path('proformas/<int:pk>/export/excel/',
+         views.ProformaViewSet.as_view({'get': 'export_excel'}),
+         name='proforma-export-excel'),
+
+    # Endpoints de búsqueda y filtrado
+    path('search/',
+         views.ProformaViewSet.as_view({'get': 'search'}),
+         name='proforma-search'),
+    path('filter/by-date/',
+         views.ProformaViewSet.as_view({'get': 'filter_by_date'}),
+         name='proforma-filter-date'),
+    path('filter/by-status/',
+         views.ProformaViewSet.as_view({'get': 'filter_by_status'}),
+         name='proforma-filter-status'),
+
+    # Endpoints para gestión de items
+    path('items/bulk-create/',
+         views.ProformaItemViewSet.as_view({'post': 'bulk_create'}),
+         name='proforma-items-bulk-create'),
+    path('items/bulk-update/',
+         views.ProformaItemViewSet.as_view({'put': 'bulk_update'}),
+         name='proforma-items-bulk-update'),
+
+    # Endpoints para historial
+    path('history/summary/',
+         views.ProformaHistoryViewSet.as_view({'get': 'summary'}),
+         name='proforma-history-summary'),
+    path('history/by-user/',
+         views.ProformaHistoryViewSet.as_view({'get': 'by_user'}),
+         name='proforma-history-by-user'),
+]
+
+
+# proformas/views.py
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q, Sum, Count
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .models import Proforma, ProformaItem, ProformaHistory
+from .serializers import ProformaSerializer, ProformaItemSerializer, ProformaHistorySerializer
+from .permissions import IsProformaUser
+
+# --------------------------------------------------------------------------
+# ProformaViewSet
+# --------------------------------------------------------------------------
+class ProformaViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestión de proformas"""
+    queryset = Proforma.objects.select_related(
+        'client', 'sales_person', 'created_by'
+    ).prefetch_related('items', 'history').all()
+    
+    serializer_class = ProformaSerializer
+    permission_classes = [IsAuthenticated, IsProformaUser]
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = {
+        'status': ['exact'],
+        'date': ['exact', 'gte', 'lte'],
+        'created_at': ['exact', 'gte', 'lte'],
+        'client': ['exact'],
+        'sales_person': ['exact']
+    }
+    search_fields = ['number', 'client__nombre', 'client__razon_social']
+    ordering_fields = ['date', 'total', 'status', 'created_at']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        """
+        Filtro adicional para que solo puedan ver
+        sus propias proformas (o todas si es superuser).
+        """
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser:
+            queryset = queryset.filter(
+                Q(created_by=user) | Q(sales_person=user)
+            )
+
+        # Filtros adicionales por fecha
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            queryset = queryset.filter(date__gte=date_from)
+        
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            queryset = queryset.filter(date__lte=date_to)
+        
+        return queryset
+
+    def perform_create(self, serializer):
+        """
+        Asigna automáticamente created_by y sales_person al usuario logueado.
+        """
+        serializer.save(
+            created_by=self.request.user,
+            sales_person=self.request.user
+        )
+
+    # ---------------------
+    # Acciones personalizadas
+    # ---------------------
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Aprobar una proforma en estado 'draft'."""
+        proforma = self.get_object()
+        if proforma.status != 'draft':
+            return Response(
+                {"error": "Solo se pueden aprobar proformas en estado borrador."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        proforma.status = 'approved'
+        proforma.save()
+        ProformaHistory.objects.create(
+            proforma=proforma,
+            user=request.user,
+            action='approved',
+            details='Proforma aprobada'
+        )
+        return Response({"status": "success", "message": "Proforma aprobada exitosamente"})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Rechazar una proforma en estado 'draft' o 'sent'."""
+        proforma = self.get_object()
+        reason = request.data.get('reason', 'No se especificó razón')
+        
+        if proforma.status not in ['draft', 'sent']:
+            return Response(
+                {"error": "Solo se pueden rechazar proformas en estado borrador o enviadas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        proforma.status = 'rejected'
+        proforma.save()
+        ProformaHistory.objects.create(
+            proforma=proforma,
+            user=request.user,
+            action='rejected',
+            details=f'Proforma rechazada. Razón: {reason}'
+        )
+        return Response({"status": "success", "message": "Proforma rechazada"})
+
+    @action(detail=True, methods=['post'])
+    def send(self, request, pk=None):
+        """
+        Marcar proforma como enviada (estado 'sent') si está en estado 'draft'.
+        (Podrías implementar envío de email aquí.)
+        """
+        proforma = self.get_object()
+        if proforma.status != 'draft':
+            return Response(
+                {"error": "Solo se pueden enviar proformas en estado borrador."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        proforma.status = 'sent'
+        proforma.save()
+        # TODO: Implementar envío de email, e.g. send_proforma_email(proforma)
+        ProformaHistory.objects.create(
+            proforma=proforma,
+            user=request.user,
+            action='sent',
+            details='Proforma enviada al cliente'
+        )
+        return Response({"status": "success", "message": "Proforma enviada exitosamente"})
+
+    @action(detail=True, methods=['post'])
+    def expire(self, request, pk=None):
+        """
+        Marcar la proforma como 'expired'.
+        Este endpoint se mencionaba en tus URLs, pero no estaba definido.
+        """
+        proforma = self.get_object()
+        # Lógica: permitimos expirar cualquier proforma que no esté ya cerrada,
+        # o define tu propia validación:
+        if proforma.status in ['approved', 'rejected']:
+            return Response(
+                {"error": "No puedes expirar una proforma aprobada o rechazada."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        proforma.status = 'expired'
+        proforma.save()
+        ProformaHistory.objects.create(
+            proforma=proforma,
+            user=request.user,
+            action='expired',
+            details='Proforma marcada como expirada'
+        )
+        return Response({"status": "success", "message": "Proforma expirada."})
+
+    # ---------------------
+    # Acciones de reporte/estadísticas
+    # ---------------------
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        """
+        Dashboard de estadísticas de proformas.
+        """
+        queryset = self.get_queryset()
+        stats = {
+            'total_count': queryset.count(),
+            'status_count': {
+                status_key: queryset.filter(status=status_key).count()
+                for status_key, _ in Proforma.STATUS_CHOICES
+            },
+            'total_amount': queryset.aggregate(total=Sum('total'))['total'] or 0
+        }
+        # Totales por mes (últimos 6 meses)
+        six_months_ago = timezone.now() - timezone.timedelta(days=180)
+        monthly_stats = (
+            queryset.filter(date__gte=six_months_ago)
+            .values('date__month')
+            .annotate(total_amount=Sum('total'), count=Count('id'))
+            .order_by('date__month')
+        )
+        stats['monthly_stats'] = monthly_stats
+        return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def monthly_report(self, request):
+        """Ejemplo de reporte mensual (placeholder)."""
+        # TODO: Lógica concreta de reporte
+        return Response({"message": "Reporte mensual (placeholder)."})
+
+    @action(detail=False, methods=['get'])
+    def client_report(self, request):
+        """Ejemplo de reporte por cliente (placeholder)."""
+        # TODO: Lógica concreta de reporte
+        return Response({"message": "Reporte por cliente (placeholder)."})
+
+    # ---------------------
+    # Acciones de exportación
+    # ---------------------
+
+    @action(detail=True, methods=['get'])
+    def export_pdf(self, request, pk=None):
+        """Ejemplo de exportar a PDF (placeholder)."""
+        # TODO: Generar PDF
+        return Response({"message": "Exportar a PDF (placeholder)."})
+
+    @action(detail=True, methods=['get'])
+    def export_excel(self, request, pk=None):
+        """Ejemplo de exportar a Excel (placeholder)."""
+        # TODO: Generar Excel
+        return Response({"message": "Exportar a Excel (placeholder)."})
+
+    # ---------------------
+    # Acciones de búsqueda/filtrado
+    # ---------------------
+
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """Búsqueda personalizada (placeholder)."""
+        # TODO: Implementar lógica de búsqueda
+        return Response({"message": "Búsqueda de proformas (placeholder)."})
+
+    @action(detail=False, methods=['get'])
+    def filter_by_date(self, request):
+        """Filtrado por fecha (placeholder)."""
+        # TODO: Implementar lógica de filtro
+        return Response({"message": "Filtrado por fecha (placeholder)."})
+
+    @action(detail=False, methods=['get'])
+    def filter_by_status(self, request):
+        """Filtrado por estado (placeholder)."""
+        # TODO: Implementar lógica de filtro
+        return Response({"message": "Filtrado por estado (placeholder)."})
+
+    # ---------------------
+    # Acciones de consulta interna
+    # ---------------------
+
+    @action(detail=True, methods=['get'])
+    def items(self, request, pk=None):
+        """Obtener items de una proforma específica"""
+        proforma = self.get_object()
+        items = proforma.items.all()
+        serializer = ProformaItemSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Obtener historial de una proforma específica"""
+        proforma = self.get_object()
+        history = proforma.history.all()
+        history_serializer = ProformaHistorySerializer(history, many=True)
+        return Response(history_serializer.data)
+
+# --------------------------------------------------------------------------
+# ProformaItemViewSet
+# --------------------------------------------------------------------------
+class ProformaItemViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestionar ProformaItem de forma independiente."""
+    queryset = ProformaItem.objects.all()
+    serializer_class = ProformaItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """
+        Crear múltiples items de proforma en un solo request.
+        Ejemplo de payload: {"items": [{...}, {...}]}
+        """
+        items_data = request.data.get("items", [])
+        if not items_data:
+            return Response(
+                {"error": "No items provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_items = []
+        for item in items_data:
+            serializer = self.get_serializer(data=item)
+            serializer.is_valid(raise_exception=True)
+            created_item = serializer.save()
+            created_items.append(created_item)
+
+        return Response(
+            self.get_serializer(created_items, many=True).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=False, methods=['put'])
+    def bulk_update(self, request):
+        """
+        Actualizar múltiples items de proforma en un solo request.
+        Ejemplo de payload: {"items": [{ "id": 1, ...}, { "id": 2, ...}]}
+        """
+        items_data = request.data.get("items", [])
+        if not items_data:
+            return Response(
+                {"error": "No items provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        updated_items = []
+        for item in items_data:
+            item_id = item.get("id")
+            if not item_id:
+                return Response(
+                    {"error": "Each item must have an 'id' to be updated."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            instance = self.get_queryset().filter(id=item_id).first()
+            if not instance:
+                return Response(
+                    {"error": f"Item with id={item_id} not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            serializer = self.get_serializer(instance, data=item, partial=True)
+            serializer.is_valid(raise_exception=True)
+            updated_item = serializer.save()
+            updated_items.append(updated_item)
+
+        return Response(
+            self.get_serializer(updated_items, many=True).data,
+            status=status.HTTP_200_OK
+        )
+
+# --------------------------------------------------------------------------
+# ProformaHistoryViewSet
+# --------------------------------------------------------------------------
+class ProformaHistoryViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestionar el historial de proformas de manera independiente."""
+    queryset = ProformaHistory.objects.select_related('proforma', 'user').all()
+    serializer_class = ProformaHistorySerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """
+        Ejemplo de acción para resumir historial global.
+        """
+        total = self.get_queryset().count()
+        return Response({"message": f"Resumen del historial. Total registros: {total}"})
+
+    @action(detail=False, methods=['get'])
+    def by_user(self, request):
+        """
+        Agrupar historial por usuario.
+        """
+        queryset = self.get_queryset().values('user__username').annotate(count=Count('id'))
+        return Response(queryset)
+
+// src/config/axios.js
+import axios from 'axios';
+
+// Si tienes VITE_API_URL apuntando a http://localhost:8000/api/v1, úsalo:
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/pandora';
+
+
+// Creamos UNA única instancia
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 segundos
+});
+
+// ============ Interceptores ============
+
+// 1) Interceptor REQUEST: agrega Bearer token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 2) Manejo de Rate Limiting: si viene status 429, reintentamos
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 429) {
+      // Espera 2 seg. antes de reintentar
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return api(error.config);
+    }
+    return Promise.reject(error);
+  }
+);
+
+// 3) Manejo de 401: si no autorizado, forzamos logout/redirect
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('refresh-token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// 4) Opción: refreshAuthToken() si quieres que se refresque automáticamente
+//    Podrías implementarlo aquí, pero a menudo se maneja desde authStore.
+
+export default api;
+
+// src/routes/routes.jsx
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import ErrorBoundary from '@/components/error/ErrorBoundary';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+const ProductList = lazy(() => import('@/pages/products/ProductList'));
+const ProductWizard = lazy(() => import('@/pages/products/ProductWizard'));
+const PriceManagement = lazy(() => import('@/pages/products/PriceManagement'));
+const PriceManagement2 = lazy(() => import('@/pages/products/PriceManagement2'));
+const PriceCharts = lazy(() => import('@/pages/products/PriceCharts'));
+
+
+// Layouts
+import AuthLayout from '@/components/layout/AuthLayout';
+import MainLayout from '@/components/layout/MainLayout';
+
+// Páginas básicas que no necesitan carga diferida
+import Login from '@/components/auth/Login';
+import ErrorPage from '@/components/error/ErrorPage';
+import ConstructionPage from '@/pages/Varias/ConstructionPage';
+import EmpresaInfo from '@/pages/legalbase/EmpresaInfo';
+import EmpresaInfo2 from '@/pages/legalbase/EmpresaInfo2';
+import EmpresaInfo3 from '@/pages/legalbase/EmpresaInfo3';
+
+// Carga diferida de componentes
+const DashboardPage = lazy(() => import('@/pages/Dashboard'));
+const Hola = lazy(() => import('@/pages/Hola'));
+
+// Módulo básico
+const ZonasPage = lazy(() => import('@/pages/mbasic/ZonasPage'));
+const CiudadesPage = lazy(() => import('@/pages/mbasic/CiudadesPage'));
+const TipoClientePage = lazy(() => import('@/pages/mbasic/TipoClientePage'));
+const CategoriasPage = lazy(() => import('@/pages/mbasic/CategoriasPage'));
+const EspecialidadesPage = lazy(() => import('@/pages/mbasic/EspecialidadesPage'));
+const MarcaPage = lazy(() => import('@/pages/mbasic/MarcaPage'));
+const ProcedenciaPage = lazy(() => import('@/pages/mbasic/ProcedenciaPage'));
+const UnidadesPage = lazy(() => import('@/pages/mbasic/UnidadesPage'));
+const PandoraPage = lazy(() => import('@/pages/mbasic/PandoraPage'));
+const TipoContratacionPage = lazy(() => import('@/pages/mbasic/TipoContratacionPage'));
+const EmpresasClcPage = lazy(() => import('@/pages/mbasic/EmpresasclcPage'));
+const ProcesosAuditadosPage = lazy(() => import('@/pages/mbasic/ProcesosAuditadosPage'));
+
+// Módulo avanzado
+const ProveedoresPage = lazy(() => import('@/pages/madvance/ProveedoresPage'));
+const ClientesPage = lazy(() => import('@/pages/madvance/ClientesPage'));
+const CostosPandoraPage = lazy(() => import('@/pages/madvance/CostosPandoraPage'));
+const VendedoresPage = lazy(() => import('@/pages/madvance/VendedoresPage'));
+const PreciosSiePage = lazy(() => import('@/pages/madvance/PreciosSiePage'));
+const MsprefPage = lazy(() => import('@/pages/madvance/MsprefPage'));
+const MsprefImportPage = lazy(() => import('@/pages/import/MsprefImportPage'));
+
+//Varias paginas de prueba
+const ProductPortfolioPage = lazy(() => import('@/pages/Varias/ProductPortfolioPage'));
+
+
+
+// Módulo Proformas
+const BulkUploadProducts = lazy(() => import('@/pages/proformas/BulkUploadProducts'));
+const ComparativeAnalysis = lazy(() => import('@/pages/proformas/ComparativeAnalysis'));
+const NewProformaForm = lazy(() => import('@/pages/proformas/NewProformaForm'));
+const PriceAlerts = lazy(() => import('@/pages/proformas/PriceAlerts'));
+const PriceAnalysisTools = lazy(() => import('@/pages/proformas/PriceAnalysisTools'));
+const PriceHistory = lazy(() => import('@/pages/proformas/PriceHistory'));
+const PriceProjections = lazy(() => import('@/pages/proformas/PriceProjections'));
+const ProformaDashboard = lazy(() => import('@/pages/proformas/ProformaDashboard'));
+const ProformaForm = lazy(() => import('@/pages/proformas/ProformaForm'));
+const ProformaGenerator = lazy(() => import('@/pages/proformas/ProformaGenerator'));
+const ProformaList = lazy(() => import('@/pages/proformas/ProformaList'));
+const ProformaPDF = lazy(() => import('@/pages/proformas/ProformaPDF'));
+const ProformaPreview = lazy(() => import('@/pages/proformas/ProformaPreview'));
+const ProformaSettings = lazy(() => import('@/pages/proformas/ProformaSettings'));
+const ProformaTemplates = lazy(() => import('@/pages/proformas/ProformaTemplates'));
+
+
+
+
+
+// Componente de envoltura para el manejo de carga y errores
+const PageWrapper = ({ component: Component }) => {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Component />
+      </Suspense>
+    </ErrorBoundary>
+  );
+};
+
+// Configuración de rutas
+export const router = createBrowserRouter([
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/',
+    element: (
+      <ErrorBoundary>
+        <AuthLayout>
+          <MainLayout />
+        </AuthLayout>
+      </ErrorBoundary>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, element: <PageWrapper component={DashboardPage} /> },
+      { path: 'hola', element: <PageWrapper component={Hola} /> },
+      
+      // Módulo básico
+      { path: 'zonas', element: <PageWrapper component={ZonasPage} /> },
+      { path: 'ciudades', element: <PageWrapper component={CiudadesPage} /> },
+      { path: 'tipocliente', element: <PageWrapper component={TipoClientePage} /> },
+      { path: 'categorias', element: <PageWrapper component={CategoriasPage} /> },
+      { path: 'especialidades', element: <PageWrapper component={EspecialidadesPage} /> },
+      { path: 'marcas', element: <PageWrapper component={MarcaPage} /> },
+      { path: 'procedencia', element: <PageWrapper component={ProcedenciaPage} /> },
+      { path: 'unidades', element: <PageWrapper component={UnidadesPage} /> },
+      { path: 'pandora', element: <PageWrapper component={PandoraPage} /> },
+      { path: 'tipocontratacion', element: <PageWrapper component={TipoContratacionPage} /> },
+      { path: 'empresasclc', element: <PageWrapper component={EmpresasClcPage} /> },
+      { path: 'procesosauditados', element: <PageWrapper component={ProcesosAuditadosPage} /> },
+      
+      // Módulo avanzado
+      { path: 'proveedores', element: <PageWrapper component={ProveedoresPage} /> },
+      { path: 'clientes', element: <PageWrapper component={ClientesPage} /> },
+      { path: 'costospandora', element: <PageWrapper component={CostosPandoraPage} /> },
+      { path: 'vendedores', element: <PageWrapper component={VendedoresPage} /> },
+      { path: 'preciossie', element: <PageWrapper component={PreciosSiePage} /> },
+      { path: 'mspref', element: <PageWrapper component={MsprefPage} /> },
+
+      { path: 'msprefimport', element: <PageWrapper component={MsprefImportPage} /> },
+      { path: 'error', element: <ConstructionPage /> },
+
+      //Varias paginas de prueba
+      { path: 'productportfolio', element: <PageWrapper component={ProductPortfolioPage} /> },
+      { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
+      { path: 'empresainfo', element: <PageWrapper component={EmpresaInfo} /> },  
+      { path: 'empresainfo2', element: <PageWrapper component={EmpresaInfo2} /> },
+      { path: 'empresainfo3', element: <PageWrapper component={EmpresaInfo3} /> },
+      { path: 'products', element: <PageWrapper component={ProductList} /> },
+      { path: 'productwizard', element: <PageWrapper component={ProductWizard} /> },
+      { path: 'priceManagement', element: <PageWrapper component={PriceManagement} /> },
+      { path: 'priceManagement2', element: <PageWrapper component={PriceManagement2} /> },
+      { path: 'priceCharts', element: <PageWrapper component={PriceCharts} /> },
+      { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
+
+       // Módulo Proformas
+       { path: 'bulkuploadproducts', element: <PageWrapper component={BulkUploadProducts} /> },
+       { path: 'comparativeanalysis', element: <PageWrapper component={ComparativeAnalysis} /> },
+       { path: 'newproformaform', element: <PageWrapper component={NewProformaForm} /> },
+       { path: 'pricealerts', element: <PageWrapper component={PriceAlerts} /> },
+       { path: 'priceanalysistools', element: <PageWrapper component={PriceAnalysisTools} /> },
+       { path: 'pricehistory', element: <PageWrapper component={PriceHistory} /> },
+       { path: 'priceprojections', element: <PageWrapper component={PriceProjections} /> },
+       { path: 'proformadashboard', element: <PageWrapper component={ProformaDashboard} /> },
+       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
+       { path: 'proformagenerator', element: <PageWrapper component={ProformaGenerator} /> },
+       { path: 'proformalist', element: <PageWrapper component={ProformaList} /> },
+       { path: 'proformapdf', element: <PageWrapper component={ProformaPDF} /> },
+       { path: 'proformapreview', element: <PageWrapper component={ProformaPreview} /> },
+       { path: 'proformasettings', element: <PageWrapper component={ProformaSettings} /> },
+       { path: 'proformatemplates', element: <PageWrapper component={ProformaTemplates} /> },
+       { path: 'error', element: <ConstructionPage /> },
+       
+
+
+
+
+
+
+    ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/error" replace />,
+  },
+]);
+
+// src/services/api.js
+import api from '@/config/axios';
+
+export class BaseService {
+  constructor(endpoint) {
+    this.endpoint = endpoint;
+  }
+
+  async getAll(params = {}) {
+    try {
+      const response = await api.get(this.endpoint, { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getById(id) {
+    try {
+      const response = await api.get(`${this.endpoint}${id}/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async create(data) {
+    try {
+      const response = await api.post(this.endpoint, data);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async update(id, data) {
+    try {
+      const response = await api.put(`${this.endpoint}${id}/`, data);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async delete(id) {
+    try {
+      await api.delete(`${this.endpoint}${id}/`);
+      return true;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async search(query) {
+    try {
+      const response = await api.get(this.endpoint, {
+        params: { search: query },
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  handleError(error) {
+    if (error.response) {
+      throw {
+        status: error.response.status,
+        message:
+          error.response.data.detail ||
+          error.response.data.message ||
+          this.getErrorMessage(error.response.status),
+        errors: error.response.data,
+      };
+    } else if (error.request) {
+      throw {
+        status: 503,
+        message:
+          'No se pudo conectar con el servidor. Por favor, verifica tu conexión.',
+      };
+    } else {
+      throw {
+        status: 500,
+        message: 'Error al procesar la solicitud.',
+      };
+    }
+  }
+
+  getErrorMessage(status) {
+    const errorMessages = {
+      400: 'Datos inválidos. Por favor, verifica la información.',
+      401: 'No autorizado. Por favor, inicia sesión nuevamente.',
+      403: 'No tienes permiso para realizar esta acción.',
+      404: 'El recurso solicitado no existe.',
+      422: 'No se pudo procesar la solicitud. Verifica los datos.',
+      429: 'Demasiadas solicitudes. Por favor, espera un momento.',
+      500: 'Error interno del servidor.',
+      503: 'Servicio no disponible temporalmente.',
+    };
+    return errorMessages[status] || 'Ha ocurrido un error inesperado.';
+  }
+}
+
+// Clase extendida para MsPref que incluye la funcionalidad de importación
+export class MsPrefService extends BaseService {
+  constructor() {
+    super('mspref/');
+  }
+
+  async importExcel(file) {
+    try {
+      const formData = new FormData();
+      // OJO: usamos 'file' para que coincida con la vista Django
+      formData.append('file', file);
+
+      const response = await api.post(`${this.endpoint}import/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+}
+
+// Exportación de servicios básicos
+export const zonasService = new BaseService('zonas/');
+export const ciudadesService = new BaseService('ciudades/');
+export const tipoClienteService = new BaseService('tipocliente/');
+export const clientesService = new BaseService('clientes/');
+export const pandoraService = new BaseService('pandora/');
+export const categoriasService = new BaseService('categorias/');
+export const especialidadesService = new BaseService('especialidades/');
+export const marcaService = new BaseService('marca/');
+export const procedenciaService = new BaseService('procedencia/');
+export const tipoContratacionService = new BaseService('tipocontratacion/');
+export const unidadesService = new BaseService('unidades/');
+export const empresasClcService = new BaseService('empresasclc/');
+export const preciosSieService = new BaseService('preciossie/');
+export const proveedoresService = new BaseService('proveedores/');
+export const costosPandoraService = new BaseService('costospandora/');
+export const vendedoresService = new BaseService('vendedores/');
+export const procesosAuditadosService = new BaseService('procesosauditados/');
+
+// Instancia del servicio MsPref con funcionalidad extendida
+export const msprefService = new MsPrefService();
+
+
+// src/store/authStore.js
+import { create } from 'zustand';
+import api from '@/config/axios'
+
+
+let loginAttemptInProgress = false;
+
+const useAuthStore = create((set) => ({
+  user: null,
+  isAuthenticated: false,
+  error: null,
+  loading: false,
+
+  // 1. LOGIN
+  login: async (credentials) => {
+    // Evitar múltiples intentos simultáneos
+    if (loginAttemptInProgress) {
+      console.log('Login attempt already in progress');
+      return false;
+    }
+
+    try {
+      loginAttemptInProgress = true;
+      set({ loading: true, error: null });
+
+      // DEBUG: Mostrar credenciales (sin la contraseña en claro)
+      console.log('Enviando credenciales:', {
+        username: credentials.username,
+        passwordLength: credentials.password?.length,
+      });
+
+      // Asegurarnos de que los datos sean strings
+      const loginData = {
+        username: String(credentials.username).trim(),
+        password: String(credentials.password),
+      };
+
+      // DEBUG: URL a la que se hace la petición
+      console.log('Haciendo petición a:', `${api.defaults.baseURL}token/`);
+
+      // Petición a /token/
+      const response = await api.post('auth/token/', loginData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      // DEBUG: Respuesta (sin datos sensibles)
+      console.log('Respuesta del servidor:', {
+        status: response.status,
+        hasAccessToken: !!response.data.access,
+        hasRefreshToken: !!response.data.refresh,
+      });
+
+      // Guardar tokens en localStorage
+      const { access, refresh } = response.data;
+      localStorage.setItem('auth-token', access);
+      localStorage.setItem('refresh-token', refresh);
+
+      // Ajustar Authorization por defecto
+      api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+
+      // Actualizar el estado de autenticación
+      set({
+        isAuthenticated: true,
+        loading: false,
+        error: null,
+      });
+
+      return true;
+    } catch (error) {
+      // DEBUG: Mostrar error detallado
+      console.error('Error detallado (login):', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        },
+      });
+
+      let errorMessage = 'Error al iniciar sesión';
+
+      if (!error.response) {
+        // Error de red (sin respuesta del servidor)
+        errorMessage = 'No se pudo conectar con el servidor. Revisa tu conexión.';
+      } else if (error.response.status === 429) {
+        errorMessage = 'Demasiados intentos. Por favor, espere unos segundos.';
+      } else if (error.response.status === 401) {
+        errorMessage = 'Usuario o contraseña incorrectos';
+      } else if (error.response.status === 400) {
+        errorMessage = 'Datos de inicio de sesión inválidos';
+      } else if (error.response.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      set({
+        error: errorMessage,
+        loading: false,
+        isAuthenticated: false,
+      });
+      return false;
+    } finally {
+      loginAttemptInProgress = false;
+      set({ loading: false });
+    }
+  },
+
+  // 2. LOGOUT
+  logout: () => {
+    // Borrar tokens de localStorage
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('refresh-token');
+
+    // Remover Authorization
+    api.defaults.headers.common['Authorization'] = null;
+
+    // Resetear estado
+    set({
+      user: null,
+      isAuthenticated: false,
+      error: null,
+    });
+  },
+
+  // 3. CHECK AUTH (verificar + refrescar token si venció)
+  checkAuth: async () => {
+    set({ loading: true });
+
+    const token = localStorage.getItem('auth-token');
+    const refreshToken = localStorage.getItem('refresh-token');
+
+    // Si no hay token, no estamos autenticados
+    if (!token || !refreshToken) {
+      set({ isAuthenticated: false, loading: false });
+      return false;
+    }
+
+    try {
+      // Configurar Authorization con el token actual
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Verificar el token actual con POST /token/verify/
+      await api.post('token/verify/', { token });
+
+      // Si funciona, seguimos autenticados
+      set({ isAuthenticated: true, loading: false });
+      return true;
+
+    } catch (error) {
+      console.log('Error en checkAuth:', error.response?.status);
+
+      // Si el token es inválido o expiró (401), intentamos refrescarlo
+      if (error.response?.status === 401) {
+        try {
+          const response = await api.post('token/refresh/', {
+            refresh: refreshToken,
+          });
+
+          // Guardar el nuevo token
+          const newToken = response.data.access;
+          localStorage.setItem('auth-token', newToken);
+
+          api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
+          set({ isAuthenticated: true, loading: false });
+          return true;
+        } catch {
+          // Si falla el refresh, cerramos sesión
+          localStorage.removeItem('auth-token');
+          localStorage.removeItem('refresh-token');
+          api.defaults.headers.common['Authorization'] = null;
+
+          set({
+            isAuthenticated: false,
+            loading: false,
+            user: null,
+            error: 'Sesión expirada, por favor inicie sesión nuevamente',
+          });
+          return false;
+        }
+      }
+
+      // Si el error no es 401 o no hay .response
+      let errorMessage = 'Error al verificar la autenticación';
+      if (!error.response) {
+        errorMessage = 'No se pudo conectar con el servidor';
+      } else if (error.response.status === 429) {
+        errorMessage = 'Demasiados intentos. Por favor, espere unos segundos.';
+      }
+
+      set({
+        isAuthenticated: false,
+        loading: false,
+        error: errorMessage,
+      });
+      return false;
+    }
+  },
+
+  // 4. LIMPIAR ERRORES
+  clearError: () => set({ error: null }),
+
+  // 5. PERFIL DE USUARIO (opcional, si tienes /users/me/ en el backend)
+  fetchUserProfile: async () => {
+    try {
+      set({ loading: true });
+      const response = await api.get('users/me/');
+      set({
+        user: response.data,
+        loading: false,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener perfil:', error);
+
+      let errorMessage = 'Error al obtener el perfil del usuario';
+      if (!error.response) {
+        errorMessage = 'No se pudo conectar con el servidor';
+      } else if (error.response.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      set({
+        loading: false,
+        error: errorMessage,
+      });
+      return null;
+    }
+  },
+
+  updateUserProfile: async (userData) => {
+    try {
+      set({ loading: true });
+      const response = await api.patch('users/me/', userData);
+      set({
+        user: response.data,
+        loading: false,
+      });
+      return true;
+    } catch (error) {
+      console.error('Error al actualizar perfil:', error);
+
+      let errorMessage = 'Error al actualizar el perfil';
+      if (!error.response) {
+        errorMessage = 'No se pudo conectar con el servidor';
+      } else if (error.response.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      set({
+        loading: false,
+        error: errorMessage,
+      });
+      return false;
+    }
+  },
+}));
+
+export default useAuthStore;
+
+
+
+
