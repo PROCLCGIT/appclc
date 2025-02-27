@@ -1,11 +1,11 @@
 # products/views.py
 
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Sum, Count, Avg, F
+from django.db.models import Q, Sum, Count, Avg, F, Max  # Añadimos Max aquí
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -17,14 +17,15 @@ from .models import (
     Product, ProductoOfertado, ProductoDisponible,
     PriceList, ProductPrice, StockMovement,
     PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument
+    ProductDocument, ImagenReferenciaProductoOfertado
 )
 from .serializers import (
     ProductSerializer, ProductoOfertadoSerializer,
     ProductoDisponibleSerializer, PriceListSerializer,
     ProductPriceSerializer, StockMovementSerializer,
     PriceHistorySerializer, ProductChangeSerializer,
-    RelatedProductSerializer, ProductDocumentSerializer
+    RelatedProductSerializer, ProductDocumentSerializer,
+    ImagenReferenciaProductoOfertadoSerializer
 )
 
 # --------------------------------------------------------------------------------
@@ -136,8 +137,9 @@ class ProductoOfertadoViewSet(BaseProductViewSet):
     """ViewSet para ProductoOfertado"""
     queryset = ProductoOfertado.objects.select_related(
         'id_categoria', 'created_by', 'updated_by'
-    ).all()
+    ).prefetch_related('imagenes').all()
     serializer_class = ProductoOfertadoSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     
     filterset_fields = {
         'id_categoria': ['exact'],
@@ -155,6 +157,75 @@ class ProductoOfertadoViewSet(BaseProductViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+        
+    @action(detail=True, methods=['post'])
+    def upload_images(self, request, pk=None):
+        """Endpoint para subir imágenes de referencia a un producto"""
+        producto = self.get_object()
+        files = request.FILES.getlist('imagenes')
+        
+        if not files:
+            return Response(
+                {'error': 'No se proporcionaron imágenes'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Obtener la última posición ordenada
+        last_order = producto.imagenes.aggregate(max_orden=Max('orden'))['max_orden'] or 0
+        
+        uploaded_images = []
+        
+        # Crear registros de imágenes
+        for i, file in enumerate(files):
+            try:
+                imagen = ImagenReferenciaProductoOfertado.objects.create(
+                    producto_ofertado=producto,
+                    imagen=file,
+                    orden=last_order + i + 1,
+                    is_primary=(i == 0 and last_order == 0),  # Es principal solo si es la primera imagen del producto
+                    created_by=request.user
+                )
+                uploaded_images.append({
+                    'id': imagen.id,
+                    'url': imagen.url if hasattr(imagen, 'url') else None
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return Response(
+                    {'error': f'Error al subir imagen: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+        return Response({
+            'message': f'Se subieron {len(files)} imágenes correctamente',
+            'images': uploaded_images
+        }, status=status.HTTP_201_CREATED)
+        
+    @action(detail=True, methods=['delete'])
+    def delete_image(self, request, pk=None):
+        """Eliminar una imagen de referencia"""
+        producto = self.get_object()
+        imagen_id = request.data.get('imagen_id')
+        
+        if not imagen_id:
+            return Response(
+                {'error': 'Debe proporcionar el ID de la imagen'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            imagen = producto.imagenes.get(id=imagen_id)
+            imagen.delete()
+            return Response(
+                {'message': 'Imagen eliminada correctamente'},
+                status=status.HTTP_200_OK
+            )
+        except ImagenReferenciaProductoOfertado.DoesNotExist:
+            return Response(
+                {'error': 'La imagen no existe o no pertenece a este producto'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=False, methods=['get'])
     def stats(self, request):

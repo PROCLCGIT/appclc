@@ -5,7 +5,7 @@ from .models import (
     Product, ProductoOfertado, ProductoDisponible,
     PriceList, ProductPrice, StockMovement,
     PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument
+    ProductDocument, ImagenReferenciaProductoOfertado
 )
 
 @admin.register(Product)
@@ -47,12 +47,18 @@ class ProductAdmin(admin.ModelAdmin):
         })
     )
 
+class ImagenReferenciaInline(admin.TabularInline):
+    model = ImagenReferenciaProductoOfertado
+    extra = 1
+    fields = ('imagen', 'descripcion', 'orden', 'is_primary')
+
 @admin.register(ProductoOfertado)
 class ProductoOfertadoAdmin(admin.ModelAdmin):
     list_display = ['code', 'nombre', 'id_categoria', 'cudim', 'especialidad', 'is_active']
     list_filter = ['id_categoria', 'especialidad', 'is_active']
     search_fields = ['code', 'cudim', 'nombre', 'descripcion', 'referencias']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    inlines = [ImagenReferenciaInline]
     
     fieldsets = (
         (_('Basic Information'), {
@@ -206,3 +212,15 @@ class ProductDocumentAdmin(admin.ModelAdmin):
     list_display = ['product', 'document_type', 'file_name', 'created_at', 'is_active']
     list_filter = ['document_type', 'is_active', 'created_at']
     search_fields = ['product__code', 'file_name', 'description']
+    
+@admin.register(ImagenReferenciaProductoOfertado)
+class ImagenReferenciaProductoOfertadoAdmin(admin.ModelAdmin):
+    list_display = ['id', 'producto_ofertado', 'descripcion', 'orden', 'is_primary', 'created_at']
+    list_filter = ['is_primary', 'created_at']
+    search_fields = ['descripcion', 'producto_ofertado__nombre', 'producto_ofertado__code']
+    readonly_fields = ['created_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)

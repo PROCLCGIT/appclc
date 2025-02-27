@@ -48,6 +48,14 @@ urlpatterns = [
     path('productos-ofertados/<int:pk>/stats/',
          views.ProductoOfertadoViewSet.as_view({'get': 'stats'}),
          name='productos-ofertados-stats'),
+         
+    path('productos-ofertados/<int:pk>/upload-images/',
+         views.ProductoOfertadoViewSet.as_view({'post': 'upload_images'}),
+         name='productos-ofertados-upload-images'),
+         
+    path('productos-ofertados/<int:pk>/delete-image/',
+         views.ProductoOfertadoViewSet.as_view({'delete': 'delete_image'}),
+         name='productos-ofertados-delete-image'),
 
     # Endpoints para productos disponibles
     path('productos-disponibles/dashboard/',

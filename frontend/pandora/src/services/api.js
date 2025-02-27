@@ -147,7 +147,141 @@ export const procesosAuditadosService = new BaseService('pandora/procesosauditad
 // Para el módulo MsPref
 export const msprefService = new MsPrefService();
 
+// Clase para manejar servicios con archivos
+export class ProductosOfertadosService extends BaseService {
+  constructor() {
+    super('products/productosofertados/');
+  }
+
+  async create(data) {
+    try {
+      // Verificamos si hay imágenes para enviar
+      const hasImages = data.imagenes_referencia && data.imagenes_referencia.length > 0;
+      
+      if (hasImages) {
+        // Preparamos un FormData para enviar con archivos
+        const formData = new FormData();
+        
+        // Agregamos todos los campos de texto al FormData
+        Object.keys(data).forEach(key => {
+          if (key !== 'imagenes_referencia') {
+            formData.append(key, data[key]);
+          }
+        });
+        
+        // Agregamos cada imagen al FormData con el MISMO nombre para todas
+        // Esto crea una lista de archivos con la misma clave
+        let newImages = 0;
+        data.imagenes_referencia.forEach((file) => {
+          if (file instanceof File) {
+            formData.append('uploaded_images', file);
+            newImages++;
+          }
+        });
+        
+        console.log(`Enviando ${newImages} imágenes nuevas`);
+        
+        // Enviamos con el content-type correcto para archivos
+        const response = await api.post(this.endpoint, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        return response.data;
+      } else {
+        // Si no hay imágenes, usamos el método normal
+        return super.create(data);
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  async update(id, data) {
+    try {
+      // Preparamos siempre un FormData para mantener consistencia
+      const formData = new FormData();
+      
+      // Agregamos todos los campos de texto al FormData
+      Object.keys(data).forEach(key => {
+        if (key !== 'imagenes_referencia') {
+          formData.append(key, data[key]);
+        }
+      });
+      
+      // Verificamos si hay imágenes para enviar
+      const hasImages = data.imagenes_referencia && data.imagenes_referencia.length > 0;
+      
+      if (hasImages) {
+        // Agregamos cada imagen nueva al FormData con el MISMO nombre
+        let newImages = 0;
+        let existingImages = 0;
+        
+        data.imagenes_referencia.forEach((file) => {
+          if (file instanceof File) {
+            formData.append('uploaded_images', file);
+            newImages++;
+          } else if (file.id) {
+            existingImages++;
+            // Si necesitamos pasar imágenes existentes, lo haríamos aquí
+          }
+        });
+        
+        console.log(`Actualizando con ${newImages} imágenes nuevas y ${existingImages} existentes`);
+      }
+      
+      // Enviamos con el content-type correcto para archivos
+      const response = await api.put(`${this.endpoint}${id}/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  async uploadImages(id, files) {
+    try {
+      const formData = new FormData();
+      
+      // Agregamos cada archivo al FormData con la clave 'imagenes'
+      // Nota: Esta clave debe coincidir con request.FILES.getlist('imagenes') en el backend
+      files.forEach(file => {
+        formData.append('imagenes', file);
+      });
+      
+      console.log(`Enviando ${files.length} imágenes al endpoint upload_images`);
+      
+      const response = await api.post(`${this.endpoint}${id}/upload_images/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error en uploadImages:", error);
+      throw this.handleError(error);
+    }
+  }
+  
+  async deleteImage(id, imageId) {
+    try {
+      const response = await api.delete(`${this.endpoint}${id}/delete_image/`, {
+        data: { imagen_id: imageId }
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+}
+
 // Servicios para módulo de productos
-export const productosOfertadosService = new BaseService('products/productosofertados/');
+export const productosOfertadosService = new ProductosOfertadosService();
 export const productosDisponiblesService = new BaseService('products/productosdisponibles/');
 

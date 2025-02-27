@@ -4,9 +4,31 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import ValidationError
+import os
+import uuid
 
 # Importa tu modelo base de timestamps
 from pandora.models import TimeStampedModel, Categorias, Marca, Unidades, Procedencia
+
+
+def producto_ofertado_imagen_path(instance, filename):
+    """
+    Define la ruta de almacenamiento para las imágenes de productos ofertados
+    """
+    # Obtiene la extensión del archivo original
+    ext = filename.split('.')[-1]
+    # Crea un nombre único usando UUID
+    filename = f"{uuid.uuid4()}.{ext}"
+    
+    # Para evitar errores, verificamos si la instancia ya tiene id de producto
+    # Si no lo tiene (por ejemplo, en una creación), usamos un directorio temporal
+    if hasattr(instance, 'producto_ofertado') and instance.producto_ofertado and instance.producto_ofertado.id:
+        producto_id = str(instance.producto_ofertado.id)
+    else:
+        producto_id = 'temp'
+        
+    # Devuelve la ruta completa
+    return os.path.join('productos_ofertados', producto_id, filename)
 
 
 class Product(TimeStampedModel):
@@ -148,6 +170,61 @@ class ProductoOfertado(TimeStampedModel):
         if self.cudim:
             self.cudim = self.cudim.upper()
         super().save(*args, **kwargs)
+        
+    @property
+    def imagenes_referencia(self):
+        """Devuelve todas las imágenes relacionadas con este producto"""
+        return self.imagenes.all() if hasattr(self, 'imagenes') else []
+
+
+class ImagenReferenciaProductoOfertado(TimeStampedModel):
+    """Model for storing reference images for offered products"""
+    producto_ofertado = models.ForeignKey(
+        ProductoOfertado,
+        on_delete=models.CASCADE,
+        related_name='imagenes',
+        verbose_name=_('Producto Ofertado')
+    )
+    imagen = models.ImageField(
+        upload_to=producto_ofertado_imagen_path,
+        verbose_name=_('Imagen'),
+        help_text=_('Imagen de referencia para el producto')
+    )
+    descripcion = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_('Descripción')
+    )
+    orden = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_('Orden'),
+        help_text=_('Orden de visualización de la imagen')
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name=_('Es imagen principal'),
+        help_text=_('Marca esta imagen como la principal para el producto')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='imagenes_referencia_created',
+        verbose_name=_('Created by')
+    )
+
+    class Meta:
+        verbose_name = _('Imagen de Referencia')
+        verbose_name_plural = _('Imágenes de Referencia')
+        ordering = ['orden', 'created_at']
+        
+    def __str__(self):
+        return f"Imagen {self.id} - {self.producto_ofertado.nombre}"
+        
+    @property
+    def url(self):
+        """Devuelve la URL de la imagen"""
+        return self.imagen.url if self.imagen else None
 
     
 

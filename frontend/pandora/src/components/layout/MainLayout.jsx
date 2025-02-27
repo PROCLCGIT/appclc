@@ -13,6 +13,8 @@ import {
   LogOut,
   Activity,
   SearchCode,
+  Microscope,
+  ShoppingBag,
   Workflow
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,12 @@ const navigation = [
     icon: Home 
   },
   { 
+    name: 'Fast Testing', 
+    path: 'test1', 
+    icon: Microscope 
+  },
+
+  { 
     name: 'Testing',
     icon: SearchCode,
     children: [
@@ -52,7 +60,10 @@ const navigation = [
       { name: 'Info Empresas 2', path: 'empresainfo2' },
       { name: 'Info Empresas 3', path: 'empresainfo3' },
       { name: 'Productos Ofertados', path: 'productosofertados' },
-      { name: 'Productos Disponibles', path: 'productosdisponibles' }
+      { name: 'Productos Disponibles', path: 'productosdisponibles' },
+      { name: 'Grok', path: 'grok' },
+      { name: 'Claude', path: 'claude' },
+      { name: 'GPT', path: 'gpt' },
     ]
   },
   { 
@@ -85,6 +96,15 @@ const navigation = [
       { name: 'Proformas', path: 'error' },
       { name: 'Catalogos', path: 'error' },
       { name: 'Catalogos', path: 'error' }
+    ]
+  },
+
+  { 
+    name: 'Productos',
+    icon: ShoppingBag,
+    children: [
+      { name: 'Productos Ofertados', path: '/productosofertados' },
+      { name: 'Productos Disponibles', path: '/productosdisponibles' },
     ]
   },
   { 
@@ -127,7 +147,8 @@ const navigation = [
       },
       { name: 'Importar / Exportar',
         children: [
-          { name: 'Importar Ref MSP', path: '/msprefimport' }
+          { name: 'Importar Ref MSP', path: '/msprefimport' },
+          { name: 'Importar Productos Ofertados', path: '/ProductosOfertadosImport' },
         ]
       }
     ]

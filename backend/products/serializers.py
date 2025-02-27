@@ -4,7 +4,7 @@ from .models import (
     Product, ProductoOfertado, ProductoDisponible,
     PriceList, ProductPrice, StockMovement,
     PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument
+    ProductDocument, ImagenReferenciaProductoOfertado
 )
 from pandora.serializers import (
     CategoriasSerializer,
@@ -45,6 +45,36 @@ class ProductSerializer(serializers.ModelSerializer):
         return data
 
 # --------------------------------------------------------------------------------
+# IMAGEN REFERENCIA PRODUCTO OFERTADO
+# --------------------------------------------------------------------------------
+class ImagenReferenciaProductoOfertadoSerializer(serializers.ModelSerializer):
+    """Serializer para las imágenes de referencia de productos ofertados"""
+    url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ImagenReferenciaProductoOfertado
+        fields = ['id', 'imagen', 'descripcion', 'orden', 'is_primary', 'url']
+
+    def get_url(self, obj):
+        if obj.imagen:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.imagen.url)
+            return obj.imagen.url
+        return None
+        
+    def to_representation(self, instance):
+        """Personaliza la representación para que sea compatible con el frontend"""
+        rep = super().to_representation(instance)
+        return {
+            'id': rep['id'],
+            'url': rep['url'],
+            'descripcion': rep['descripcion'],
+            'orden': rep['orden'],
+            'is_primary': rep['is_primary']
+        }
+
+# --------------------------------------------------------------------------------
 # PRODUCTO OFERTADO
 # --------------------------------------------------------------------------------
 class ProductoOfertadoSerializer(serializers.ModelSerializer):
@@ -52,6 +82,16 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
     categoria_detail = CategoriasSerializer(source='id_categoria', read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
+    imagenes_referencia = ImagenReferenciaProductoOfertadoSerializer(many=True, read_only=True)
+    
+    # Usamos un ListField para aceptar múltiples archivos
+    # Importante: En el frontend, todos los archivos deben tener la misma clave en el FormData
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(max_length=1000000, allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
 
     class Meta:
         model = ProductoOfertado
@@ -64,6 +104,48 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
             if ProductoOfertado.objects.filter(code=value.upper()).exists():
                 raise serializers.ValidationError("Este código ya existe.")
         return value.upper()
+        
+    def create(self, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        
+        # Crear el producto ofertado primero
+        producto = super().create(validated_data)
+        
+        try:
+            # Luego crear las imágenes asociadas
+            for i, image in enumerate(uploaded_images):
+                ImagenReferenciaProductoOfertado.objects.create(
+                    producto_ofertado=producto,
+                    imagen=image,
+                    orden=i,
+                    is_primary=(i == 0)  # La primera imagen es la principal
+                )
+        except Exception as e:
+            # Si hay un error al guardar las imágenes, lo registramos pero continuamos
+            print(f"Error al guardar imágenes: {str(e)}")
+            
+        return producto
+        
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        
+        # Actualizar primero el producto ofertado
+        instance = super().update(instance, validated_data)
+        
+        try:
+            # Luego agregar nuevas imágenes (si hay)
+            last_order = instance.imagenes.aggregate(models.Max('orden'))['orden__max'] or 0
+            for i, image in enumerate(uploaded_images):
+                ImagenReferenciaProductoOfertado.objects.create(
+                    producto_ofertado=instance,
+                    imagen=image,
+                    orden=last_order + i + 1
+                )
+        except Exception as e:
+            # Si hay un error al guardar las imágenes, lo registramos pero continuamos
+            print(f"Error al actualizar imágenes: {str(e)}")
+            
+        return instance
 
 # --------------------------------------------------------------------------------
 # PRODUCTO DISPONIBLE

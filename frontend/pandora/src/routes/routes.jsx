@@ -13,6 +13,9 @@ const PriceCharts = lazy(() => import('@/pages/products/PriceCharts'));
 // Importaciones de productos
 const ProductosOfertadosPage = lazy(() => import('@/pages/products/ProductosOfertadosPage'));
 const ProductosDisponiblesPage = lazy(() => import('@/pages/products/ProductosDisponiblesPage'));
+const ProductosOfertadosPage2 = lazy(() => import('@/pages/products/claude'));
+const ProductosOfertadosPage3 = lazy(() => import('@/pages/products/gpt'));
+const ProductosOfertadosPage4 = lazy(() => import('@/pages/products/grok'));
 
 
 
@@ -53,10 +56,14 @@ const CostosPandoraPage = lazy(() => import('@/pages/madvance/CostosPandoraPage'
 const VendedoresPage = lazy(() => import('@/pages/madvance/VendedoresPage'));
 const PreciosSiePage = lazy(() => import('@/pages/madvance/PreciosSiePage'));
 const MsprefPage = lazy(() => import('@/pages/madvance/MsprefPage'));
+
+// Modulo de importaciones
 const MsprefImportPage = lazy(() => import('@/pages/import/MsprefImportPage'));
+const ProductosOfortadosImportPage = lazy(() => import('@/pages/import/ProductosOfertadosImportPage'));
 
 //Varias paginas de prueba
 const ProductPortfolioPage = lazy(() => import('@/pages/Varias/ProductPortfolioPage'));
+const testpage1 = lazy(() => import('@/pages/test/testpage1'));
 
 
 
@@ -134,8 +141,13 @@ export const router = createBrowserRouter([
       { path: 'preciossie', element: <PageWrapper component={PreciosSiePage} /> },
       { path: 'mspref', element: <PageWrapper component={MsprefPage} /> },
 
+      // Módulo Importaciones Excel
       { path: 'msprefimport', element: <PageWrapper component={MsprefImportPage} /> },
-      { path: 'error', element: <ConstructionPage /> },
+      { path: 'productosofertadosimport', element: <PageWrapper component={ProductosOfortadosImportPage} /> },
+
+
+      //Pruebas rapidas
+      { path: 'test1', element: <PageWrapper component={testpage1} /> },
 
       //Varias paginas de prueba
       { path: 'productportfolio', element: <PageWrapper component={ProductPortfolioPage} /> },
@@ -149,6 +161,10 @@ export const router = createBrowserRouter([
       { path: 'priceManagement2', element: <PageWrapper component={PriceManagement2} /> },
       { path: 'priceCharts', element: <PageWrapper component={PriceCharts} /> },
       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
+      { path: 'grok', element: <PageWrapper component={ProductosOfertadosPage4} /> },
+      { path: 'gpt', element: <PageWrapper component={ProductosOfertadosPage3} /> },
+      { path: 'claude', element: <PageWrapper component={ProductosOfertadosPage2} /> },
+
 
        // Módulo Proformas
        { path: 'bulkuploadproducts', element: <PageWrapper component={BulkUploadProducts} /> },

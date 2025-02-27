@@ -1,12 +1,11 @@
 // src/pages/productos/ProductosOfertadosPage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   categoriasService,
   productosOfertadosService
 } from '@/services/api';
-import { Image, Upload, X } from 'lucide-react';
 
-const ProductosOfertadosPage = () => {
+const testpage1 = () => {
   const [data, setData] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [error, setError] = useState(null);
@@ -22,10 +21,8 @@ const ProductosOfertadosPage = () => {
     especialidad: '',
     referencias: '',
     is_active: true,
-    id_categoria: '',
-    imagenes_referencia: []
+    id_categoria: ''
   });
-  const fileInputRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('listado');
@@ -36,17 +33,7 @@ const ProductosOfertadosPage = () => {
     try {
       // Carga de productos ofertados
       const response = await productosOfertadosService.getAll();
-      
-      // Procesamos los datos para asegurarnos que las imágenes estén correctamente formateadas
-      const productsWithImages = (response.results || []).map(product => {
-        // Aseguramos que imagenes_referencia siempre sea un array, incluso si viene null o undefined
-        return {
-          ...product,
-          imagenes_referencia: Array.isArray(product.imagenes_referencia) ? product.imagenes_referencia : []
-        };
-      });
-      
-      setData(productsWithImages);
+      setData(response.results || []);
       
       // Carga las categorías para el select
       const categoriasResponse = await categoriasService.getAll();
@@ -75,75 +62,29 @@ const ProductosOfertadosPage = () => {
       especialidad: '',
       referencias: '',
       is_active: true,
-      id_categoria: '',
-      imagenes_referencia: []
+      id_categoria: ''
     });
     setActiveTab('formulario');
   };
 
-  const handleEdit = async (item) => {
-    try {
-      // Cargamos los detalles completos del producto incluyendo imágenes
-      setIsLoading(true);
-      const detailedItem = await productosOfertadosService.getById(item.id);
-      
-      // Aseguramos que imagenes_referencia siempre sea un array
-      const imagenes = Array.isArray(detailedItem.imagenes_referencia) 
-        ? detailedItem.imagenes_referencia 
-        : [];
-      
-      // Actualizamos el item seleccionado con datos completos
-      const completeItem = {
-        ...detailedItem,
-        imagenes_referencia: imagenes
-      };
-      
-      setSelectedItem(completeItem);
-      setFormData({
-        code: completeItem.code || '',
-        cudim: completeItem.cudim || '',
-        nombre: completeItem.nombre || '',
-        descripcion: completeItem.descripcion || '',
-        especialidad: completeItem.especialidad || '',
-        referencias: completeItem.referencias || '',
-        is_active: completeItem.is_active || true,
-        id_categoria: completeItem.id_categoria || '',
-        imagenes_referencia: completeItem.imagenes_referencia || []
-      });
-      setActiveTab('formulario');
-    } catch (error) {
-      console.error("Error al cargar detalles del producto:", error);
-      setError("No se pudieron cargar los detalles completos del producto");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleEdit = (item) => {
+    setSelectedItem(item);
+    setFormData({
+      code: item.code || '',
+      cudim: item.cudim || '',
+      nombre: item.nombre || '',
+      descripcion: item.descripcion || '',
+      especialidad: item.especialidad || '',
+      referencias: item.referencias || '',
+      is_active: item.is_active || true,
+      id_categoria: item.id_categoria || ''
+    });
+    setActiveTab('formulario');
   };
 
-  const handleView = async (item) => {
-    try {
-      // Cargamos los detalles completos del producto incluyendo imágenes
-      setIsLoading(true);
-      const detailedItem = await productosOfertadosService.getById(item.id);
-      
-      // Aseguramos que imagenes_referencia siempre sea un array
-      const imagenes = Array.isArray(detailedItem.imagenes_referencia) 
-        ? detailedItem.imagenes_referencia 
-        : [];
-      
-      // Actualizamos el item seleccionado con datos completos
-      const completeItem = {
-        ...detailedItem,
-        imagenes_referencia: imagenes
-      };
-      
-      setSelectedItem(completeItem);
-      setActiveTab('visualizar');
-    } catch (error) {
-      console.error("Error al cargar detalles del producto:", error);
-      setError("No se pudieron cargar los detalles completos del producto");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleView = (item) => {
+    setSelectedItem(item);
+    setActiveTab('visualizar');
   };
 
   const handleDelete = async (item) => {
@@ -160,79 +101,16 @@ const ProductosOfertadosPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError(null); // Limpiar errores anteriores
-    
     try {
-      // Validar campos requeridos
-      if (!formData.code.trim()) {
-        throw new Error('El código es obligatorio');
-      }
-      if (!formData.nombre.trim()) {
-        throw new Error('El nombre es obligatorio');
-      }
-      if (!formData.id_categoria) {
-        throw new Error('Debe seleccionar una categoría');
-      }
-      
-      // Guardamos las imágenes para después
-      const imageFiles = formData.imagenes_referencia.filter(img => img instanceof File);
-      
-      // Creamos un nuevo objeto sin las imágenes
-      const productData = {
-        code: formData.code,
-        cudim: formData.cudim,
-        nombre: formData.nombre,
-        descripcion: formData.descripcion,
-        especialidad: formData.especialidad,
-        referencias: formData.referencias,
-        is_active: formData.is_active,
-        id_categoria: formData.id_categoria
-      };
-      
-      console.log("Enviando datos del producto:", productData);
-      
-      // 1. Primero guardamos el producto
-      let savedProduct;
       if (selectedItem) {
-        savedProduct = await productosOfertadosService.update(selectedItem.id, productData);
-        console.log("Producto actualizado:", savedProduct);
+        await productosOfertadosService.update(selectedItem.id, formData);
       } else {
-        savedProduct = await productosOfertadosService.create(productData);
-        console.log("Producto creado:", savedProduct);
+        await productosOfertadosService.create(formData);
       }
-      
-      // 2. Si hay imágenes nuevas, las subimos mediante otro endpoint
-      if (imageFiles.length > 0) {
-        try {
-          console.log(`Subiendo ${imageFiles.length} imágenes...`);
-          const productId = savedProduct.id || selectedItem.id;
-          
-          // Ya no necesitamos crear el FormData aquí, lo hacemos en el servicio
-          
-          // Llamamos al endpoint específico para subir imágenes
-          // Pasamos directamente el array de archivos al método uploadImages
-          const imageResponse = await productosOfertadosService.uploadImages(productId, imageFiles);
-          console.log("Imágenes subidas:", imageResponse);
-        } catch (imageError) {
-          console.error("Error al subir imágenes:", imageError);
-          setError("El producto se guardó, pero hubo un problema al subir las imágenes.");
-          // No interrumpimos el flujo principal
-        }
-      }
-      
-      // Solo cambiamos a la vista de listado si no hubo errores
       setActiveTab('listado');
       await loadData();
     } catch (err) {
-      console.error("Error en submit:", err);
       setError(err.message || 'Error al guardar el producto');
-      // Agregamos un scroll al área del error
-      setTimeout(() => {
-        const errorElement = document.querySelector('.error-message');
-        if (errorElement) {
-          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
     } finally {
       setIsSubmitting(false);
     }
@@ -244,23 +122,6 @@ const ProductosOfertadosPage = () => {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
-  };
-  
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        imagenes_referencia: [...prev.imagenes_referencia, ...files]
-      }));
-    }
-  };
-  
-  const handleRemoveImage = (indexToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      imagenes_referencia: prev.imagenes_referencia.filter((_, index) => index !== indexToRemove)
-    }));
   };
 
   const handleSwitchChange = (checked) => {
@@ -431,12 +292,7 @@ const ProductosOfertadosPage = () => {
   );
 
   const renderFormularioTab = () => (
-    <form id="productoOfertadoForm" onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md error-message">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <h3 className="text-lg font-medium mb-4">Información Básica</h3>
@@ -563,67 +419,6 @@ const ProductosOfertadosPage = () => {
             onChange={handleInputChange}
           ></textarea>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Imágenes de Referencia
-          </label>
-          <div className="mt-1 flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 flex items-center gap-2"
-            >
-              <Upload size={16} />
-              <span>Subir imágenes</span>
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
-            />
-          </div>
-          
-          {formData.imagenes_referencia.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {formData.imagenes_referencia.map((file, index) => (
-                <div key={index} className="relative group">
-                  <div className="w-full h-24 border rounded-md overflow-hidden bg-gray-50 flex items-center justify-center">
-                    {file instanceof File ? (
-                      <img 
-                        src={URL.createObjectURL(file)}
-                        alt={`Imagen ${index + 1}`}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : file.url ? (
-                      <img 
-                        src={file.url}
-                        alt={`Imagen ${index + 1}`}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <div className="text-gray-500 flex flex-col items-center">
-                        <Image size={24} />
-                        <span className="text-xs mt-1">Vista previa no disponible</span>
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    type="button"
-                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 
-                              opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveImage(index)}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -727,46 +522,6 @@ const ProductosOfertadosPage = () => {
               <h4 className="text-sm font-medium text-gray-500">Referencias</h4>
               <p className="text-base mt-1">{selectedItem.referencias || 'Sin referencias'}</p>
             </div>
-            
-            {selectedItem.imagenes_referencia && selectedItem.imagenes_referencia.length > 0 ? (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Imágenes de Referencia ({selectedItem.imagenes_referencia.length})</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {selectedItem.imagenes_referencia.map((imagen, index) => (
-                    <div key={imagen.id || index} className="border rounded-md overflow-hidden bg-white shadow-sm">
-                      <div className="relative">
-                        {imagen.is_primary && (
-                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded-full z-10">
-                            Principal
-                          </div>
-                        )}
-                        <a href={imagen.url} target="_blank" rel="noopener noreferrer" className="block">
-                          <img 
-                            src={imagen.url} 
-                            alt={`Imagen ${index + 1}`}
-                            className="w-full h-32 object-contain p-2"
-                            onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/150?text=Imagen+no+disponible';
-                              e.target.alt = 'Imagen no disponible';
-                            }}
-                          />
-                        </a>
-                      </div>
-                      {imagen.descripcion && (
-                        <div className="px-2 py-1 bg-gray-50 text-xs text-gray-600 truncate">
-                          {imagen.descripcion}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Imágenes de Referencia</h4>
-                <p className="text-sm text-gray-500 italic">Este producto no tiene imágenes asociadas</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -774,15 +529,7 @@ const ProductosOfertadosPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md relative">
-      {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-t-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="mt-2 text-sm text-gray-700">Cargando...</span>
-          </div>
-        </div>
-      )}
+    <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md">
       <div className="p-6 border-b">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Productos Ofertados</h2>
@@ -795,10 +542,8 @@ const ProductosOfertadosPage = () => {
             </button>
           ) : activeTab === 'formulario' ? (
             <button
-              type="button"
-              form="productoOfertadoForm"
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-              onClick={() => document.getElementById('productoOfertadoForm').dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))}
+              onClick={handleSubmit}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
@@ -845,4 +590,4 @@ const ProductosOfertadosPage = () => {
   );
 };
 
-export default ProductosOfertadosPage;
+export default testpage1;
