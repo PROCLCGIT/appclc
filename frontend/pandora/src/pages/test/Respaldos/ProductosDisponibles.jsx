@@ -1,5 +1,5 @@
 // src/pages/products/ProductosDisponiblesPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   categoriasService,
   marcaService,
@@ -21,6 +21,15 @@ const ProductosDisponiblesPage = () => {
 
   // Elemento seleccionado para ver en detalle
   const [detailItem, setDetailItem] = useState(null);
+  
+  // Referencias para archivos
+  const imageInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+
+  // Estado para archivos seleccionados
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [documentMetadata, setDocumentMetadata] = useState([]);
 
   // Datos del formulario
   const [formData, setFormData] = useState({
@@ -53,7 +62,9 @@ const ProductosDisponiblesPage = () => {
   // Pestaña activa: listado | formulario | estadisticas | detalles
   const [activeTab, setActiveTab] = useState('listado');
 
+  // ─────────────────────────────────────────────────────────────────────────────
   // Cargar datos principales
+  // ─────────────────────────────────────────────────────────────────────────────
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -83,7 +94,54 @@ const ProductosDisponiblesPage = () => {
     loadData();
   }, []);
 
-  // Agregar producto (resetea el formulario y va a la pestaña formulario)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Genera un código único para un nuevo producto
+  //   - Usando el campo "codigo" de la tabla categoria como prefijo
+  // ─────────────────────────────────────────────────────────────────────────────
+  const generateProductCode = async (categoryId) => {
+    if (!categoryId) return '';
+    
+    try {
+      // Primero, obtener la categoría para conseguir su "codigo" (p.ej: "INS")
+      const categoria = categorias.find(cat => cat.id === categoryId);
+      if (!categoria || !categoria.codigo) return '';
+      
+      // Prefijo = la columna "codigo" de la categoría
+      const prefix = categoria.codigo.toUpperCase();
+      
+      // Obtener todos los productos para determinar el siguiente número secuencial
+      const productos = await productosDisponiblesService.getAll();
+      const allCodes = productos.results.map(product => product.code || '');
+      
+      // Buscar el patrón de código para esta categoría: XXX-A###
+      // Ej: "INS-A001"
+      const pattern = new RegExp(`${prefix}-A(\\d{3})`);
+      let maxNumber = 0;
+      
+      allCodes.forEach(code => {
+        const match = code.match(pattern);
+        if (match && match[1]) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      });
+      
+      // Incrementar el número y formatear con ceros a la izquierda
+      const nextNumber = maxNumber + 1;
+      const formattedNumber = nextNumber.toString().padStart(3, '0');
+      
+      return `${prefix}-A${formattedNumber}`;
+    } catch (error) {
+      console.error("Error generando código de producto:", error);
+      return '';
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Acciones principales (Agregar, Editar, Ver Detalle, Eliminar)
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleAdd = () => {
     setSelectedItem(null);
     setFormData({
@@ -107,10 +165,12 @@ const ProductosDisponiblesPage = () => {
       precio_venta_privado: '',
       is_active: true
     });
+    setSelectedImages([]);
+    setSelectedDocuments([]);
+    setDocumentMetadata([]);
     setActiveTab('formulario');
   };
 
-  // Editar producto (carga sus datos en el formulario y va a la pestaña formulario)
   const handleEdit = (item) => {
     setSelectedItem(item);
     setFormData({
@@ -134,16 +194,23 @@ const ProductosDisponiblesPage = () => {
       precio_venta_privado: item.precio_venta_privado || '',
       is_active: item.is_active !== undefined ? item.is_active : true
     });
+    setSelectedImages([]);
+    setSelectedDocuments([]);
+    setDocumentMetadata([]);
     setActiveTab('formulario');
   };
 
-  // Ver detalle de un producto
-  const handleViewDetails = (item) => {
-    setDetailItem(item);
-    setActiveTab('detalles');
+  const handleViewDetails = async (item) => {
+    try {
+      const productDetail = await productosDisponiblesService.getById(item.id);
+      setDetailItem(productDetail);
+      setActiveTab('detalles');
+    } catch (err) {
+      console.error('Error al cargar detalles del producto:', err);
+      setError('Error al cargar detalles del producto');
+    }
   };
 
-  // Eliminar producto
   const handleDelete = async (item) => {
     if (window.confirm('¿Está seguro de eliminar este producto disponible?')) {
       try {
@@ -155,10 +222,17 @@ const ProductosDisponiblesPage = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
   // Guardar (crear o actualizar)
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
     try {
+      // Validación manual de campos obligatorios
+      if (!formData.code || !formData.nombre || !formData.id_categoria || !formData.id_marca || !formData.id_producto_ofertado) {
+        setError('Los campos marcados con * son obligatorios');
+        return;
+      }
+      
       const dataToSubmit = {
         ...formData,
         // Convertir a número si hay valores
@@ -176,13 +250,60 @@ const ProductosDisponiblesPage = () => {
           : null
       };
 
-      if (selectedItem) {
-        await productosDisponiblesService.update(selectedItem.id, dataToSubmit);
+      // Si hay archivos seleccionados, preparamos un FormData
+      if (selectedImages.length > 0 || selectedDocuments.length > 0) {
+        const formDataToSend = new FormData();
+        
+        Object.keys(dataToSubmit).forEach(key => {
+          if (dataToSubmit[key] !== null && dataToSubmit[key] !== undefined) {
+            formDataToSend.append(key, dataToSubmit[key]);
+          }
+        });
+        
+        // Agregar imágenes
+        selectedImages.forEach(image => {
+          formDataToSend.append('uploaded_images', image);
+        });
+        
+        // Agregar documentos y sus metadatos
+        selectedDocuments.forEach((doc, index) => {
+          formDataToSend.append('uploaded_documents', doc);
+          
+          const title = documentMetadata[index]?.title || `Documento ${index + 1}`;
+          const type = documentMetadata[index]?.type || 'otros';
+          const description = documentMetadata[index]?.description || `Documento ${doc.name}`;
+          
+          formDataToSend.append('document_titles', title);
+          formDataToSend.append('document_types', type);
+          formDataToSend.append('document_descriptions', description);
+        });
+        
+        try {
+          if (selectedItem) {
+            await productosDisponiblesService.updateWithFormData(selectedItem.id, formDataToSend);
+          } else {
+            await productosDisponiblesService.createWithFormData(formDataToSend);
+          }
+        } catch (err) {
+          console.error('Error al enviar FormData:', err);
+          setError(err.message || 'Error al guardar el producto');
+          return;
+        }
       } else {
-        await productosDisponiblesService.create(dataToSubmit);
+        // Si no hay archivos, usamos el método normal
+        try {
+          if (selectedItem) {
+            await productosDisponiblesService.update(selectedItem.id, dataToSubmit);
+          } else {
+            await productosDisponiblesService.create(dataToSubmit);
+          }
+        } catch (err) {
+          console.error('Error al guardar datos:', err);
+          setError(err.message || 'Error al guardar el producto');
+          return;
+        }
       }
 
-      // Vuelve a la pestaña de listado
       setActiveTab('listado');
       await loadData();
     } catch (err) {
@@ -190,13 +311,82 @@ const ProductosDisponiblesPage = () => {
     }
   };
 
-  // Manejo de inputs
-  const handleInputChange = (e) => {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Manejo de inputs (incluye autogenerar código si cambia la categoría)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleInputChange = async (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
+    
+    // Si se cambia la categoría y estamos creando un nuevo producto (no editando)
+    if (name === 'id_categoria' && !selectedItem && value) {
+      // Generar nuevo código basado en la categoría seleccionada
+      const newCode = await generateProductCode(value);
+      
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value,
+        code: newCode // Actualiza el código automáticamente
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value
+      });
+    }
+  };
+  
+  // Manejo de selección de imágenes
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedImages([...selectedImages, ...files]);
+  };
+  
+  // Manejo de selección de documentos
+  const handleDocumentChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    setSelectedDocuments([...selectedDocuments, ...files]);
+    
+    const newMetadata = files.map(file => ({
+      title: file.name.split('.')[0],
+      type: 'otros',
+      description: `Documento: ${file.name}`
+    }));
+    
+    setDocumentMetadata([...documentMetadata, ...newMetadata]);
+  };
+  
+  // Actualizar metadatos de documentos
+  const handleDocumentMetadataChange = (index, field, value) => {
+    if (field === 'description' && value.trim() === '') {
+      value = `Documento #${index + 1}`;
+    }
+    
+    const updatedMetadata = [...documentMetadata];
+    updatedMetadata[index] = {
+      ...updatedMetadata[index],
+      [field]: value
+    };
+    setDocumentMetadata(updatedMetadata);
+  };
+  
+  // Eliminar una imagen seleccionada (antes de guardar)
+  const handleRemoveSelectedImage = (index) => {
+    const updatedImages = [...selectedImages];
+    updatedImages.splice(index, 1);
+    setSelectedImages(updatedImages);
+  };
+  
+  // Eliminar un documento seleccionado (antes de guardar)
+  const handleRemoveSelectedDocument = (index) => {
+    const updatedDocuments = [...selectedDocuments];
+    const updatedMetadata = [...documentMetadata];
+    
+    updatedDocuments.splice(index, 1);
+    updatedMetadata.splice(index, 1);
+    
+    setSelectedDocuments(updatedDocuments);
+    setDocumentMetadata(updatedMetadata);
   };
 
   // Slider manual
@@ -216,19 +406,33 @@ const ProductosDisponiblesPage = () => {
   };
 
   // Cuando se selecciona producto ofertado, autocompleta nombre y categoría
-  const handleProductoOfertadoChange = (e) => {
+  const handleProductoOfertadoChange = async (e) => {
     const productoOfertadoId = e.target.value;
     const productoOfertado = productosOfertados.find(
       (p) => p.id.toString() === productoOfertadoId
     );
 
     if (productoOfertado) {
-      setFormData({
-        ...formData,
-        id_producto_ofertado: productoOfertadoId,
-        nombre: productoOfertado.nombre,
-        id_categoria: productoOfertado.id_categoria
-      });
+      if (!selectedItem) {
+        // Generar código automáticamente basado en la categoría
+        const newCode = await generateProductCode(productoOfertado.id_categoria);
+        
+        setFormData({
+          ...formData,
+          id_producto_ofertado: productoOfertadoId,
+          nombre: productoOfertado.nombre,
+          id_categoria: productoOfertado.id_categoria,
+          code: newCode 
+        });
+      } else {
+        // Editando, no regeneramos code
+        setFormData({
+          ...formData,
+          id_producto_ofertado: productoOfertadoId,
+          nombre: productoOfertado.nombre,
+          id_categoria: productoOfertado.id_categoria
+        });
+      }
     } else {
       setFormData({
         ...formData,
@@ -237,13 +441,14 @@ const ProductosDisponiblesPage = () => {
     }
   };
 
-  // Búsqueda
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Búsqueda y paginación
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
-  // Filtrado y paginación manual
   const filteredData = data.filter((item) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -273,7 +478,9 @@ const ProductosDisponiblesPage = () => {
     return 'text-red-500';
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
   // Render de la pestaña LISTADO
+  // ─────────────────────────────────────────────────────────────────────────────
   const renderListadoTab = () => (
     <div className="space-y-4">
       {/* Buscador y botón Agregar */}
@@ -313,21 +520,19 @@ const ProductosDisponiblesPage = () => {
                 <th className="px-4 py-2 text-left">Marca</th>
                 <th className="px-4 py-2 text-left">Modelo</th>
                 <th className="px-4 py-2 text-left">Precio SIE Ref.</th>
-                <th className="px-4 py-2 text-left">Calificaciones</th>
-                <th className="px-4 py-2 text-left">Estado</th>
                 <th className="px-4 py-2 text-left">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-2 text-center">
+                  <td colSpan="6" className="px-4 py-2 text-center">
                     Cargando productos...
                   </td>
                 </tr>
               ) : visibleData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-2 text-center">
+                  <td colSpan="6" className="px-4 py-2 text-center">
                     No se encontraron productos
                   </td>
                 </tr>
@@ -350,57 +555,34 @@ const ProductosDisponiblesPage = () => {
                         : 'N/A'}
                     </td>
                     <td className="px-4 py-2">
-                      <div className="flex space-x-1">
-                        <span
-                          className={getRatingColor(item.tz_oferta)}
-                          title="Oferta"
-                        >
-                          O:{item.tz_oferta}
-                        </span>
-                        <span
-                          className={getRatingColor(item.tz_demanda)}
-                          title="Demanda"
-                        >
-                          D:{item.tz_demanda}
-                        </span>
-                        <span
-                          className={getRatingColor(item.tz_calidad)}
-                          title="Calidad"
-                        >
-                          C:{item.tz_calidad}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          item.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {item.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-4">
                         <button
+                          title="Ver Detalle"
                           className="text-blue-600 hover:text-blue-800"
                           onClick={() => handleViewDetails(item)}
                         >
-                          Ver Detalle
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                         </button>
                         <button
+                          title="Editar"
                           className="text-blue-600 hover:text-blue-800"
                           onClick={() => handleEdit(item)}
                         >
-                          Editar
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                         <button
+                          title="Eliminar"
                           className="text-red-600 hover:text-red-800"
                           onClick={() => handleDelete(item)}
                         >
-                          Eliminar
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -445,7 +627,9 @@ const ProductosDisponiblesPage = () => {
     </div>
   );
 
-  // Slider manual
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Slider manual (para calificaciones en el formulario)
+  // ─────────────────────────────────────────────────────────────────────────────
   const RatingSlider = ({ name, value, label }) => {
     const handleManualChange = (e) => {
       const newVal = Number(e.target.value);
@@ -475,9 +659,11 @@ const ProductosDisponiblesPage = () => {
     );
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
   // Render de la pestaña FORMULARIO
+  // ─────────────────────────────────────────────────────────────────────────────
   const renderFormularioTab = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Información Básica */}
         <div>
@@ -509,7 +695,12 @@ const ProductosDisponiblesPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Código *
+                Código *{' '}
+                {!selectedItem && (
+                  <span className="text-xs text-blue-600">
+                    (Generado automáticamente al seleccionar categoría)
+                  </span>
+                )}
               </label>
               <input
                 type="text"
@@ -517,6 +708,7 @@ const ProductosDisponiblesPage = () => {
                 className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 value={formData.code}
                 onChange={handleInputChange}
+                readOnly={!selectedItem} // Solo editable si estamos actualizando un producto
                 required
               />
             </div>
@@ -729,6 +921,154 @@ const ProductosDisponiblesPage = () => {
         </div>
       </div>
 
+      {/* Sección de imágenes */}
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">Imágenes</h3>
+        <div className="space-y-4">
+          {selectedImages.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {selectedImages.map((image, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={URL.createObjectURL(image)} 
+                    alt={`Vista previa ${index + 1}`}
+                    className="w-full h-32 object-cover rounded border border-gray-300" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSelectedImage(index)}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div>
+            <input
+              type="file"
+              id="image-upload"
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+              ref={imageInputRef}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current.click()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              + Agregar Imágenes
+            </button>
+            <span className="ml-2 text-sm text-gray-500">
+              Puede seleccionar múltiples imágenes
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sección de documentos */}
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">Documentos (PDF, Fichas técnicas, etc.)</h3>
+        <div className="space-y-4">
+          {selectedDocuments.length > 0 && (
+            <div className="space-y-4">
+              {selectedDocuments.map((doc, index) => (
+                <div key={index} className="border p-4 rounded-md">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center">
+                      <span className="text-xl mr-2">📄</span>
+                      <div>
+                        <p className="font-medium">{doc.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {(doc.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSelectedDocument(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                  
+                  {/* Metadatos */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Título
+                      </label>
+                      <input
+                        type="text"
+                        value={documentMetadata[index]?.title || ''}
+                        onChange={(e) => handleDocumentMetadataChange(index, 'title', e.target.value)}
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipo de Documento
+                      </label>
+                      <select
+                        value={documentMetadata[index]?.type || 'otros'}
+                        onChange={(e) => handleDocumentMetadataChange(index, 'type', e.target.value)}
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="manual">Manual de Usuario</option>
+                        <option value="ficha_tecnica">Ficha Técnica</option>
+                        <option value="certificado">Certificado</option>
+                        <option value="catalogo">Catálogo</option>
+                        <option value="otros">Otros</option>
+                      </select>
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Descripción
+                      </label>
+                      <textarea
+                        value={documentMetadata[index]?.description || ''}
+                        onChange={(e) => handleDocumentMetadataChange(index, 'description', e.target.value)}
+                        className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        rows="2"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div>
+            <input
+              type="file"
+              id="document-upload"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              onChange={handleDocumentChange}
+              ref={documentInputRef}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => documentInputRef.current.click()}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              + Agregar Documentos
+            </button>
+            <span className="ml-2 text-sm text-gray-500">
+              PDF, Word, Excel, etc.
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Botones de acción */}
       <div className="flex justify-end space-x-2 pt-4 border-t mt-6">
         <button
@@ -739,16 +1079,19 @@ const ProductosDisponiblesPage = () => {
           Cancelar
         </button>
         <button
-          type="submit"
+          type="button"
+          onClick={handleSubmit}
           className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 shadow-sm text-sm font-medium"
         >
           {selectedItem ? 'Actualizar Producto' : 'Crear Producto'}
         </button>
       </div>
-    </form>
+    </div>
   );
 
+  // ─────────────────────────────────────────────────────────────────────────────
   // Render de la pestaña DETALLES
+  // ─────────────────────────────────────────────────────────────────────────────
   const renderDetallesTab = () => {
     if (!detailItem) {
       return (
@@ -758,7 +1101,6 @@ const ProductosDisponiblesPage = () => {
       );
     }
 
-    // Obtenemos la marca, la categoría y el producto ofertado si es necesario
     const marca = marcas.find((m) => m.id === detailItem.id_marca);
     const categoria = categorias.find((c) => c.id === detailItem.id_categoria);
     const ofertado = productosOfertados.find(
@@ -867,8 +1209,64 @@ const ProductosDisponiblesPage = () => {
             </span>
           </p>
         </div>
+        
+        {detailItem.imagenes && detailItem.imagenes.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-lg font-medium">Imágenes</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+              {detailItem.imagenes.map((img, index) => (
+                <div key={index} className="border rounded-md overflow-hidden">
+                  <a href={img.url} target="_blank" rel="noopener noreferrer">
+                    <img 
+                      src={img.url} 
+                      alt={img.descripcion || `Imagen ${index + 1}`}
+                      className="w-full h-32 object-cover" 
+                    />
+                  </a>
+                  {img.descripcion && (
+                    <p className="p-2 text-sm text-center truncate">{img.descripcion}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {detailItem.documentos && detailItem.documentos.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-lg font-medium">Documentos</h4>
+            <div className="space-y-2 mt-2">
+              {detailItem.documentos.map((doc, index) => (
+                <div key={index} className="border p-3 rounded-md">
+                  <div className="flex items-start">
+                    <span className="text-xl mr-2">📄</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <p className="font-medium">{doc.titulo}</p>
+                        <a 
+                          href={doc.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          Descargar
+                        </a>
+                      </div>
+                      <p className="text-sm text-gray-600">{doc.tipo_documento_display}</p>
+                      {doc.descripcion && (
+                        <p className="text-sm mt-1">{doc.descripcion}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {doc.extension?.toUpperCase()} - {doc.tamano} MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Botón para volver al listado */}
         <div className="flex justify-end mt-4">
           <button
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
@@ -881,6 +1279,9 @@ const ProductosDisponiblesPage = () => {
     );
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Render principal
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-md">
       {/* Encabezado */}
@@ -896,10 +1297,11 @@ const ProductosDisponiblesPage = () => {
             </button>
           ) : activeTab === 'formulario' ? (
             <button
+              type="button"
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
               onClick={handleSubmit}
             >
-              Guardar Cambios
+              {selectedItem ? 'Actualizar Producto' : 'Crear Producto'}
             </button>
           ) : null}
         </div>
@@ -927,9 +1329,9 @@ const ProductosDisponiblesPage = () => {
             }`}
             onClick={() => {
               if (selectedItem) {
-                // Si hay un elemento seleccionado, permanecemos con su data
+                // Si hay un elemento seleccionado, usamos sus datos
               } else {
-                handleAdd(); // Si no, limpiamos para crear un nuevo producto
+                handleAdd(); // Si no, limpiamos para crear uno nuevo
               }
               setActiveTab('formulario');
             }}

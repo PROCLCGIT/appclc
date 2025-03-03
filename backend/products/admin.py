@@ -5,7 +5,8 @@ from .models import (
     Product, ProductoOfertado, ProductoDisponible,
     PriceList, ProductPrice, StockMovement,
     PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument, ImagenReferenciaProductoOfertado
+    ProductDocument, ImagenReferenciaProductoOfertado,
+    ImagenProductoDisponible, DocumentoProductoDisponible
 )
 
 @admin.register(Product)
@@ -94,6 +95,16 @@ class ProductoOfertadoAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
+class ImagenProductoDisponibleInline(admin.TabularInline):
+    model = ImagenProductoDisponible
+    extra = 1
+    fields = ('imagen', 'descripcion', 'orden', 'is_primary')
+    
+class DocumentoProductoDisponibleInline(admin.TabularInline):
+    model = DocumentoProductoDisponible
+    extra = 1
+    fields = ('documento', 'tipo_documento', 'titulo', 'descripcion', 'is_public')
+
 @admin.register(ProductoDisponible)
 class ProductoDisponibleAdmin(admin.ModelAdmin):
     list_display = [
@@ -103,6 +114,7 @@ class ProductoDisponibleAdmin(admin.ModelAdmin):
     list_filter = ['id_categoria', 'id_marca', 'is_active']
     search_fields = ['code', 'nombre', 'modelo', 'referencia']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    inlines = [ImagenProductoDisponibleInline, DocumentoProductoDisponibleInline]
     
     fieldsets = (
         (_('Basic Information'), {
@@ -218,6 +230,30 @@ class ImagenReferenciaProductoOfertadoAdmin(admin.ModelAdmin):
     list_display = ['id', 'producto_ofertado', 'descripcion', 'orden', 'is_primary', 'created_at']
     list_filter = ['is_primary', 'created_at']
     search_fields = ['descripcion', 'producto_ofertado__nombre', 'producto_ofertado__code']
+    readonly_fields = ['created_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+        
+@admin.register(ImagenProductoDisponible)
+class ImagenProductoDisponibleAdmin(admin.ModelAdmin):
+    list_display = ['id', 'producto_disponible', 'descripcion', 'orden', 'is_primary', 'created_at']
+    list_filter = ['is_primary', 'created_at']
+    search_fields = ['descripcion', 'producto_disponible__nombre', 'producto_disponible__code']
+    readonly_fields = ['created_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(DocumentoProductoDisponible)
+class DocumentoProductoDisponibleAdmin(admin.ModelAdmin):
+    list_display = ['id', 'producto_disponible', 'titulo', 'tipo_documento', 'is_public', 'created_at']
+    list_filter = ['tipo_documento', 'is_public', 'created_at']
+    search_fields = ['titulo', 'descripcion', 'producto_disponible__nombre', 'producto_disponible__code']
     readonly_fields = ['created_at']
 
     def save_model(self, request, obj, form, change):

@@ -1,10 +1,12 @@
 # products/serializers.py
 from rest_framework import serializers
+from django.db.models import Max
 from .models import (
     Product, ProductoOfertado, ProductoDisponible,
     PriceList, ProductPrice, StockMovement,
     PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument, ImagenReferenciaProductoOfertado
+    ProductDocument, ImagenReferenciaProductoOfertado,
+    ImagenProductoDisponible, DocumentoProductoDisponible
 )
 from pandora.serializers import (
     CategoriasSerializer,
@@ -148,6 +150,67 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
         return instance
 
 # --------------------------------------------------------------------------------
+# IMAGEN PRODUCTO DISPONIBLE
+# --------------------------------------------------------------------------------
+class ImagenProductoDisponibleSerializer(serializers.ModelSerializer):
+    """Serializer para imágenes de productos disponibles"""
+    url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ImagenProductoDisponible
+        fields = ['id', 'imagen', 'descripcion', 'orden', 'is_primary', 'url']
+        
+    def get_url(self, obj):
+        if obj.imagen:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.imagen.url)
+            return obj.imagen.url
+        return None
+        
+    def to_representation(self, instance):
+        """Personaliza la representación para que sea compatible con el frontend"""
+        rep = super().to_representation(instance)
+        return {
+            'id': rep['id'],
+            'url': rep['url'],
+            'descripcion': rep['descripcion'],
+            'orden': rep['orden'],
+            'is_primary': rep['is_primary']
+        }
+
+# --------------------------------------------------------------------------------
+# DOCUMENTO PRODUCTO DISPONIBLE
+# --------------------------------------------------------------------------------
+class DocumentoProductoDisponibleSerializer(serializers.ModelSerializer):
+    """Serializer para documentos de productos disponibles"""
+    url = serializers.SerializerMethodField()
+    tipo_documento_display = serializers.CharField(source='get_tipo_documento_display', read_only=True)
+    extension = serializers.SerializerMethodField()
+    tamano = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = DocumentoProductoDisponible
+        fields = [
+            'id', 'documento', 'tipo_documento', 'tipo_documento_display', 
+            'titulo', 'descripcion', 'is_public', 'url', 'extension', 'tamano'
+        ]
+        
+    def get_url(self, obj):
+        if obj.documento:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.documento.url)
+            return obj.documento.url
+        return None
+        
+    def get_extension(self, obj):
+        return obj.extension
+        
+    def get_tamano(self, obj):
+        return obj.tamano_en_mb
+
+# --------------------------------------------------------------------------------
 # PRODUCTO DISPONIBLE
 # --------------------------------------------------------------------------------
 class ProductoDisponibleSerializer(serializers.ModelSerializer):
@@ -160,6 +223,45 @@ class ProductoDisponibleSerializer(serializers.ModelSerializer):
     )
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
+    imagenes = ImagenProductoDisponibleSerializer(source='imagenes_producto', many=True, read_only=True)
+    documentos = DocumentoProductoDisponibleSerializer(source='documentos_producto', many=True, read_only=True)
+    
+    # Campos para subir archivos
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(max_length=1000000, allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    uploaded_documents = serializers.ListField(
+        child=serializers.FileField(max_length=5000000, allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    # Metadata para documentos subidos
+    document_titles = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    document_types = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    document_descriptions = serializers.ListField(
+        child=serializers.CharField(max_length=1000, allow_blank=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
 
     class Meta:
         model = ProductoDisponible
@@ -177,7 +279,125 @@ class ProductoDisponibleSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     field: "La calificación debe estar entre 0 y 5."
                 })
+                
+        # Validar que la cantidad de títulos y tipos coincida con la cantidad de documentos
+        uploaded_documents = data.get('uploaded_documents', [])
+        document_titles = data.get('document_titles', [])
+        document_types = data.get('document_types', [])
+        
+        if len(uploaded_documents) > 0 and len(document_titles) != len(uploaded_documents):
+            raise serializers.ValidationError({
+                'document_titles': "Debe proporcionar un título para cada documento."
+            })
+            
+        if len(uploaded_documents) > 0 and len(document_types) != len(uploaded_documents):
+            raise serializers.ValidationError({
+                'document_types': "Debe proporcionar un tipo para cada documento."
+            })
+            
         return data
+        
+    def create(self, validated_data):
+        # Extraer listas de imágenes y documentos
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        uploaded_documents = validated_data.pop('uploaded_documents', [])
+        document_titles = validated_data.pop('document_titles', [])
+        document_types = validated_data.pop('document_types', [])
+        document_descriptions = validated_data.pop('document_descriptions', [])
+        
+        # Crear el producto disponible
+        instance = super().create(validated_data)
+        
+        # Procesar imágenes
+        try:
+            for i, image in enumerate(uploaded_images):
+                ImagenProductoDisponible.objects.create(
+                    producto_disponible=instance,
+                    imagen=image,
+                    orden=i,
+                    is_primary=(i == 0),  # La primera imagen es la principal
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar imágenes: {str(e)}")
+        
+        # Procesar documentos
+        try:
+            for i, doc in enumerate(uploaded_documents):
+                # Obtener metadatos del documento
+                titulo = document_titles[i] if i < len(document_titles) else f"Documento {i+1}"
+                tipo = document_types[i] if i < len(document_types) else "otros"
+                descripcion = document_descriptions[i] if i < len(document_descriptions) else ""
+                
+                # Validar que el tipo de documento sea válido
+                tipos_validos = [choice[0] for choice in DocumentoProductoDisponible.TIPO_DOCUMENTO]
+                if tipo not in tipos_validos:
+                    tipo = "otros"
+                
+                DocumentoProductoDisponible.objects.create(
+                    producto_disponible=instance,
+                    documento=doc,
+                    tipo_documento=tipo,
+                    titulo=titulo,
+                    descripcion=descripcion,
+                    is_public=True,
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar documentos: {str(e)}")
+            
+        return instance
+        
+    def update(self, instance, validated_data):
+        # Extraer listas de imágenes y documentos
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        uploaded_documents = validated_data.pop('uploaded_documents', [])
+        document_titles = validated_data.pop('document_titles', [])
+        document_types = validated_data.pop('document_types', [])
+        document_descriptions = validated_data.pop('document_descriptions', [])
+        
+        # Actualizar el producto disponible
+        instance = super().update(instance, validated_data)
+        
+        # Procesar imágenes nuevas
+        try:
+            last_order = instance.imagenes_producto.aggregate(max_orden=Max('orden'))['max_orden'] or 0
+            for i, image in enumerate(uploaded_images):
+                ImagenProductoDisponible.objects.create(
+                    producto_disponible=instance,
+                    imagen=image,
+                    orden=last_order + i + 1,
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar imágenes: {str(e)}")
+        
+        # Procesar documentos nuevos
+        try:
+            for i, doc in enumerate(uploaded_documents):
+                # Obtener metadatos del documento
+                titulo = document_titles[i] if i < len(document_titles) else f"Documento {i+1}"
+                tipo = document_types[i] if i < len(document_types) else "otros"
+                descripcion = document_descriptions[i] if i < len(document_descriptions) else ""
+                
+                # Validar que el tipo de documento sea válido
+                tipos_validos = [choice[0] for choice in DocumentoProductoDisponible.TIPO_DOCUMENTO]
+                if tipo not in tipos_validos:
+                    tipo = "otros"
+                
+                DocumentoProductoDisponible.objects.create(
+                    producto_disponible=instance,
+                    documento=doc,
+                    tipo_documento=tipo,
+                    titulo=titulo,
+                    descripcion=descripcion,
+                    is_public=True,
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar documentos: {str(e)}")
+            
+        return instance
 
 # --------------------------------------------------------------------------------
 # PRICE LIST

@@ -1,41 +1,17 @@
 // src/routes/routes.jsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
+import PropTypes from 'prop-types';
 import ErrorBoundary from '@/components/error/ErrorBoundary';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-const ProductList = lazy(() => import('@/pages/products/ProductList'));
-const ProductWizard = lazy(() => import('@/pages/products/ProductWizard'));
-const PriceManagement = lazy(() => import('@/pages/products/PriceManagement'));
-const PriceManagement2 = lazy(() => import('@/pages/products/PriceManagement2'));
-const PriceCharts = lazy(() => import('@/pages/products/PriceCharts'));
 
-
-// Importaciones de productos
-const ProductosOfertadosPage = lazy(() => import('@/pages/products/ProductosOfertadosPage'));
-const ProductosDisponiblesPage = lazy(() => import('@/pages/products/ProductosDisponiblesPage'));
-const ProductosOfertadosPage2 = lazy(() => import('@/pages/products/claude'));
-const ProductosOfertadosPage3 = lazy(() => import('@/pages/products/gpt'));
-const ProductosOfertadosPage4 = lazy(() => import('@/pages/products/grok'));
-
-
-
-// Layouts
+// LayOuts
 import AuthLayout from '@/components/layout/AuthLayout';
 import MainLayout from '@/components/layout/MainLayout';
-
-// Páginas básicas que no necesitan carga diferida
-import Login from '@/components/auth/Login';
-import ErrorPage from '@/components/error/ErrorPage';
-import ConstructionPage from '@/pages/Varias/ConstructionPage';
-import EmpresaInfo from '@/pages/legalbase/EmpresaInfo';
-import EmpresaInfo2 from '@/pages/legalbase/EmpresaInfo2';
-import EmpresaInfo3 from '@/pages/legalbase/EmpresaInfo3';
-
-// Carga diferida de componentes
 const DashboardPage = lazy(() => import('@/pages/Dashboard'));
-const Hola = lazy(() => import('@/pages/Hola'));
 
-// Módulo básico
+// Pandora
+// Modulo Bases Relacionales
 const ZonasPage = lazy(() => import('@/pages/mbasic/ZonasPage'));
 const CiudadesPage = lazy(() => import('@/pages/mbasic/CiudadesPage'));
 const TipoClientePage = lazy(() => import('@/pages/mbasic/TipoClientePage'));
@@ -49,7 +25,7 @@ const TipoContratacionPage = lazy(() => import('@/pages/mbasic/TipoContratacionP
 const EmpresasClcPage = lazy(() => import('@/pages/mbasic/EmpresasclcPage'));
 const ProcesosAuditadosPage = lazy(() => import('@/pages/mbasic/ProcesosAuditadosPage'));
 
-// Módulo avanzado
+// Modulo Bases Generales
 const ProveedoresPage = lazy(() => import('@/pages/madvance/ProveedoresPage'));
 const ClientesPage = lazy(() => import('@/pages/madvance/ClientesPage'));
 const CostosPandoraPage = lazy(() => import('@/pages/madvance/CostosPandoraPage'));
@@ -57,17 +33,21 @@ const VendedoresPage = lazy(() => import('@/pages/madvance/VendedoresPage'));
 const PreciosSiePage = lazy(() => import('@/pages/madvance/PreciosSiePage'));
 const MsprefPage = lazy(() => import('@/pages/madvance/MsprefPage'));
 
-// Modulo de importaciones
-const MsprefImportPage = lazy(() => import('@/pages/import/MsprefImportPage'));
-const ProductosOfortadosImportPage = lazy(() => import('@/pages/import/ProductosOfertadosImportPage'));
+// Productos
+// Productos Disponibles
+const ProductosDisponiblesPage = lazy(() => import('@/pages/products/ProductsDisp/ProductosDisponiblesPage'));
 
-//Varias paginas de prueba
-const ProductPortfolioPage = lazy(() => import('@/pages/Varias/ProductPortfolioPage'));
-const testpage1 = lazy(() => import('@/pages/test/testpage1'));
+//Productos Ofertados
+const ProductosOfertadosPage = lazy(() => import('@/pages/products/ProductsOfet/ProductosOfertadosPage'));
 
+// Productos Paginas de referencias
+const ProductList = lazy(() => import('@/pages/products/Referencias/ProductList'));
+const ProductWizard = lazy(() => import('@/pages/products/Referencias/ProductWizard'));
+const PriceManagement = lazy(() => import('@/pages/products/Referencias/PriceManagement'));
+const PriceManagement2 = lazy(() => import('@/pages/products/Referencias/PriceManagement2'));
+const PriceCharts = lazy(() => import('@/pages/products/Referencias/PriceCharts'));
 
-
-// Módulo Proformas
+//Proformas
 const BulkUploadProducts = lazy(() => import('@/pages/proformas/BulkUploadProducts'));
 const ComparativeAnalysis = lazy(() => import('@/pages/proformas/ComparativeAnalysis'));
 const NewProformaForm = lazy(() => import('@/pages/proformas/NewProformaForm'));
@@ -86,17 +66,47 @@ const ProformaTemplates = lazy(() => import('@/pages/proformas/ProformaTemplates
 
 
 
+// Páginas básicas que no necesitan carga diferida
+import Login from '@/components/auth/Login';
+import ErrorPage from '@/components/error/ErrorPage';
+import ConstructionPage from '@/pages/Varias/ConstructionPage';
 
+// Legal Base
+import EmpresaInfo from '@/pages/legalbase/EmpresaInfo';
+import EmpresaInfo2 from '@/pages/legalbase/EmpresaInfo2';
+import EmpresaInfo3 from '@/pages/legalbase/EmpresaInfo3';
+
+// Modulo de importaciones
+const MsprefImportPage = lazy(() => import('@/pages/import/MsprefImportPage'));
+const ProductosOfortadosImportPage = lazy(() => import('@/pages/import/ProductosOfertadosImportPage'));
+
+//Testing
+const Testing1 = lazy(() => import('@/pages/test/Testing1'));
+const Testing2 = lazy(() => import('@/pages/test/Testing2'));
+const Testing3 = lazy(() => import('@/pages/test/Testing3'));
+const gpt = lazy(() => import('@/pages/test/gpt'));
+const claude = lazy(() => import('@/pages/test/claude'));
+const grok = lazy(() => import('@/pages/test/grok'));
 
 // Componente de envoltura para el manejo de carga y errores
 const PageWrapper = ({ component: Component }) => {
+  // Maneja errores de carga diferida con un límite de tiempo
   return (
     <ErrorBoundary>
-      <Suspense fallback={<LoadingSpinner />}>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-[200px]">
+          <LoadingSpinner />
+        </div>
+      }>
         <Component />
       </Suspense>
     </ErrorBoundary>
   );
+};
+
+// PropTypes para validación
+PageWrapper.propTypes = {
+  component: PropTypes.elementType.isRequired
 };
 
 // Configuración de rutas
@@ -117,9 +127,15 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { index: true, element: <PageWrapper component={DashboardPage} /> },
-      { path: 'hola', element: <PageWrapper component={Hola} /> },
-      
-      // Módulo básico
+            
+      // Módulo Proformas
+
+
+      // LayOuts
+
+
+      // Pandora
+      // Modulo Bases Relacionales
       { path: 'zonas', element: <PageWrapper component={ZonasPage} /> },
       { path: 'ciudades', element: <PageWrapper component={CiudadesPage} /> },
       { path: 'tipocliente', element: <PageWrapper component={TipoClientePage} /> },
@@ -132,8 +148,8 @@ export const router = createBrowserRouter([
       { path: 'tipocontratacion', element: <PageWrapper component={TipoContratacionPage} /> },
       { path: 'empresasclc', element: <PageWrapper component={EmpresasClcPage} /> },
       { path: 'procesosauditados', element: <PageWrapper component={ProcesosAuditadosPage} /> },
-      
-      // Módulo avanzado
+
+      // Modulo Bases Generales
       { path: 'proveedores', element: <PageWrapper component={ProveedoresPage} /> },
       { path: 'clientes', element: <PageWrapper component={ClientesPage} /> },
       { path: 'costospandora', element: <PageWrapper component={CostosPandoraPage} /> },
@@ -141,56 +157,70 @@ export const router = createBrowserRouter([
       { path: 'preciossie', element: <PageWrapper component={PreciosSiePage} /> },
       { path: 'mspref', element: <PageWrapper component={MsprefPage} /> },
 
-      // Módulo Importaciones Excel
-      { path: 'msprefimport', element: <PageWrapper component={MsprefImportPage} /> },
-      { path: 'productosofertadosimport', element: <PageWrapper component={ProductosOfortadosImportPage} /> },
+      // Productos
+      // Productos Disponibles
+      { path: 'productosdisponibles', element: <PageWrapper component={ProductosDisponiblesPage} /> },
+        
+      //Productos Ofertados
+      { path: 'productosofertados', element: <PageWrapper component={ProductosOfertadosPage} /> },
+
+      // Productos Paginas de referencias
 
 
-      //Pruebas rapidas
-      { path: 'test1', element: <PageWrapper component={testpage1} /> },
-
-      //Varias paginas de prueba
-      { path: 'productportfolio', element: <PageWrapper component={ProductPortfolioPage} /> },
+      //Proformas
+      { path: 'bulkuploadproducts', element: <PageWrapper component={BulkUploadProducts} /> },
+      { path: 'comparativeanalysis', element: <PageWrapper component={ComparativeAnalysis} /> },
+      { path: 'newproformaform', element: <PageWrapper component={NewProformaForm} /> },
+      { path: 'pricealerts', element: <PageWrapper component={PriceAlerts} /> },
+      { path: 'priceanalysistools', element: <PageWrapper component={PriceAnalysisTools} /> },
+      { path: 'pricehistory', element: <PageWrapper component={PriceHistory} /> },
+      { path: 'priceprojections', element: <PageWrapper component={PriceProjections} /> },
+      { path: 'proformadashboard', element: <PageWrapper component={ProformaDashboard} /> },
       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
+      { path: 'proformagenerator', element: <PageWrapper component={ProformaGenerator} /> },
+      { path: 'proformalist', element: <PageWrapper component={ProformaList} /> },
+      { path: 'proformapdf', element: <PageWrapper component={ProformaPDF} /> },
+      { path: 'proformapreview', element: <PageWrapper component={ProformaPreview} /> },
+      { path: 'proformasettings', element: <PageWrapper component={ProformaSettings} /> },
+      { path: 'proformatemplates', element: <PageWrapper component={ProformaTemplates} /> },
+      { path: 'error', element: <ConstructionPage /> },
+
+      //Legal Base
       { path: 'empresainfo', element: <PageWrapper component={EmpresaInfo} /> },  
       { path: 'empresainfo2', element: <PageWrapper component={EmpresaInfo2} /> },
       { path: 'empresainfo3', element: <PageWrapper component={EmpresaInfo3} /> },
+
       { path: 'products', element: <PageWrapper component={ProductList} /> },
       { path: 'productwizard', element: <PageWrapper component={ProductWizard} /> },
       { path: 'priceManagement', element: <PageWrapper component={PriceManagement} /> },
       { path: 'priceManagement2', element: <PageWrapper component={PriceManagement2} /> },
       { path: 'priceCharts', element: <PageWrapper component={PriceCharts} /> },
       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
-      { path: 'grok', element: <PageWrapper component={ProductosOfertadosPage4} /> },
-      { path: 'gpt', element: <PageWrapper component={ProductosOfertadosPage3} /> },
-      { path: 'claude', element: <PageWrapper component={ProductosOfertadosPage2} /> },
+  
+    // Modulo de importaciones
+      { path: 'msprefimport', element: <PageWrapper component={MsprefImportPage} /> },
+      { path: 'productosofertadosimport', element: <PageWrapper component={ProductosOfortadosImportPage} /> },
 
 
-       // Módulo Proformas
-       { path: 'bulkuploadproducts', element: <PageWrapper component={BulkUploadProducts} /> },
-       { path: 'comparativeanalysis', element: <PageWrapper component={ComparativeAnalysis} /> },
-       { path: 'newproformaform', element: <PageWrapper component={NewProformaForm} /> },
-       { path: 'pricealerts', element: <PageWrapper component={PriceAlerts} /> },
-       { path: 'priceanalysistools', element: <PageWrapper component={PriceAnalysisTools} /> },
-       { path: 'pricehistory', element: <PageWrapper component={PriceHistory} /> },
-       { path: 'priceprojections', element: <PageWrapper component={PriceProjections} /> },
-       { path: 'proformadashboard', element: <PageWrapper component={ProformaDashboard} /> },
-       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
-       { path: 'proformagenerator', element: <PageWrapper component={ProformaGenerator} /> },
-       { path: 'proformalist', element: <PageWrapper component={ProformaList} /> },
-       { path: 'proformapdf', element: <PageWrapper component={ProformaPDF} /> },
-       { path: 'proformapreview', element: <PageWrapper component={ProformaPreview} /> },
-       { path: 'proformasettings', element: <PageWrapper component={ProformaSettings} /> },
-       { path: 'proformatemplates', element: <PageWrapper component={ProformaTemplates} /> },
-       { path: 'error', element: <ConstructionPage /> },
-       { path: 'productosofertados', element: <PageWrapper component={ProductosOfertadosPage} /> },
-       { path: 'productosdisponibles', element: <PageWrapper component={ProductosDisponiblesPage} /> },
+      //_____________________________________________________________________
+      //Testing
+      //_____________________________________________________________________
+      { path: 'testing1', element: <PageWrapper component={Testing1} /> },
+      { path: 'testing2', element: <PageWrapper component={Testing2} /> },
+      { path: 'testing3', element: <PageWrapper component={Testing3} /> },
+      { path: 'gpt', element: <PageWrapper component={gpt} /> },
+      { path: 'claude', element: <PageWrapper component={claude} /> },
+      { path: 'grok', element: <PageWrapper component={grok} /> },
 
-
-
+    
+      { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
 
 
     ],
+  },
+  {
+    path: 'error',
+    element: <ErrorPage />,
   },
   {
     path: '*',

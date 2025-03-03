@@ -36,8 +36,25 @@ const navigation = [
   },
   { 
     name: 'Fast Testing', 
-    path: 'test1', 
-    icon: Microscope 
+    icon: Microscope, 
+    children: [
+      { name: 'Testing 1', path: 'testing1' },
+      { name: 'Testing 2', path: 'testing2' },
+      { name: 'Testing 3', path: 'testing3' },
+      { name: 'Grok', path: 'grok' },
+      { name: 'Claude', path: 'claude' },
+      { name: 'GPT', path: 'gpt' },
+    ]
+  },
+
+  {
+    name: 'Base Legal', 
+    icon: Microscope, 
+    children: [
+      { name: 'Proforma Form', path: 'proformaform' },
+      { name: 'Info Empresas 2', path: 'empresainfo2' },
+      { name: 'Info Empresas 3', path: 'empresainfo3' },
+    ]
   },
 
   { 
@@ -56,15 +73,8 @@ const navigation = [
       { name: 'Precios Manager 2', path: 'priceManagement2' },
       { name: 'Precios Charts', path: 'priceCharts' },
       { name: 'Productos wizard', path: 'productwizard' },
-      { name: 'Proforma Form', path: 'proformaform' },
-      { name: 'Info Empresas 2', path: 'empresainfo2' },
-      { name: 'Info Empresas 3', path: 'empresainfo3' },
-      { name: 'Productos Ofertados', path: 'productosofertados' },
-      { name: 'Productos Disponibles', path: 'productosdisponibles' },
-      { name: 'Grok', path: 'grok' },
-      { name: 'Claude', path: 'claude' },
-      { name: 'GPT', path: 'gpt' },
-    ]
+ 
+          ]
   },
   { 
     name: 'Proformas',

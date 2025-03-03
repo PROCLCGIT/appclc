@@ -29,6 +29,45 @@ def producto_ofertado_imagen_path(instance, filename):
         
     # Devuelve la ruta completa
     return os.path.join('productos_ofertados', producto_id, filename)
+    
+def producto_disponible_imagen_path(instance, filename):
+    """
+    Define la ruta de almacenamiento para las imágenes de productos disponibles
+    """
+    # Obtiene la extensión del archivo original
+    ext = filename.split('.')[-1]
+    # Crea un nombre único usando UUID
+    filename = f"{uuid.uuid4()}.{ext}"
+    
+    # Para evitar errores, verificamos si la instancia ya tiene id de producto
+    # Si no lo tiene (por ejemplo, en una creación), usamos un directorio temporal
+    if hasattr(instance, 'producto_disponible') and instance.producto_disponible and instance.producto_disponible.id:
+        producto_id = str(instance.producto_disponible.id)
+    else:
+        producto_id = 'temp'
+        
+    # Devuelve la ruta completa
+    return os.path.join('productos_disponibles', 'imagenes', producto_id, filename)
+    
+def producto_disponible_documento_path(instance, filename):
+    """
+    Define la ruta de almacenamiento para documentos de productos disponibles
+    """
+    # Obtiene la extensión del archivo original
+    ext = filename.split('.')[-1]
+    # Crea un nombre único usando UUID manteniendo el nombre original
+    nombre_original = os.path.splitext(filename)[0]
+    filename = f"{nombre_original}_{uuid.uuid4()}.{ext}"
+    
+    # Para evitar errores, verificamos si la instancia ya tiene id de producto
+    # Si no lo tiene (por ejemplo, en una creación), usamos un directorio temporal
+    if hasattr(instance, 'producto_disponible') and instance.producto_disponible and instance.producto_disponible.id:
+        producto_id = str(instance.producto_disponible.id)
+    else:
+        producto_id = 'temp'
+        
+    # Devuelve la ruta completa
+    return os.path.join('productos_disponibles', 'documentos', producto_id, filename)
 
 
 class Product(TimeStampedModel):
@@ -254,54 +293,54 @@ class ProductoDisponible(TimeStampedModel):
     id_marca = models.ForeignKey(
         Marca,
         on_delete=models.PROTECT,
-        verbose_name=_('Brand')
+        verbose_name=_('Marca')
     )
     modelo = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name=_('Model')
+        verbose_name=_('Modolo')
     )
     presentacion = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name=_('Presentation')
+        verbose_name=_('Presentacion')
     )
     referencia = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name=_('Reference')
+        verbose_name=_('Referencia')
     )
 
     # Calificaciones
     tz_oferta = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Supply Rating')
+        verbose_name=_('Taza de Oferta')
     )
     tz_demanda = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Demand Rating')
+        verbose_name=_('Taza de demanda')
     )
     tz_inflacion = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Inflation Rating')
+        verbose_name=_('Taza de inflacion')
     )
     tz_calidad = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Quality Rating')
+        verbose_name=_('Taza de calidad')
     )
     tz_eficiencia = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Efficiency Rating')
+        verbose_name=_('Taza de eficiencia')
     )
     tz_referencial = models.IntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_('Reference Rating')
+        verbose_name=_('Taza de Referencia')
     )
 
     # Precios
@@ -310,14 +349,14 @@ class ProductoDisponible(TimeStampedModel):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_('Reference Cost')
+        verbose_name=_('Costo Referencial')
     )
     precio_sie_referencial = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_('SIE Reference Price')
+        verbose_name=_('SIE Precio Referencial')
     )
     precio_sie_tipob = models.DecimalField(
         max_digits=10,
@@ -370,6 +409,147 @@ class ProductoDisponible(TimeStampedModel):
         if self.code:
             self.code = self.code.upper()
         super().save(*args, **kwargs)
+        
+    @property
+    def imagenes(self):
+        """Devuelve todas las imágenes relacionadas con este producto"""
+        return self.imagenes_producto.all() if hasattr(self, 'imagenes_producto') else []
+    
+    @property
+    def documentos(self):
+        """Devuelve todos los documentos relacionados con este producto"""
+        return self.documentos_producto.all() if hasattr(self, 'documentos_producto') else []
+
+
+class ImagenProductoDisponible(TimeStampedModel):
+    """Modelo para imágenes de productos disponibles"""
+    producto_disponible = models.ForeignKey(
+        ProductoDisponible,
+        on_delete=models.CASCADE,
+        related_name='imagenes_producto',
+        verbose_name=_('Producto Disponible')
+    )
+    imagen = models.ImageField(
+        upload_to=producto_disponible_imagen_path,
+        verbose_name=_('Imagen'),
+        help_text=_('Imagen del producto disponible')
+    )
+    descripcion = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_('Descripción')
+    )
+    orden = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_('Orden'),
+        help_text=_('Orden de visualización de la imagen')
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name=_('Es imagen principal'),
+        help_text=_('Marca esta imagen como la principal para el producto')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='imagenes_producto_disponible_created',
+        verbose_name=_('Created by')
+    )
+
+    class Meta:
+        verbose_name = _('Imagen de Producto Disponible')
+        verbose_name_plural = _('Imágenes de Productos Disponibles')
+        ordering = ['orden', 'created_at']
+        
+    def __str__(self):
+        return f"Imagen {self.id} - {self.producto_disponible.nombre}"
+        
+    @property
+    def url(self):
+        """Devuelve la URL de la imagen"""
+        return self.imagen.url if self.imagen else None
+
+
+class DocumentoProductoDisponible(TimeStampedModel):
+    """Modelo para documentos de productos disponibles (manuales, fichas técnicas, etc.)"""
+    TIPO_DOCUMENTO = (
+        ('manual', _('Manual de Usuario')),
+        ('ficha_tecnica', _('Ficha Técnica')),
+        ('certificado', _('Certificado')),
+        ('catalogo', _('Catálogo')),
+        ('otros', _('Otros')),
+    )
+    
+    producto_disponible = models.ForeignKey(
+        ProductoDisponible,
+        on_delete=models.CASCADE,
+        related_name='documentos_producto',
+        verbose_name=_('Producto Disponible')
+    )
+    documento = models.FileField(
+        upload_to=producto_disponible_documento_path,
+        verbose_name=_('Documento'),
+        help_text=_('Documento PDF del producto (manual, ficha técnica, etc.)')
+    )
+    tipo_documento = models.CharField(
+        max_length=50,
+        choices=TIPO_DOCUMENTO,
+        default='otros',
+        verbose_name=_('Tipo de Documento')
+    )
+    titulo = models.CharField(
+        max_length=255,
+        verbose_name=_('Título')
+    )
+    descripcion = models.TextField(
+        blank=True,
+        verbose_name=_('Descripción')
+    )
+    is_public = models.BooleanField(
+        default=True,
+        verbose_name=_('Es público'),
+        help_text=_('Indica si el documento es público o solo para uso interno')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='documentos_producto_disponible_created',
+        verbose_name=_('Created by')
+    )
+
+    class Meta:
+        verbose_name = _('Documento de Producto Disponible')
+        verbose_name_plural = _('Documentos de Productos Disponibles')
+        ordering = ['tipo_documento', 'titulo']
+        
+    def __str__(self):
+        return f"{self.get_tipo_documento_display()} - {self.titulo}"
+        
+    @property
+    def url(self):
+        """Devuelve la URL del documento"""
+        return self.documento.url if self.documento else None
+        
+    @property
+    def extension(self):
+        """Devuelve la extensión del documento"""
+        if self.documento:
+            return os.path.splitext(self.documento.name)[1].lower()
+        return None
+        
+    @property
+    def es_pdf(self):
+        """Devuelve True si el documento es un PDF"""
+        return self.extension == '.pdf'
+        
+    @property
+    def tamano_en_mb(self):
+        """Devuelve el tamaño del documento en MB"""
+        if self.documento and hasattr(self.documento, 'size'):
+            return round(self.documento.size / (1024 * 1024), 2)
+        return None
 
 
 class PriceList(TimeStampedModel):

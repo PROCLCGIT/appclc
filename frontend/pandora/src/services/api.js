@@ -35,18 +35,36 @@ export class BaseService {
 
   async update(id, data) {
     try {
-      const response = await api.put(`${this.endpoint}${id}/`, data);
+      // Asegurarse de que el ID sea un número
+      const numericId = parseInt(id, 10);
+      
+      if (isNaN(numericId)) {
+        throw new Error(`ID inválido: ${id}`);
+      }
+      
+      console.log(`Enviando PUT request regular a ${this.endpoint}${numericId}/`);
+      
+      const response = await api.put(`${this.endpoint}${numericId}/`, data);
       return response.data;
     } catch (error) {
+      console.error('Error en update:', error);
       throw this.handleError(error);
     }
   }
 
   async delete(id) {
     try {
-      await api.delete(`${this.endpoint}${id}/`);
+      // Asegurarse de que el ID sea un número
+      const numericId = parseInt(id, 10);
+      
+      if (isNaN(numericId)) {
+        throw new Error(`ID inválido: ${id}`);
+      }
+      
+      await api.delete(`${this.endpoint}${numericId}/`);
       return true;
     } catch (error) {
+      console.error('Error en delete:', error);
       throw this.handleError(error);
     }
   }
@@ -281,7 +299,50 @@ export class ProductosOfertadosService extends BaseService {
   }
 }
 
+// Clase para manejar productos disponibles con archivos
+export class ProductosDisponiblesService extends BaseService {
+  constructor() {
+    super('products/productosdisponibles/');
+  }
+
+  async createWithFormData(formData) {
+    try {
+      const response = await api.post(this.endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  async updateWithFormData(id, formData) {
+    try {
+      // Asegurarse de que el ID sea un número
+      const numericId = parseInt(id, 10);
+      
+      if (isNaN(numericId)) {
+        throw new Error(`ID inválido: ${id}`);
+      }
+      
+      console.log(`Enviando PUT request a ${this.endpoint}${numericId}/`);
+      
+      const response = await api.put(`${this.endpoint}${numericId}/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error en updateWithFormData:', error);
+      throw this.handleError(error);
+    }
+  }
+}
+
 // Servicios para módulo de productos
 export const productosOfertadosService = new ProductosOfertadosService();
-export const productosDisponiblesService = new BaseService('products/productosdisponibles/');
+export const productosDisponiblesService = new ProductosDisponiblesService();
 
