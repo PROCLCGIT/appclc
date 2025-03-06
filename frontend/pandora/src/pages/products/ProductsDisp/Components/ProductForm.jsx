@@ -1,5 +1,8 @@
+// src/pages/products/ProductsDisp/Components/ProductForm.jsx
+
+
 import { useState } from 'react';
-import { unidadesService, marcaService, categoriasService } from '@/services/api';
+import { unidadesService, marcaService, categoriasService, productosOfertadosService, procedenciaService } from '@/services/api';
 
 // Modal genérico para formularios simples con diseño mejorado
 function FormModal({ isOpen, onClose, onSave, title, fields, submitLabel = "Guardar" }) {
@@ -393,9 +396,11 @@ function ProductForm({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showResultsTable, setShowResultsTable] = useState(false);
   const [isUnidadModalOpen, setIsUnidadModalOpen] = useState(false);
   const [isMarcaModalOpen, setIsMarcaModalOpen] = useState(false);
   const [isCategoriaModalOpen, setIsCategoriaModalOpen] = useState(false);
+  const [procedencias, setProcedencias] = useState([]);
   
   // Funciones para abrir modales
   const handleAddUnidad = () => {
@@ -491,43 +496,42 @@ function ProductForm({
     try {
       if (!searchQuery.trim()) {
         alert("Por favor ingrese un término de búsqueda");
-        return;
+        return Promise.resolve(false); // Retorna una promesa resuelta con false
       }
       
       console.log("Buscando productos con término:", searchQuery);
-      console.log("Total de productos ofertados disponibles:", productosOfertados?.length || 0);
       setIsSearching(true);
       
-      if (!productosOfertados || productosOfertados.length === 0) {
-        console.warn("No hay productos ofertados disponibles para buscar");
-        setSearchResults([]);
-        alert("No hay productos disponibles para buscar. Espere a que se carguen los datos.");
-        return;
+      // Realizar búsqueda en el servidor en lugar de filtrar en memoria
+      // Esto permite buscar en toda la tabla de la base de datos
+      const response = await productosOfertadosService.search(searchQuery);
+      const results = response.results || [];
+      
+      console.log(`Se encontraron ${results.length} productos que coinciden con "${searchQuery}"`);
+      
+      if (results.length === 0) {
+        alert("No se encontraron productos con ese término de búsqueda");
+        return Promise.resolve(false);
       }
       
-      // Filtrar productos ofertados basados en el término de búsqueda
-      const filtered = productosOfertados.filter((prod) =>
-        (prod.nombre || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (prod.code || "").toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      
-      console.log(`Se encontraron ${filtered.length} productos que coinciden con "${searchQuery}"`);
-      
       // Mostramos máximo 10 resultados
-      setSearchResults(filtered.slice(0, 10));
+      setSearchResults(results.slice(0, 10));
+      
+      // Mostrar la tabla de resultados
+      setShowResultsTable(true);
+      
+      return Promise.resolve(true); // Retorna una promesa resuelta con true
     } catch (error) {
       console.error('Error buscando productos ofertados:', error);
       alert("Error al buscar productos: " + (error.message || "Error desconocido"));
+      return Promise.resolve(false);
     } finally {
       setIsSearching(false);
     }
   };
 
-  // Manejo de selección de producto desde el <select>
-  const handleSelectProductByIndex = (index) => {
-    if (index === '') return; // Usuario no seleccionó nada válido
-    const selectedIndex = Number(index);
-    const selectedProduct = searchResults[selectedIndex];
+  // Manejo de selección de producto 
+  const handleSelectProduct = (selectedProduct) => {
     if (!selectedProduct) return;
     
     console.log("Producto seleccionado:", selectedProduct);
@@ -542,10 +546,30 @@ function ProductForm({
     
     // Llamamos directamente a la función de cambio de producto ofertado
     handleProductoOfertadoChange(evt);
+    
+    // Ocultar la tabla de resultados
+    setShowResultsTable(false);
   };
 
   // ---------------------------------------------------------
-  // 2) ESTRUCTURA DEL FORMULARIO
+  // 2) CARGAR DATOS NECESARIOS AL INICIALIZAR
+  // ---------------------------------------------------------
+  useState(() => {
+    // Cargar procedencias al inicializar el componente
+    const fetchProcedencias = async () => {
+      try {
+        const data = await procedenciaService.getAll();
+        setProcedencias(data.results || []);
+      } catch (error) {
+        console.error("Error al cargar procedencias:", error);
+      }
+    };
+    
+    fetchProcedencias();
+  }, []);
+
+  // ---------------------------------------------------------
+  // 3) ESTRUCTURA DEL FORMULARIO
   // ---------------------------------------------------------
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 max-w-6xl mx-auto">
@@ -607,6 +631,12 @@ function ProductForm({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Ingrese parte del nombre o código"
               className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
             />
           </div>
           <button
@@ -634,32 +664,77 @@ function ProductForm({
           </button>
         </div>
 
-        {/* SELECT PARA RESULTADOS */}
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Seleccione un resultado (máx. 10):
-          </label>
-          <select
-            onChange={(e) => handleSelectProductByIndex(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white pr-10"
-            defaultValue=""
-            style={{ backgroundImage: "url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e')", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em" }}
-          >
-            <option value="">-- Seleccione (opcional) --</option>
-            {searchResults.length === 0 ? (
-              <option value="" disabled>No hay resultados (o ingrese un término de búsqueda)</option>
-            ) : (
-              searchResults.map((prod, idx) => (
-                <option key={prod.id} value={idx}>
-                  {`${prod.code} - ${prod.nombre}`}
-                </option>
-              ))
-            )}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Se autocompletarán los campos correspondientes al producto seleccionado
-          </p>
-        </div>
+        {/* TABLA DE RESULTADOS */}
+        {showResultsTable && searchResults.length > 0 && (
+          <div className="mt-4 relative">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Resultados encontrados ({searchResults.length}):
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowResultsTable(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors focus:outline-none"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="max-h-60 overflow-y-auto overflow-x-hidden border border-gray-300 rounded-lg bg-white shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Código
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nombre
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Categoría
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                      Acción
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {searchResults.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleSelectProduct(product)}>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {product.code}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-500">
+                        {product.nombre}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-500">
+                        {categorias.find(c => c.id === product.id_categoria)?.nombre || '-'}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm">
+                        <button
+                          type="button"
+                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectProduct(product);
+                          }}
+                        >
+                          Seleccionar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <p className="text-xs text-gray-500 mt-1 italic">
+              Haga clic en una fila para seleccionar el producto y autocompletar los campos correspondientes
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ================================================================
@@ -835,6 +910,32 @@ function ProductForm({
                 <option value="nueva_unidad" className="font-semibold text-blue-600">
                   + Agregar nueva unidad...
                 </option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label
+              htmlFor="procedencia"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Procedencia
+            </label>
+            <div className="relative">
+              <select
+                name="procedencia"
+                id="procedencia"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none pr-10"
+                value={formData.procedencia || ''}
+                onChange={handleInputChange}
+                style={{ backgroundImage: "url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e')", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em" }}
+              >
+                <option value="">Seleccione procedencia</option>
+                {procedencias.map((proc) => (
+                  <option key={proc.id} value={proc.id}>
+                    {proc.nombre}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

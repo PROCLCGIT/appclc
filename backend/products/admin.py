@@ -2,51 +2,12 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from .models import (
-    Product, ProductoOfertado, ProductoDisponible,
-    PriceList, ProductPrice, StockMovement,
-    PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument, ImagenReferenciaProductoOfertado,
-    ImagenProductoDisponible, DocumentoProductoDisponible
+    ProductoOfertado, ProductoDisponible,
+    ImagenReferenciaProductoOfertado,
+    ImagenProductoDisponible, DocumentoProductoDisponible,
+    DocumentoProductoOfertado, HistorialDeVentas, HistorialDeCompras
 )
 
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = [
-        'code', 'nombre', 'categorias', 'marca',
-        'base_price', 'stock', 'status'
-    ]
-    list_filter = ['status', 'categorias', 'marca', 'is_active']
-    search_fields = ['code', 'nombre', 'description', 'sku', 'barcode']
-    fieldsets = (
-        ('Información Básica', {
-            'fields': (
-                'code', 'nombre', 'description',
-                'categorias', 'marca', 'unidades', 'procedencia'
-            )
-        }),
-        ('Información Comercial', {
-            'fields': (
-                'base_price', 'cost_price', 'suggested_price'
-            )
-        }),
-        ('Control de Inventario', {
-            'fields': (
-                'stock', 'min_stock', 'max_stock', 'reorder_point'
-            )
-        }),
-        ('Especificaciones Técnicas', {
-            'fields': ('technical_specs', 'dimensions', 'weight'),
-            'classes': ('collapse',)
-        }),
-        ('Control y Seguimiento', {
-            'fields': ('sku', 'barcode', 'location')
-        }),
-        ('Estado', {
-            'fields': (
-                'is_active', 'is_sellable', 'is_purchasable', 'status'
-            )
-        })
-    )
 
 class ImagenReferenciaInline(admin.TabularInline):
     model = ImagenReferenciaProductoOfertado
@@ -167,63 +128,6 @@ class ProductoDisponibleAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-@admin.register(PriceList)
-class PriceListAdmin(admin.ModelAdmin):
-    list_display = [
-        'code', 'nombre', 'markup_percentage',
-        'is_active', 'valid_from', 'valid_to'
-    ]
-    list_filter = ['is_active']
-    search_fields = ['code', 'nombre', 'description']
-
-@admin.register(ProductPrice)
-class ProductPriceAdmin(admin.ModelAdmin):
-    list_display = ['product', 'price_list', 'price', 'valid_from', 'valid_to']
-    list_filter = ['price_list', 'valid_from', 'valid_to']
-    search_fields = ['product__code', 'product__nombre']
-
-@admin.register(StockMovement)
-class StockMovementAdmin(admin.ModelAdmin):
-    list_display = ['product', 'movement_type', 'quantity', 'created_at']
-    list_filter = ['movement_type', 'created_at']
-    search_fields = ['product__code', 'product__nombre', 'notes']
-
-@admin.register(PriceHistory)
-class PriceHistoryAdmin(admin.ModelAdmin):
-    """
-    Se eliminan las referencias a 'change_date'.
-    Usamos 'created_at' (TimeStampedModel) para mostrar la fecha de creación.
-    """
-    list_display = ['product', 'price_type', 'old_price', 'new_price', 'created_at']
-    list_filter = ['price_type', 'created_at']
-    search_fields = ['product__code', 'product__nombre']
-
-@admin.register(ProductChange)
-class ProductChangeAdmin(admin.ModelAdmin):
-    """
-    Se eliminan referencias a 'changed_at'.
-    Usamos 'created_at' en su lugar.
-    También mantenemos 'changed_by' si existe en el modelo.
-    """
-    list_display = ['product', 'field_name', 'created_at', 'changed_by']
-    list_filter = ['field_name', 'created_at']
-    search_fields = ['product__code', 'product__nombre', 'old_value', 'new_value']
-
-@admin.register(RelatedProduct)
-class RelatedProductAdmin(admin.ModelAdmin):
-    list_display = ['product', 'related_product', 'relationship_type']
-    list_filter = ['relationship_type']
-    search_fields = ['product__code', 'related_product__code']
-
-@admin.register(ProductDocument)
-class ProductDocumentAdmin(admin.ModelAdmin):
-    """
-    Se elimina la referencia a 'uploaded_at'.
-    Usamos 'created_at' en su lugar (TimeStampedModel).
-    """
-    list_display = ['product', 'document_type', 'file_name', 'created_at', 'is_active']
-    list_filter = ['document_type', 'is_active', 'created_at']
-    search_fields = ['product__code', 'file_name', 'description']
     
 @admin.register(ImagenReferenciaProductoOfertado)
 class ImagenReferenciaProductoOfertadoAdmin(admin.ModelAdmin):
@@ -260,3 +164,85 @@ class DocumentoProductoDisponibleAdmin(admin.ModelAdmin):
         if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+@admin.register(DocumentoProductoOfertado)
+class DocumentoProductoOfertadoAdmin(admin.ModelAdmin):
+    list_display = ['id', 'producto_ofertado', 'titulo', 'tipo_documento', 'is_public', 'created_at']
+    list_filter = ['tipo_documento', 'is_public', 'created_at']
+    search_fields = ['titulo', 'descripcion', 'producto_ofertado__nombre', 'producto_ofertado__code']
+    readonly_fields = ['created_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(HistorialDeVentas)
+class HistorialDeVentasAdmin(admin.ModelAdmin):
+    list_display = ['factura', 'fecha', 'cliente', 'producto', 'cantidad', 'valor', 'iva', 'empresa']
+    list_filter = ['fecha', 'cliente', 'empresa']
+    search_fields = ['factura', 'producto__nombre', 'cliente__nombre']
+    date_hierarchy = 'fecha'
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        (_('Información de Venta'), {
+            'fields': (
+                'factura',
+                'fecha',
+                'cliente',
+                'empresa'
+            )
+        }),
+        (_('Producto y Valores'), {
+            'fields': (
+                'producto',
+                'cantidad',
+                'valor',
+                'iva'
+            )
+        }),
+        (_('Información del Sistema'), {
+            'fields': (
+                'created_at',
+                'updated_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(HistorialDeCompras)
+class HistorialDeComprasAdmin(admin.ModelAdmin):
+    list_display = ['factura', 'fecha', 'proveedor', 'producto', 'cantidad', 'valor', 'iva', 'empresa']
+    list_filter = ['fecha', 'proveedor', 'empresa']
+    search_fields = ['factura', 'producto__nombre', 'proveedor__nombre']
+    date_hierarchy = 'fecha'
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        (_('Información de Compra'), {
+            'fields': (
+                'factura',
+                'fecha',
+                'proveedor',
+                'empresa'
+            )
+        }),
+        (_('Producto y Valores'), {
+            'fields': (
+                'producto',
+                'cantidad',
+                'valor',
+                'iva'
+            )
+        }),
+        (_('Información del Sistema'), {
+            'fields': (
+                'created_at',
+                'updated_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )

@@ -82,3 +82,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Radix UI - estilos personalizados para corregir problemas de visualización */
+
+/* Asegurarse de que el contenido de los portales esté por encima de todo */
+#select-portal-container,
+[data-radix-portal],
+[data-radix-popper-content-wrapper] {
+  position: fixed;
+  z-index: 9999 !important;
+}
+
+/* Estilos para el calendario */
+.rdp {
+  --rdp-cell-size: 40px !important;
+  --rdp-accent-color: #4f46e5 !important;
+  --rdp-background-color: #e0e7ff !important;
+  margin: 0 !important;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #e0e7ff !important;
+  color: #4f46e5 !important;
+}
+
+/* Animaciones suaves para mejorar la experiencia de usuario */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Aplicar animación al contenido del select */
+[data-radix-select-content] {
+  animation: slideDown 0.2s ease-out !important;
+}

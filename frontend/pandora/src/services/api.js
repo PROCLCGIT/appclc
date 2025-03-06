@@ -223,7 +223,7 @@ export class ProductosOfertadosService extends BaseService {
       
       // Agregamos todos los campos de texto al FormData
       Object.keys(data).forEach(key => {
-        if (key !== 'imagenes_referencia') {
+        if (key !== 'imagenes_referencia' && key !== 'documentos') {
           formData.append(key, data[key]);
         }
       });
@@ -287,10 +287,57 @@ export class ProductosOfertadosService extends BaseService {
     }
   }
   
+  async uploadDocuments(id, files, titles, types, descriptions) {
+    try {
+      const formData = new FormData();
+      
+      // Agregamos cada documento y sus metadatos al FormData
+      files.forEach((file, index) => {
+        formData.append('uploaded_documents', file);
+        
+        if (titles && titles[index]) {
+          formData.append('document_titles', titles[index]);
+        }
+        
+        if (types && types[index]) {
+          formData.append('document_types', types[index]);
+        }
+        
+        if (descriptions && descriptions[index]) {
+          formData.append('document_descriptions', descriptions[index]);
+        }
+      });
+      
+      console.log(`Enviando ${files.length} documentos al endpoint upload_documents`);
+      
+      const response = await api.post(`${this.endpoint}${id}/upload_documents/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error en uploadDocuments:", error);
+      throw this.handleError(error);
+    }
+  }
+  
   async deleteImage(id, imageId) {
     try {
       const response = await api.delete(`${this.endpoint}${id}/delete_image/`, {
         data: { imagen_id: imageId }
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  async deleteDocument(id, documentId) {
+    try {
+      const response = await api.delete(`${this.endpoint}${id}/delete_document/`, {
+        data: { documento_id: documentId }
       });
       return response.data;
     } catch (error) {

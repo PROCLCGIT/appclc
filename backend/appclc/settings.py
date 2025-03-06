@@ -24,7 +24,8 @@ INSTALLED_APPS = [
     'pandora.apps.PandoraConfig',
     'django_filters',  
     'products',
-    'proformas'
+    'proformas',
+    
 ]
 
 MIDDLEWARE = [
@@ -115,7 +116,15 @@ REST_FRAMEWORK = {
         'burst': '60/min',
         'sustained': '1000/day'
     },
-    'EXCEPTION_HANDLER': 'pandora.exceptions.custom_exception_handler'
+    'EXCEPTION_HANDLER': 'pandora.exceptions.custom_exception_handler',
+    # Configuración de filtros
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    # Ignorar parámetros de filtro desconocidos
+    'STRICT_PARAM_PARSING': False
 }
 
 CACHES = {
@@ -160,4 +169,34 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Configuración para archivos multimedia
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+# Configuración de Django Filter
+DJANGO_FILTERS_IGNORE_EMPTY = True
+
+# Enable more detailed logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'products': {  # Add this to see logs from your app
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 

@@ -1,9 +1,11 @@
+//src/pages/products/ProductsDisp/Components/ProductDetails.jsx
 import React from 'react';
 
 function ProductDetails({
   detailItem,
   marcas,
   categorias,
+  unidades,
   productosOfertados,
   getRatingColor,
   setActiveTab
@@ -28,6 +30,7 @@ function ProductDetails({
   }
 
   const marca = marcas.find((m) => m.id === detailItem.id_marca);
+  const unidad = unidades.find((u) => u.id === detailItem.presentacion);
   const categoria = categorias.find((c) => c.id === detailItem.id_categoria);
   const ofertado = productosOfertados.find(
     (p) => p.id === detailItem.id_producto_ofertado
@@ -118,7 +121,7 @@ function ProductDetails({
               </div>
               <div className="flex items-start">
                 <span className="text-gray-500 min-w-32">Presentación:</span>
-                <span className="font-medium ml-2">{detailItem.presentacion || 'N/A'}</span>
+                <span className="font-medium ml-2">{unidad ? unidad.nombre : 'N/A'}</span>
               </div>
               <div className="flex items-start">
                 <span className="text-gray-500 min-w-32">Referencia:</span>

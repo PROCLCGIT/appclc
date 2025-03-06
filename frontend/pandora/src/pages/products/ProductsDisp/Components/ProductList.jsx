@@ -1,4 +1,4 @@
-//src/pages/products/ProductsDisp/Components/ProductDetails.jsx
+//src/pages/products/ProductsDisp/Components/ProductList.jsx
 
 function ProductList({
   isLoading,

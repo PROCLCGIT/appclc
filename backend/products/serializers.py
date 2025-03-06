@@ -2,49 +2,20 @@
 from rest_framework import serializers
 from django.db.models import Max
 from .models import (
-    Product, ProductoOfertado, ProductoDisponible,
-    PriceList, ProductPrice, StockMovement,
-    PriceHistory, ProductChange, RelatedProduct,
-    ProductDocument, ImagenReferenciaProductoOfertado,
-    ImagenProductoDisponible, DocumentoProductoDisponible
+    ProductoOfertado, ProductoDisponible,
+    ImagenReferenciaProductoOfertado,
+    ImagenProductoDisponible, DocumentoProductoDisponible, 
+    DocumentoProductoOfertado, HistorialDeVentas, HistorialDeCompras
 )
 from pandora.serializers import (
     CategoriasSerializer,
     MarcaSerializer,
     UnidadesSerializer,
-    ProcedenciaSerializer
+    ProcedenciaSerializer,
+    ClientesSerializer,
+    EmpresaClcSerializer,
+    ProveedoresSerializer
 )
-
-# --------------------------------------------------------------------------------
-# PRODUCT
-# --------------------------------------------------------------------------------
-class ProductSerializer(serializers.ModelSerializer):
-    """Serializer para el modelo Product"""
-    categorias_detail = CategoriasSerializer(source='categorias', read_only=True)
-    marca_detail = MarcaSerializer(source='marca', read_only=True)
-    unidades_detail = UnidadesSerializer(source='unidades', read_only=True)
-    procedencia_detail = ProcedenciaSerializer(source='procedencia', read_only=True)
-
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-
-    class Meta:
-        model = Product
-        fields = '__all__'
-        # Suponiendo que no quieres permitir asignarlos vía API
-        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
-
-    def validate(self, data):
-        """Validaciones generales para el modelo Product."""
-        min_stock = data.get('min_stock')
-        max_stock = data.get('max_stock')
-        if max_stock is not None and min_stock is not None:
-            if max_stock < min_stock:
-                raise serializers.ValidationError({
-                    "max_stock": "El stock máximo debe ser mayor o igual que el stock mínimo."
-                })
-        return data
 
 # --------------------------------------------------------------------------------
 # IMAGEN REFERENCIA PRODUCTO OFERTADO
@@ -77,6 +48,37 @@ class ImagenReferenciaProductoOfertadoSerializer(serializers.ModelSerializer):
         }
 
 # --------------------------------------------------------------------------------
+# DOCUMENTO PRODUCTO OFERTADO
+# --------------------------------------------------------------------------------
+class DocumentoProductoOfertadoSerializer(serializers.ModelSerializer):
+    """Serializer para documentos de productos ofertados"""
+    url = serializers.SerializerMethodField()
+    tipo_documento_display = serializers.CharField(source='get_tipo_documento_display', read_only=True)
+    extension = serializers.SerializerMethodField()
+    tamano = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = DocumentoProductoOfertado
+        fields = [
+            'id', 'documento', 'tipo_documento', 'tipo_documento_display', 
+            'titulo', 'descripcion', 'is_public', 'url', 'extension', 'tamano'
+        ]
+        
+    def get_url(self, obj):
+        if obj.documento:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.documento.url)
+            return obj.documento.url
+        return None
+        
+    def get_extension(self, obj):
+        return obj.extension
+        
+    def get_tamano(self, obj):
+        return obj.tamano_en_mb
+
+# --------------------------------------------------------------------------------
 # PRODUCTO OFERTADO
 # --------------------------------------------------------------------------------
 class ProductoOfertadoSerializer(serializers.ModelSerializer):
@@ -85,11 +87,42 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
     imagenes_referencia = ImagenReferenciaProductoOfertadoSerializer(many=True, read_only=True)
+    documentos = DocumentoProductoOfertadoSerializer(source='documentos_producto', many=True, read_only=True)
     
     # Usamos un ListField para aceptar múltiples archivos
     # Importante: En el frontend, todos los archivos deben tener la misma clave en el FormData
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(max_length=1000000, allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    # Campos para subir documentos
+    uploaded_documents = serializers.ListField(
+        child=serializers.FileField(max_length=5000000, allow_empty_file=False, use_url=False),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    # Metadata para documentos subidos
+    document_titles = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    document_types = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        write_only=True,
+        required=False,
+        default=[]
+    )
+    
+    document_descriptions = serializers.ListField(
+        child=serializers.CharField(max_length=1000, allow_blank=False),
         write_only=True,
         required=False,
         default=[]
@@ -107,8 +140,31 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Este código ya existe.")
         return value.upper()
         
+    def validate(self, data):
+        """Validaciones generales para documentos."""
+        # Validar que la cantidad de títulos y tipos coincida con la cantidad de documentos
+        uploaded_documents = data.get('uploaded_documents', [])
+        document_titles = data.get('document_titles', [])
+        document_types = data.get('document_types', [])
+        
+        if len(uploaded_documents) > 0 and len(document_titles) != len(uploaded_documents):
+            raise serializers.ValidationError({
+                'document_titles': "Debe proporcionar un título para cada documento."
+            })
+            
+        if len(uploaded_documents) > 0 and len(document_types) != len(uploaded_documents):
+            raise serializers.ValidationError({
+                'document_types': "Debe proporcionar un tipo para cada documento."
+            })
+            
+        return data
+        
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
+        uploaded_documents = validated_data.pop('uploaded_documents', [])
+        document_titles = validated_data.pop('document_titles', [])
+        document_types = validated_data.pop('document_types', [])
+        document_descriptions = validated_data.pop('document_descriptions', [])
         
         # Crear el producto ofertado primero
         producto = super().create(validated_data)
@@ -120,32 +176,88 @@ class ProductoOfertadoSerializer(serializers.ModelSerializer):
                     producto_ofertado=producto,
                     imagen=image,
                     orden=i,
-                    is_primary=(i == 0)  # La primera imagen es la principal
+                    is_primary=(i == 0),  # La primera imagen es la principal
+                    created_by=self.context['request'].user if 'request' in self.context else None
                 )
         except Exception as e:
             # Si hay un error al guardar las imágenes, lo registramos pero continuamos
             print(f"Error al guardar imágenes: {str(e)}")
             
+        # Procesar documentos
+        try:
+            for i, doc in enumerate(uploaded_documents):
+                # Obtener metadatos del documento
+                titulo = document_titles[i] if i < len(document_titles) else f"Documento {i+1}"
+                tipo = document_types[i] if i < len(document_types) else "otros"
+                descripcion = document_descriptions[i] if i < len(document_descriptions) else ""
+                
+                # Validar que el tipo de documento sea válido
+                tipos_validos = [choice[0] for choice in DocumentoProductoOfertado.TIPO_DOCUMENTO]
+                if tipo not in tipos_validos:
+                    tipo = "otros"
+                
+                DocumentoProductoOfertado.objects.create(
+                    producto_ofertado=producto,
+                    documento=doc,
+                    tipo_documento=tipo,
+                    titulo=titulo,
+                    descripcion=descripcion,
+                    is_public=True,
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar documentos: {str(e)}")
+            
         return producto
         
     def update(self, instance, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
+        uploaded_documents = validated_data.pop('uploaded_documents', [])
+        document_titles = validated_data.pop('document_titles', [])
+        document_types = validated_data.pop('document_types', [])
+        document_descriptions = validated_data.pop('document_descriptions', [])
         
         # Actualizar primero el producto ofertado
         instance = super().update(instance, validated_data)
         
         try:
             # Luego agregar nuevas imágenes (si hay)
-            last_order = instance.imagenes.aggregate(models.Max('orden'))['orden__max'] or 0
+            last_order = instance.imagenes.aggregate(Max('orden'))['orden__max'] or 0
             for i, image in enumerate(uploaded_images):
                 ImagenReferenciaProductoOfertado.objects.create(
                     producto_ofertado=instance,
                     imagen=image,
-                    orden=last_order + i + 1
+                    orden=last_order + i + 1,
+                    created_by=self.context['request'].user if 'request' in self.context else None
                 )
         except Exception as e:
             # Si hay un error al guardar las imágenes, lo registramos pero continuamos
             print(f"Error al actualizar imágenes: {str(e)}")
+            
+        # Procesar documentos nuevos
+        try:
+            for i, doc in enumerate(uploaded_documents):
+                # Obtener metadatos del documento
+                titulo = document_titles[i] if i < len(document_titles) else f"Documento {i+1}"
+                tipo = document_types[i] if i < len(document_types) else "otros"
+                descripcion = document_descriptions[i] if i < len(document_descriptions) else ""
+                
+                # Validar que el tipo de documento sea válido
+                tipos_validos = [choice[0] for choice in DocumentoProductoOfertado.TIPO_DOCUMENTO]
+                if tipo not in tipos_validos:
+                    tipo = "otros"
+                
+                DocumentoProductoOfertado.objects.create(
+                    producto_ofertado=instance,
+                    documento=doc,
+                    tipo_documento=tipo,
+                    titulo=titulo,
+                    descripcion=descripcion,
+                    is_public=True,
+                    created_by=self.context['request'].user if 'request' in self.context else None
+                )
+        except Exception as e:
+            print(f"Error al procesar documentos: {str(e)}")
             
         return instance
 
@@ -400,107 +512,135 @@ class ProductoDisponibleSerializer(serializers.ModelSerializer):
         return instance
 
 # --------------------------------------------------------------------------------
-# PRICE LIST
+# HISTORIAL DE VENTAS
 # --------------------------------------------------------------------------------
-class PriceListSerializer(serializers.ModelSerializer):
-    """Serializer para PriceList"""
+class HistorialDeVentasSerializer(serializers.ModelSerializer):
+    """Serializer para el historial de ventas de productos"""
+    # Campos para relaciones detalladas
+    producto_detail = ProductoDisponibleSerializer(source='producto', read_only=True)
+    cliente_detail = ClientesSerializer(source='cliente', read_only=True)
+    empresa_detail = EmpresaClcSerializer(source='empresa', read_only=True)
+    
     class Meta:
-        model = PriceList
+        model = HistorialDeVentas
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
-
+    
+    def to_internal_value(self, data):
+        """Convertir tipos de datos de entrada antes de validar"""
+        try:
+            print("Convirtiendo datos de ventas:", data)
+            
+            # Convertir IDs de string a int si es necesario
+            for field in ['producto', 'cliente', 'empresa']:
+                if field in data and data[field] and isinstance(data[field], str):
+                    try:
+                        data[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        # Dejar el valor como está y dejar que la validación maneje el error
+                        pass
+                    
+            return super().to_internal_value(data)
+        except Exception as e:
+            print("Error en to_internal_value de ventas:", e)
+            raise
+        
     def validate(self, data):
-        """Validar rango de fechas."""
-        if data.get('valid_from') and data.get('valid_to'):
-            if data['valid_to'] < data['valid_from']:
-                raise serializers.ValidationError({
-                    "valid_to": "La fecha final debe ser posterior a la fecha inicial."
-                })
+        """Validaciones específicas para el historial de ventas"""
+        print("Validando datos de ventas:", data)
+        
+        if 'valor' in data and data['valor'] < 0:
+            raise serializers.ValidationError({"valor": "El valor no puede ser negativo."})
+        
+        if 'iva' in data and data['iva'] < 0:
+            raise serializers.ValidationError({"iva": "El IVA no puede ser negativo."})
+            
+        if 'cantidad' in data and data['cantidad'] < 1:
+            raise serializers.ValidationError({"cantidad": "La cantidad debe ser al menos 1."})
+            
+        if 'factura' in data and 'cliente' in data:
+            # Verificar si la factura ya existe para este cliente
+            instance = getattr(self, 'instance', None)
+            if instance:
+                # En caso de actualización, excluimos la instancia actual
+                exists = HistorialDeVentas.objects.exclude(id=instance.id).filter(
+                    factura=data['factura'], 
+                    cliente=data['cliente']
+                ).exists()
+            else:
+                # En caso de creación
+                exists = HistorialDeVentas.objects.filter(
+                    factura=data['factura'], 
+                    cliente=data['cliente']
+                ).exists()
+                
+            if exists:
+                raise serializers.ValidationError({"factura": "Este número de factura ya existe para este cliente."})
+                
         return data
 
 # --------------------------------------------------------------------------------
-# PRODUCT PRICE
+# HISTORIAL DE COMPRAS
 # --------------------------------------------------------------------------------
-class ProductPriceSerializer(serializers.ModelSerializer):
-    """Serializer para ProductPrice"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    price_list_detail = PriceListSerializer(source='price_list', read_only=True)
-
+class HistorialDeComprasSerializer(serializers.ModelSerializer):
+    """Serializer para el historial de compras de productos"""
+    # Campos para relaciones detalladas
+    producto_detail = ProductoDisponibleSerializer(source='producto', read_only=True)
+    proveedor_detail = ProveedoresSerializer(source='proveedor', read_only=True)
+    empresa_detail = EmpresaClcSerializer(source='empresa', read_only=True)
+    
     class Meta:
-        model = ProductPrice
+        model = HistorialDeCompras
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
+    
+    def to_internal_value(self, data):
+        """Convertir tipos de datos antes de validar"""
+        try:
+            print("Procesando datos de compra:", data)
+            # Convertir IDs de string a int si es necesario
+            for field in ['producto', 'proveedor', 'empresa']:
+                if field in data and data[field] and isinstance(data[field], str):
+                    try:
+                        data[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        # Dejar el valor como está y dejar que la validación maneje el error
+                        pass
+            
+            return super().to_internal_value(data)
+        except Exception as e:
+            print("Error en to_internal_value de compras:", e)
+            raise
+        
+    def validate(self, data):
+        """Validaciones específicas para el historial de compras"""
+        print("Validando datos de compra:", data)
+        
+        if 'valor' in data and data['valor'] < 0:
+            raise serializers.ValidationError({"valor": "El valor no puede ser negativo."})
+        
+        if 'iva' in data and data['iva'] < 0:
+            raise serializers.ValidationError({"iva": "El IVA no puede ser negativo."})
+            
+        if 'cantidad' in data and data['cantidad'] < 1:
+            raise serializers.ValidationError({"cantidad": "La cantidad debe ser al menos 1."})
+            
+        if 'factura' in data and 'proveedor' in data:
+            # Verificar si la factura ya existe para este proveedor
+            instance = getattr(self, 'instance', None)
+            if instance:
+                # En caso de actualización, excluimos la instancia actual
+                exists = HistorialDeCompras.objects.exclude(id=instance.id).filter(
+                    factura=data['factura'], 
+                    proveedor=data['proveedor']
+                ).exists()
+            else:
+                # En caso de creación
+                exists = HistorialDeCompras.objects.filter(
+                    factura=data['factura'], 
+                    proveedor=data['proveedor']
+                ).exists()
+                
+            if exists:
+                raise serializers.ValidationError({"factura": "Este número de factura ya existe para este proveedor."})
+                
+        return data
 
-# --------------------------------------------------------------------------------
-# STOCK MOVEMENT
-# --------------------------------------------------------------------------------
-class StockMovementSerializer(serializers.ModelSerializer):
-    """Serializer para StockMovement"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-
-    class Meta:
-        model = StockMovement
-        fields = '__all__'
-        # En el modelo no existe updated_by, pero sí tenemos updated_at del TimeStampedModel
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
-
-# --------------------------------------------------------------------------------
-# PRICE HISTORY
-# --------------------------------------------------------------------------------
-class PriceHistorySerializer(serializers.ModelSerializer):
-    """Serializer para PriceHistory"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    changed_by_name = serializers.CharField(source='changed_by.username', read_only=True)
-
-    class Meta:
-        model = PriceHistory
-        fields = '__all__'
-        # No hay updated_by, pero tenemos created_at y updated_at por TimeStampedModel
-        read_only_fields = ['created_at', 'updated_at', 'changed_by']
-
-# --------------------------------------------------------------------------------
-# PRODUCT CHANGE
-# --------------------------------------------------------------------------------
-class ProductChangeSerializer(serializers.ModelSerializer):
-    """Serializer para ProductChange"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    changed_by_name = serializers.CharField(source='changed_by.username', read_only=True)
-
-    class Meta:
-        model = ProductChange
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'changed_by']
-
-# --------------------------------------------------------------------------------
-# RELATED PRODUCT
-# --------------------------------------------------------------------------------
-class RelatedProductSerializer(serializers.ModelSerializer):
-    """Serializer para RelatedProduct"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    related_product_detail = ProductSerializer(source='related_product', read_only=True)
-
-    class Meta:
-        model = RelatedProduct
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
-
-# --------------------------------------------------------------------------------
-# PRODUCT DOCUMENT
-# --------------------------------------------------------------------------------
-class ProductDocumentSerializer(serializers.ModelSerializer):
-    """Serializer para ProductDocument"""
-    product_detail = ProductSerializer(source='product', read_only=True)
-    uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True)
-
-    class Meta:
-        model = ProductDocument
-        fields = '__all__'
-        # 'uploaded_at' ya no existe; se sustituye con 'created_at' y 'updated_at'
-        read_only_fields = ['uploaded_by', 'created_at', 'updated_at']
-
-    def validate_file_path(self, value):
-        """Validar tamaño máximo del archivo (10MB)."""
-        if value.size > 10 * 1024 * 1024:  # 10MB limit
-            raise serializers.ValidationError("El archivo no puede ser mayor a 10MB.")
-        return value

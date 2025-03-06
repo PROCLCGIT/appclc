@@ -753,6 +753,7 @@ const ProductosDisponiblesPage = () => {
             detailItem={detailItem}
             marcas={marcas}
             categorias={categorias}
+            unidades={unidades}
             productosOfertados={productosOfertados}
             getRatingColor={getRatingColor}
             setActiveTab={setActiveTab}

@@ -40,12 +40,10 @@ const ProductosDisponiblesPage = lazy(() => import('@/pages/products/ProductsDis
 //Productos Ofertados
 const ProductosOfertadosPage = lazy(() => import('@/pages/products/ProductsOfet/ProductosOfertadosPage'));
 
-// Productos Paginas de referencias
-const ProductList = lazy(() => import('@/pages/products/Referencias/ProductList'));
-const ProductWizard = lazy(() => import('@/pages/products/Referencias/ProductWizard'));
-const PriceManagement = lazy(() => import('@/pages/products/Referencias/PriceManagement'));
-const PriceManagement2 = lazy(() => import('@/pages/products/Referencias/PriceManagement2'));
-const PriceCharts = lazy(() => import('@/pages/products/Referencias/PriceCharts'));
+// Históricos
+const VentasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/VentasHistoricaProducto'));
+const ComprasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/ComprasHistoricaProducto'));
+
 
 //Proformas
 const BulkUploadProducts = lazy(() => import('@/pages/proformas/BulkUploadProducts'));
@@ -163,10 +161,12 @@ export const router = createBrowserRouter([
         
       //Productos Ofertados
       { path: 'productosofertados', element: <PageWrapper component={ProductosOfertadosPage} /> },
+      
+      // Históricos
+      { path: 'historico-ventas', element: <PageWrapper component={VentasHistoricaProducto} /> },
+      { path: 'historico-compras', element: <PageWrapper component={ComprasHistoricaProducto} /> },
 
-      // Productos Paginas de referencias
-
-
+     
       //Proformas
       { path: 'bulkuploadproducts', element: <PageWrapper component={BulkUploadProducts} /> },
       { path: 'comparativeanalysis', element: <PageWrapper component={ComparativeAnalysis} /> },
@@ -190,11 +190,7 @@ export const router = createBrowserRouter([
       { path: 'empresainfo2', element: <PageWrapper component={EmpresaInfo2} /> },
       { path: 'empresainfo3', element: <PageWrapper component={EmpresaInfo3} /> },
 
-      { path: 'products', element: <PageWrapper component={ProductList} /> },
-      { path: 'productwizard', element: <PageWrapper component={ProductWizard} /> },
-      { path: 'priceManagement', element: <PageWrapper component={PriceManagement} /> },
-      { path: 'priceManagement2', element: <PageWrapper component={PriceManagement2} /> },
-      { path: 'priceCharts', element: <PageWrapper component={PriceCharts} /> },
+      
       { path: 'proformaform', element: <PageWrapper component={ProformaForm} /> },
   
     // Modulo de importaciones

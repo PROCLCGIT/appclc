@@ -69,11 +69,7 @@ const navigation = [
       { name: 'Proveedores', path: 'proveedores' },
       { name: 'Clientes', path: 'clientes' },
       { name: 'Vendedores', path: 'vendedores' },
-      { name: 'Precios Manager', path: 'priceManagement' },
-      { name: 'Precios Manager 2', path: 'priceManagement2' },
-      { name: 'Precios Charts', path: 'priceCharts' },
-      { name: 'Productos wizard', path: 'productwizard' },
- 
+    
           ]
   },
   { 
@@ -115,6 +111,8 @@ const navigation = [
     children: [
       { name: 'Productos Ofertados', path: '/productosofertados' },
       { name: 'Productos Disponibles', path: '/productosdisponibles' },
+      { name: 'Histórico de Ventas', path: '/historico-ventas' },
+      { name: 'Histórico de Compras', path: '/historico-compras' },
     ]
   },
   { 
