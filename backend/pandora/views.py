@@ -17,7 +17,7 @@ from .models import (
     Categorias, Especialidades, Marca, Procedencia,
     TipoContratacion, Procesos_auditados, Unidades,
     EmpresaClc, PreciosSie, MsPref, Proveedores,
-    CostosPandora, Vendedores
+    Vendedores, Contactos
 )
 
 # Importar serializers de la app pandora
@@ -27,8 +27,8 @@ from .serializers import (
     EspecialidadesSerializer, MarcaSerializer, ProcedenciaSerializer,
     TipoContratacionSerializer, Procesos_auditadosSerializer,
     UnidadesSerializer, EmpresaClcSerializer, PreciosSieSerializer,
-    MsPrefSerializer, ProveedoresSerializer, CostosPandoraSerializer,
-    VendedoresSerializer
+    MsPrefSerializer, ProveedoresSerializer, VendedoresSerializer,
+    ContactosSerializer
 )
 
 # Importar throttles (si los estás usando)
@@ -191,7 +191,6 @@ class PandoraViewSet(BaseModelViewSet):
         stats = {
             'total_productos': queryset.count(),
             'precios_sie': PreciosSie.objects.filter(pandora__in=queryset).count(),
-            'costos': CostosPandora.objects.filter(pandora__in=queryset).count(),
         }
         return Response(stats)
 
@@ -202,7 +201,6 @@ class PandoraViewSet(BaseModelViewSet):
         stats = {
             'total_pandoras': queryset.count(),
             'precios_sie': PreciosSie.objects.filter(pandora__in=queryset).count(),
-            'costos_pandora': CostosPandora.objects.filter(pandora__in=queryset).count()
         }
         return Response(stats)
 
@@ -366,9 +364,18 @@ class ProveedoresViewSet(BaseModelViewSet):
     def productos(self, request, pk=None):
         """Retorna productos relacionados a este proveedor (ruta 'proveedores/<int:pk>/productos/')."""
         proveedor = self.get_object()
-        costos = CostosPandora.objects.filter(proveedor=proveedor)
-        serializer = CostosPandoraSerializer(costos, many=True)
-        return Response(serializer.data)
+        # Nota: CostosPandora ha sido eliminado del modelo
+        # Aquí deberías devolver los productos relacionados de otra manera
+        # Por ejemplo, usando los modelos de productos disponibles
+        from products.models import ProductoDisponible
+        from products.serializers import ProductoDisponibleSerializer
+        
+        # Esto es un ejemplo - ajusta según tu modelo de datos actual
+        # productos = ProductoDisponible.objects.filter(proveedor=proveedor)
+        # serializer = ProductoDisponibleSerializer(productos, many=True)
+        
+        # Por ahora devolvemos un mensaje informativo
+        return Response({"message": "Funcionalidad en mantenimiento"})
 
 
 class VendedoresViewSet(BaseModelViewSet):
@@ -423,21 +430,6 @@ class PreciosSieViewSet(BaseModelViewSet):
     ordering_fields = ['precio', 'fecha_sie', 'created_at', 'updated_at']
 
 
-class CostosPandoraViewSet(BaseModelViewSet):
-    """ViewSet para Costos de Pandora."""
-    queryset = CostosPandora.objects.select_related('pandora', 'proveedor', 'marca').all()
-    serializer_class = CostosPandoraSerializer
-    filterset_fields = {
-        **BaseModelViewSet.filterset_fields,
-        'pandora': ['exact'],
-        'proveedor': ['exact'],
-        'marca': ['exact'],
-        'fecha': ['gte', 'lte', 'exact', 'gt', 'lt'],
-        'nota': ['icontains'],
-        'precio': ['gte', 'lte', 'exact', 'gt', 'lt']
-    }
-    search_fields = ['nota']
-    ordering_fields = ['precio', 'fecha', 'created_at', 'updated_at']
 
 # --------------------------------------------------------------------------------
 # ViewSet adicional para EmpresaClc (si lo requieres)
@@ -461,4 +453,23 @@ class EmpresaClcViewSet(BaseModelViewSet):
         'nombre', 'razon_social', 'code', 'ruc',
         'direccion', 'telefono', 'correo', 'representante_legal'
     ]
+    ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class ContactosViewSet(BaseModelViewSet):
+    """ViewSet para gestión de contactos."""
+    queryset = Contactos.objects.all()
+    serializer_class = ContactosSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'nombre': ['exact', 'icontains'],
+        'alias': ['exact', 'icontains'],
+        'telefono': ['exact', 'icontains'],
+        'telefono2': ['exact', 'icontains'],
+        'email': ['exact', 'icontains'],
+        'direccion': ['icontains'],
+        'obserbacion': ['icontains'],
+        'ingerencia': ['exact', 'icontains'],
+    }
+    search_fields = ['nombre', 'alias', 'telefono', 'email', 'direccion']
     ordering_fields = ['nombre', 'created_at', 'updated_at']

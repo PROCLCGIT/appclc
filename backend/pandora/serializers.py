@@ -4,7 +4,7 @@ from .models import (
     Zonas, Ciudades, TipoCliente, Clientes, Pandora,
     Categorias, Especialidades, Marca, Procedencia,
     TipoContratacion, Unidades, EmpresaClc, Procesos_auditados,
-    PreciosSie, MsPref, Proveedores, CostosPandora, Vendedores
+    PreciosSie, MsPref, Proveedores, Vendedores, Contactos
 )
 from .utils import get_history  # Asegúrate de que este archivo exista y defina get_history
 
@@ -291,30 +291,6 @@ class ProveedoresSerializer(BaseModelSerializer):
         ]
 
 
-class CostosPandoraSerializer(BaseModelSerializer):
-    pandora_nombre = serializers.ReadOnlyField(source='pandora.nombre')
-    proveedor_nombre = serializers.ReadOnlyField(source='proveedor.nombre')
-    marca_nombre = serializers.ReadOnlyField(source='marca.nombre')
-
-    class Meta:
-        model = CostosPandora
-        fields = [
-            'id',
-            'pandora',
-            'pandora_nombre',
-            'proveedor',
-            'proveedor_nombre',
-            'marca',
-            'marca_nombre',
-            'precio',
-            'nota',
-            'fecha',
-            'created_at',
-            'updated_at',
-            'history',
-        ]
-
-
 class VendedoresSerializer(BaseModelSerializer):
     proveedor_nombre = serializers.ReadOnlyField(source='proveedor.nombre')
 
@@ -329,6 +305,25 @@ class VendedoresSerializer(BaseModelSerializer):
             'telefono',
             'observacion',
             'activo',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class ContactosSerializer(BaseModelSerializer):
+    class Meta:
+        model = Contactos
+        fields = [
+            'id',
+            'nombre',
+            'alias',
+            'telefono',
+            'telefono2',
+            'email',
+            'direccion',
+            'obserbacion',
+            'ingerencia',
             'created_at',
             'updated_at',
             'history',

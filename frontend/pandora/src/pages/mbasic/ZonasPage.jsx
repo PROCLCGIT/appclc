@@ -15,7 +15,11 @@ const ZonasPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ 
+    nombre: '',
+    code: '',
+    cobertura: ''
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -39,13 +43,21 @@ const ZonasPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({ 
+      nombre: '',
+      code: '',
+      cobertura: '' 
+    });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({ 
+      nombre: item.nombre,
+      code: item.code || '',
+      cobertura: item.cobertura || ''
+    });
     setIsDialogOpen(true);
   };
 
@@ -85,7 +97,9 @@ const ZonasPage = () => {
 
   const paginatedData = (() => {
     const filteredData = data.filter((item) =>
-      item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.cobertura && item.cobertura.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const totalItems = filteredData.length;
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -108,8 +122,8 @@ const ZonasPage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
+    { key: 'code', label: 'Código' },
+    { key: 'cobertura', label: 'Cobertura' },
   ];
 
   return (
@@ -184,18 +198,51 @@ const ZonasPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+                Nombre
+              </label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) =>
+                  setFormData({ ...formData, nombre: e.target.value })
+                }
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="code" className="text-sm font-medium text-gray-700">
+                Código
+              </label>
+              <Input
+                id="code"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="cobertura" className="text-sm font-medium text-gray-700">
+              Cobertura
+            </label>
+            <textarea
+              id="cobertura"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              rows="3"
+              value={formData.cobertura}
+              onChange={(e) =>
+                setFormData({ ...formData, cobertura: e.target.value })
+              }
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

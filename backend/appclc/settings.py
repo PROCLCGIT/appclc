@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django_filters',  
     'products',
     'proformas',
+    'blegal',
     
 ]
 
@@ -59,6 +60,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'appclc.wsgi.application'
 
+# Temporary SQLite configuration for development
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# Original MySQL configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -73,6 +83,10 @@ DATABASES = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -111,10 +125,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'burst': '60/min',
-        'sustained': '1000/day'
+        'anon': '1000/day',
+        'user': '5000/day',
+        'burst': '1000/min',
+        'sustained': '5000/day'
     },
     'EXCEPTION_HANDLER': 'pandora.exceptions.custom_exception_handler',
     # Configuración de filtros

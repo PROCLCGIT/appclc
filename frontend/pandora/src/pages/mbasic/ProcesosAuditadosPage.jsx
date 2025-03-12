@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DataTable from '@/components/common/DataTable';
 import FormDialog from '@/components/common/FormDialog';
@@ -15,7 +16,11 @@ const ProcesosAuditadosPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ 
+    nombre: '',
+    description: '',
+    objeto: ''
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -39,13 +44,21 @@ const ProcesosAuditadosPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({ 
+      nombre: '',
+      description: '',
+      objeto: ''
+    });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({ 
+      nombre: item.nombre,
+      description: item.description || '',
+      objeto: item.objeto || ''
+    });
     setIsDialogOpen(true);
   };
 
@@ -85,7 +98,9 @@ const ProcesosAuditadosPage = () => {
 
   const paginatedData = (() => {
     const filteredData = data.filter((item) =>
-      item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.objeto && item.objeto.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const totalItems = filteredData.length;
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -108,8 +123,8 @@ const ProcesosAuditadosPage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
+    { key: 'description', label: 'Descripción' },
+    { key: 'objeto', label: 'Objeto' },
   ];
 
   return (
@@ -184,18 +199,49 @@ const ProcesosAuditadosPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="space-y-2">
+            <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+              Nombre
+            </label>
+            <Input
+              id="nombre"
+              value={formData.nombre}
+              onChange={(e) =>
+                setFormData({ ...formData, nombre: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium text-gray-700">
+              Descripción
+            </label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="objeto" className="text-sm font-medium text-gray-700">
+              Objeto
+            </label>
+            <Textarea
+              id="objeto"
+              value={formData.objeto}
+              onChange={(e) =>
+                setFormData({ ...formData, objeto: e.target.value })
+              }
+              rows={5}
+              className="min-h-[120px] resize-y"
+              required
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

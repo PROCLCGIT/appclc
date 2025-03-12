@@ -160,6 +160,7 @@ export const preciosSieService = new BaseService('pandora/preciossie/');
 export const proveedoresService = new BaseService('pandora/proveedores/');
 export const costosPandoraService = new BaseService('pandora/costospandora/');
 export const vendedoresService = new BaseService('pandora/vendedores/');
+export const contactosService = new BaseService('pandora/contactos/');
 export const procesosAuditadosService = new BaseService('pandora/procesosauditados/');
 
 // Para el módulo MsPref
@@ -392,4 +393,3 @@ export class ProductosDisponiblesService extends BaseService {
 // Servicios para módulo de productos
 export const productosOfertadosService = new ProductosOfertadosService();
 export const productosDisponiblesService = new ProductosDisponiblesService();
-

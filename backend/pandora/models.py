@@ -1,4 +1,5 @@
-# backend/appclc/pandora/models.py
+# /backend/pandora/models.py
+
 from django.db import models
 
 class TimeStampedModel(models.Model):
@@ -8,6 +9,7 @@ class TimeStampedModel(models.Model):
 
     class Meta:
         abstract = True
+
 
 class Procesos_auditados(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
@@ -20,6 +22,7 @@ class Procesos_auditados(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class Categorias(TimeStampedModel):
     nombre = models.CharField(max_length=255, unique=True)
@@ -45,6 +48,7 @@ class Categorias(TimeStampedModel):
             self.path = self.code
         super().save(*args, **kwargs)
 
+
 class Ciudades(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
     provincia = models.CharField(max_length=50, unique=True)
@@ -56,6 +60,7 @@ class Ciudades(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class EmpresaClc(TimeStampedModel):
     nombre = models.CharField(max_length=150, unique=True)
@@ -75,6 +80,7 @@ class EmpresaClc(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
 class Especialidades(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=50, unique=True)
@@ -85,6 +91,7 @@ class Especialidades(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class Marca(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
@@ -102,6 +109,7 @@ class Marca(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
 class Procedencia(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=50, unique=True)
@@ -113,6 +121,7 @@ class Procedencia(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
 class TipoCliente(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
 
@@ -123,6 +132,7 @@ class TipoCliente(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class TipoContratacion(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
@@ -136,6 +146,7 @@ class TipoContratacion(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
 class Unidades(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=50, unique=True)
@@ -146,6 +157,7 @@ class Unidades(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class Zonas(TimeStampedModel):
     nombre = models.CharField(max_length=50, unique=True)
@@ -159,6 +171,7 @@ class Zonas(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
 class Pandora(TimeStampedModel):
     nombre = models.CharField(max_length=250, unique=True)
     code = models.CharField(max_length=50, unique=True)
@@ -168,6 +181,7 @@ class Pandora(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
 
 class Clientes(TimeStampedModel):
     zona = models.ForeignKey(Zonas, on_delete=models.CASCADE)
@@ -189,10 +203,32 @@ class Clientes(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
+
+# Eliminamos la clase CostosPandora (ya no se usará)
+
 class PreciosSie(TimeStampedModel):
     pandora = models.ForeignKey(Pandora, on_delete=models.CASCADE)
     cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE)
     detalle_sie = models.ForeignKey(Procesos_auditados, on_delete=models.CASCADE)
+
+    # Agregamos las dos nuevas FK a productos (app "products"):
+    producto_ofertado = models.ForeignKey(
+        'products.ProductoOfertado',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='precios_sie_ofertados',
+        verbose_name="Producto Ofertado"
+    )
+    producto_disponible = models.ForeignKey(
+        'products.ProductoDisponible',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='precios_sie_disponibles',
+        verbose_name="Producto Disponible"
+    )
+
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     nota = models.TextField(blank=True, null=True)
     fecha_sie = models.DateField(null=True, blank=True)
@@ -204,6 +240,7 @@ class PreciosSie(TimeStampedModel):
 
     def __str__(self):
         return f"{self.pandora} - {self.cliente} - {self.precio} - {self.detalle_sie}"
+
 
 class MsPref(TimeStampedModel):
     sku = models.CharField(max_length=50)
@@ -221,6 +258,7 @@ class MsPref(TimeStampedModel):
 
     def __str__(self):
         return f"{self.sku} - {self.nombre_generico}"
+
 
 class Proveedores(TimeStampedModel):
     ruc = models.CharField(max_length=20, unique=True)
@@ -240,21 +278,6 @@ class Proveedores(TimeStampedModel):
     def __str__(self):
         return self.nombre
 
-class CostosPandora(TimeStampedModel):
-    pandora = models.ForeignKey(Pandora, on_delete=models.CASCADE)
-    proveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
-    marca = models.ForeignKey(Marca, on_delete=models.CASCADE)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-    nota = models.TextField(blank=True, null=True)
-    fecha = models.DateField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Costo Pandora"
-        verbose_name_plural = "Costos Pandora"
-        ordering = ['-fecha', 'pandora']
-
-    def __str__(self):
-        return f"{self.pandora} - {self.proveedor} - {self.precio}"
 
 class Vendedores(TimeStampedModel):
     proveedor = models.ForeignKey(Proveedores, on_delete=models.CASCADE)
@@ -263,6 +286,25 @@ class Vendedores(TimeStampedModel):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     observacion = models.TextField(blank=True, null=True)
     activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class Contactos(TimeStampedModel):
+    nombre = models.CharField(max_length=255)
+    alias = models.CharField(max_length=255, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    telefono2 = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(max_length=100, blank=True, null=True)
+    direccion = models.TextField(blank=True, null=True)
+    obserbacion = models.TextField(blank=True, null=True)
+    ingerencia = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Contacto"
+        verbose_name_plural = "Contactos"
+        ordering = ['nombre']
 
     def __str__(self):
         return self.nombre

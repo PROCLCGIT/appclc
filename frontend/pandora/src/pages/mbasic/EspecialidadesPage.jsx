@@ -15,7 +15,7 @@ const EspecialidadesPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ nombre: '', code: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -39,13 +39,13 @@ const EspecialidadesPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({ nombre: '', code: '' });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({ nombre: item.nombre, code: item.code || '' });
     setIsDialogOpen(true);
   };
 
@@ -84,7 +84,8 @@ const EspecialidadesPage = () => {
   };
 
   const filteredData = data.filter((item) =>
-    item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const totalItems = filteredData.length;
@@ -102,9 +103,8 @@ const EspecialidadesPage = () => {
   };
 
   const columns = [
+    { key: 'code', label: 'Código' },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
   ];
 
   return (
@@ -179,18 +179,33 @@ const EspecialidadesPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid w-full gap-2">
+            <label htmlFor="code" className="text-sm font-medium text-gray-700">
+              Código
+            </label>
+            <Input
+              id="code"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value })
+              }
+              required
+            />
+          </div>
+          <div className="grid w-full gap-2">
+            <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+              Nombre
+            </label>
+            <Input
+              id="nombre"
+              value={formData.nombre}
+              onChange={(e) =>
+                setFormData({ ...formData, nombre: e.target.value })
+              }
+              required
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

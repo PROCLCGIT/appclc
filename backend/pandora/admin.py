@@ -17,7 +17,6 @@ from .models import (
     PreciosSie,
     MsPref,
     Proveedores,
-    CostosPandora,
     Procesos_auditados,
     Vendedores
 )
@@ -39,7 +38,6 @@ admin.site.register(Clientes)
 admin.site.register(PreciosSie)
 admin.site.register(MsPref)
 admin.site.register(Proveedores)
-admin.site.register(CostosPandora)
 admin.site.register(Vendedores)
 
 

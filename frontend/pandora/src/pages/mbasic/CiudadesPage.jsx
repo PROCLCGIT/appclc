@@ -15,7 +15,11 @@ const CiudadesPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ 
+    nombre: '', 
+    provincia: '',
+    code: ''
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -39,13 +43,21 @@ const CiudadesPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({ 
+      nombre: '',
+      provincia: '',
+      code: ''
+    });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({ 
+      nombre: item.nombre,
+      provincia: item.provincia || '',
+      code: item.code || ''
+    });
     setIsDialogOpen(true);
   };
 
@@ -85,7 +97,9 @@ const CiudadesPage = () => {
 
   const paginatedData = (() => {
     const filteredData = data.filter((item) =>
-      item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.provincia && item.provincia.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const totalItems = filteredData.length;
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -108,8 +122,8 @@ const CiudadesPage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
+    { key: 'provincia', label: 'Provincia' },
+    { key: 'code', label: 'Código' }
   ];
 
   return (
@@ -184,18 +198,48 @@ const CiudadesPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid w-full gap-2">
+            <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+              Nombre
+            </label>
+            <Input
+              id="nombre"
+              value={formData.nombre}
+              onChange={(e) =>
+                setFormData({ ...formData, nombre: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="grid w-full gap-2">
+            <label htmlFor="provincia" className="text-sm font-medium text-gray-700">
+              Provincia
+            </label>
+            <Input
+              id="provincia"
+              value={formData.provincia}
+              onChange={(e) =>
+                setFormData({ ...formData, provincia: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="grid w-full gap-2">
+            <label htmlFor="code" className="text-sm font-medium text-gray-700">
+              Código
+            </label>
+            <Input
+              id="code"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value })
+              }
+              required
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

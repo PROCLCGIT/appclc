@@ -48,6 +48,7 @@ const ProductosDisponiblesPage = () => {
     id_marca: '',
     modelo: '',
     presentacion: '',
+    procedencia: '',
     referencia: '',
     tz_oferta: 0,
     tz_demanda: 0,
@@ -62,9 +63,11 @@ const ProductosDisponiblesPage = () => {
     is_active: true
   });
 
-  // Búsqueda, paginación y pestaña activa
+  // Búsqueda, paginación, ordenamiento y pestaña activa
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState('nombre');
+  const [sortDirection, setSortDirection] = useState('asc');
   const itemsPerPage = 10;
   const [activeTab, setActiveTab] = useState('listado');
 
@@ -171,6 +174,7 @@ const ProductosDisponiblesPage = () => {
       id_marca: '',
       modelo: '',
       presentacion: '',
+      procedencia: '',
       referencia: '',
       tz_oferta: 0,
       tz_demanda: 0,
@@ -204,6 +208,7 @@ const ProductosDisponiblesPage = () => {
       id_marca: item.id_marca || '',
       modelo: item.modelo || '',
       presentacion: item.presentacion || '',
+      procedencia: item.procedencia || '',
       referencia: item.referencia || '',
       tz_oferta: item.tz_oferta || 0,
       tz_demanda: item.tz_demanda || 0,
@@ -572,13 +577,25 @@ const ProductosDisponiblesPage = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Búsqueda y paginación
+  // Búsqueda, ordenamiento y paginación
   // ─────────────────────────────────────────────────────────────────────────────
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
+  
+  const handleSortChange = (field) => {
+    // Si se hace clic en el mismo campo, cambia la dirección
+    if (sortBy === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Si se hace clic en un campo diferente, establece ese campo y dirección ascendente
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+  };
 
+  // Filtrar por término de búsqueda
   const filteredData = data.filter((item) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -587,11 +604,33 @@ const ProductosDisponiblesPage = () => {
       item.modelo?.toLowerCase().includes(term)
     );
   });
+  
+  // Ordenar los datos
+  const sortedData = [...filteredData].sort((a, b) => {
+    // Maneja el caso de valores undefined o null
+    const valueA = a[sortBy] !== undefined && a[sortBy] !== null ? a[sortBy] : '';
+    const valueB = b[sortBy] !== undefined && b[sortBy] !== null ? b[sortBy] : '';
+    
+    // Si es numérico, compara como números
+    if (!isNaN(valueA) && !isNaN(valueB)) {
+      return sortDirection === 'asc' 
+        ? Number(valueA) - Number(valueB) 
+        : Number(valueB) - Number(valueA);
+    }
+    
+    // Compara como strings
+    const strA = String(valueA).toLowerCase();
+    const strB = String(valueB).toLowerCase();
+    
+    return sortDirection === 'asc' 
+      ? strA.localeCompare(strB) 
+      : strB.localeCompare(strA);
+  });
 
-  const totalItems = filteredData.length;
+  const totalItems = sortedData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const visibleData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+  const visibleData = sortedData.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -703,6 +742,7 @@ const ProductosDisponiblesPage = () => {
             error={error}
             data={visibleData}
             marcas={marcas}
+            categorias={categorias}
             searchTerm={searchTerm}
             handleSearchChange={handleSearchChange}
             handleAdd={handleAdd}
@@ -714,6 +754,8 @@ const ProductosDisponiblesPage = () => {
             totalItems={totalItems}
             handlePrevPage={handlePrevPage}
             handleNextPage={handleNextPage}
+            sortBy={sortBy}
+            setSortBy={handleSortChange}
           />
         )}
 

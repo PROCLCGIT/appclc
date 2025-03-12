@@ -14,40 +14,67 @@ const Login = () => {
   });
 
   useEffect(() => {
-    // Limpiar cualquier token antiguo al montar el componente
-    localStorage.removeItem('auth-token');
-    localStorage.removeItem('refresh-token');
+    console.log('Login component mounted');
     
-    if (isAuthenticated) {
-      navigate('/');
-    }
-    return () => clearError();
-  }, [isAuthenticated, navigate, clearError]);
+    // Limpiar errores anteriores
+    clearError();
+    
+    // NO borramos tokens aquí - eso puede causar ciclos infinitos
+    // Al no borrar automáticamente los tokens, permitimos que AuthLayout
+    // decida si son válidos o no
+    
+    return () => {
+      console.log('Login component unmounting');
+      clearError();
+    };
+  }, [clearError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Debug: mostrar datos del formulario (sin la contraseña)
-    console.log('Datos del formulario:', {
-      username: formData.username,
-      hasPassword: !!formData.password
-    });
-
-    // Validar que ambos campos tengan contenido
-    if (!formData.username.trim() || !formData.password) {
-      console.log('Validación fallida: campos vacíos');
+    // Limpiar errores previos
+    clearError();
+    
+    // Validar campos
+    if (!formData.username.trim()) {
+      console.log('Error: Nombre de usuario vacío');
+      useAuthStore.setState({ error: 'Por favor ingrese su nombre de usuario' });
       return;
     }
+    
+    if (!formData.password) {
+      console.log('Error: Contraseña vacía');
+      useAuthStore.setState({ error: 'Por favor ingrese su contraseña' });
+      return;
+    }
+    
+    console.log('Intentando iniciar sesión...');
+    
+    try {
+      // Intentar login
+      console.log('Login.jsx: Iniciando proceso de login...');
+      const success = await login({
+        username: formData.username.trim(),
+        password: formData.password
+      });
 
-    const success = await login({
-      username: formData.username.trim(),
-      password: formData.password
-    });
+      console.log('Login.jsx: Resultado del login:', { success });
 
-    console.log('Resultado del login:', { success });
-
-    if (success) {
-      navigate('/');
+      if (success) {
+        console.log('Login.jsx: Login exitoso, redirigiendo...');
+        // Esperamos un momento para que los tokens se guarden correctamente
+        setTimeout(() => {
+          navigate('/');
+        }, 300);
+      } else {
+        console.log('Login.jsx: Login fallido');
+        // El error ya debe estar en el estado global (authStore)
+      }
+    } catch (error) {
+      console.error('Error inesperado durante el login:', error);
+      useAuthStore.setState({ 
+        error: 'Ocurrió un error inesperado. Por favor intente nuevamente.'
+      });
     }
   };
 

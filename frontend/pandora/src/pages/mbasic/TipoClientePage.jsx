@@ -108,8 +108,6 @@ const TipoClientePage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
   ];
 
   return (
@@ -184,18 +182,20 @@ const TipoClientePage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid w-full gap-2">
+            <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+              Nombre
+            </label>
+            <Input
+              id="nombre"
+              value={formData.nombre}
+              onChange={(e) =>
+                setFormData({ ...formData, nombre: e.target.value })
+              }
+              required
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

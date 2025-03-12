@@ -15,7 +15,15 @@ const CategoriasPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({
+    nombre: '',
+    code: '',
+    parent: null,
+    level: 0,
+    path: '',
+    is_active: true
+  });
+  const [parentCategories, setParentCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -25,6 +33,11 @@ const CategoriasPage = () => {
     try {
       const response = await categoriasService.getAll();
       setData(response.results);
+      
+      // Filter out potential parent categories (level 0 or level 1)
+      const potentialParents = response.results.filter(cat => cat.level < 2);
+      setParentCategories(potentialParents);
+      
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -39,13 +52,27 @@ const CategoriasPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({
+      nombre: '',
+      code: '',
+      parent: null,
+      level: 0,
+      path: '',
+      is_active: true
+    });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({
+      nombre: item.nombre,
+      code: item.code || '',
+      parent: item.parent || null,
+      level: item.level || 0,
+      path: item.path || '',
+      is_active: item.is_active !== undefined ? item.is_active : true
+    });
     setIsDialogOpen(true);
   };
 
@@ -85,7 +112,9 @@ const CategoriasPage = () => {
 
   const paginatedData = (() => {
     const filteredData = data.filter((item) =>
-      item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.path && item.path.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const totalItems = filteredData.length;
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -108,8 +137,10 @@ const CategoriasPage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
+    { key: 'code', label: 'Código' },
+    { key: 'level', label: 'Nivel' },
+    { key: 'path', label: 'Ruta' },
+    { key: 'is_active', label: 'Activo', format: value => value ? 'Sí' : 'No' },
   ];
 
   return (
@@ -184,18 +215,109 @@ const CategoriasPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+                Nombre
+              </label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) =>
+                  setFormData({ ...formData, nombre: e.target.value })
+                }
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="code" className="text-sm font-medium text-gray-700">
+                Código
+              </label>
+              <Input
+                id="code"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="parent" className="text-sm font-medium text-gray-700">
+              Categoría Padre
+            </label>
+            <select
+              id="parent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              value={formData.parent || ''}
+              onChange={(e) =>
+                setFormData({ 
+                  ...formData, 
+                  parent: e.target.value ? parseInt(e.target.value) : null,
+                  level: e.target.value ? 
+                    (parentCategories.find(c => c.id === parseInt(e.target.value))?.level + 1 || 0) : 0
+                })
+              }
+            >
+              <option value="">Sin categoría padre</option>
+              {parentCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nombre} (Nivel {cat.level})
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="level" className="text-sm font-medium text-gray-700">
+                Nivel
+              </label>
+              <Input
+                id="level"
+                type="number"
+                min="0"
+                value={formData.level}
+                onChange={(e) =>
+                  setFormData({ ...formData, level: parseInt(e.target.value) })
+                }
+                disabled={formData.parent !== null}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="path" className="text-sm font-medium text-gray-700">
+                Ruta
+              </label>
+              <Input
+                id="path"
+                value={formData.path}
+                onChange={(e) =>
+                  setFormData({ ...formData, path: e.target.value })
+                }
+                disabled
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="is_active"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              checked={formData.is_active}
+              onChange={(e) =>
+                setFormData({ ...formData, is_active: e.target.checked })
+              }
+            />
+            <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+              Activo
+            </label>
+          </div>
         </div>
       </FormDialog>
     </div>

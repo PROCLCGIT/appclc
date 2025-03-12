@@ -15,7 +15,16 @@ const EmpresasClcPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ 
+    nombre: '',
+    razon_social: '',
+    code: '',
+    ruc: '',
+    direccion: '',
+    telefono: '',
+    correo: '',
+    representante_legal: '' 
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -39,13 +48,31 @@ const EmpresasClcPage = () => {
 
   const handleAdd = () => {
     setSelectedItem(null);
-    setFormData({ nombre: '' });
+    setFormData({ 
+      nombre: '',
+      razon_social: '',
+      code: '',
+      ruc: '',
+      direccion: '',
+      telefono: '',
+      correo: '',
+      representante_legal: ''
+    });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item) => {
     setSelectedItem(item);
-    setFormData({ nombre: item.nombre });
+    setFormData({ 
+      nombre: item.nombre,
+      razon_social: item.razon_social || '',
+      code: item.code || '',
+      ruc: item.ruc || '',
+      direccion: item.direccion || '',
+      telefono: item.telefono || '',
+      correo: item.correo || '',
+      representante_legal: item.representante_legal || ''
+    });
     setIsDialogOpen(true);
   };
 
@@ -85,7 +112,9 @@ const EmpresasClcPage = () => {
 
   const paginatedData = (() => {
     const filteredData = data.filter((item) =>
-      item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.razon_social && item.razon_social.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.ruc && item.ruc.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const totalItems = filteredData.length;
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -108,8 +137,13 @@ const EmpresasClcPage = () => {
 
   const columns = [
     { key: 'nombre', label: 'Nombre' },
-    { key: 'created_at', label: 'Fecha Creación' },
-    { key: 'updated_at', label: 'Última Actualización' },
+    { key: 'razon_social', label: 'Razón Social' },
+    { key: 'code', label: 'Código' },
+    { key: 'ruc', label: 'RUC' },
+    { key: 'direccion', label: 'Dirección' },
+    { key: 'telefono', label: 'Teléfono' },
+    { key: 'correo', label: 'Correo' },
+    { key: 'representante_legal', label: 'Representante Legal' },
   ];
 
   return (
@@ -184,18 +218,124 @@ const EmpresasClcPage = () => {
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       >
-        <div className="grid w-full gap-2">
-          <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-            Nombre
-          </label>
-          <Input
-            id="nombre"
-            value={formData.nombre}
-            onChange={(e) =>
-              setFormData({ ...formData, nombre: e.target.value })
-            }
-            required
-          />
+        <div className="grid w-full gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
+                Nombre
+              </label>
+              <Input
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) =>
+                  setFormData({ ...formData, nombre: e.target.value })
+                }
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="razon_social" className="text-sm font-medium text-gray-700">
+                Razón Social
+              </label>
+              <Input
+                id="razon_social"
+                value={formData.razon_social}
+                onChange={(e) =>
+                  setFormData({ ...formData, razon_social: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="code" className="text-sm font-medium text-gray-700">
+                Código
+              </label>
+              <Input
+                id="code"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({ ...formData, code: e.target.value })
+                }
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="ruc" className="text-sm font-medium text-gray-700">
+                RUC
+              </label>
+              <Input
+                id="ruc"
+                value={formData.ruc}
+                onChange={(e) =>
+                  setFormData({ ...formData, ruc: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="direccion" className="text-sm font-medium text-gray-700">
+              Dirección
+            </label>
+            <Input
+              id="direccion"
+              value={formData.direccion}
+              onChange={(e) =>
+                setFormData({ ...formData, direccion: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="telefono" className="text-sm font-medium text-gray-700">
+                Teléfono
+              </label>
+              <Input
+                id="telefono"
+                value={formData.telefono}
+                onChange={(e) =>
+                  setFormData({ ...formData, telefono: e.target.value })
+                }
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="correo" className="text-sm font-medium text-gray-700">
+                Correo Electrónico
+              </label>
+              <Input
+                id="correo"
+                type="email"
+                value={formData.correo}
+                onChange={(e) =>
+                  setFormData({ ...formData, correo: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="representante_legal" className="text-sm font-medium text-gray-700">
+              Representante Legal
+            </label>
+            <Input
+              id="representante_legal"
+              value={formData.representante_legal}
+              onChange={(e) =>
+                setFormData({ ...formData, representante_legal: e.target.value })
+              }
+              required
+            />
+          </div>
         </div>
       </FormDialog>
     </div>

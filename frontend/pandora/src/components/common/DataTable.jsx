@@ -51,8 +51,20 @@ const DataTable = ({
             data.map((row) => (
               <TableRow key={row.id}>
                 {columns.map((column) => (
-                  <TableCell key={`${row.id}-${column.key}`}>
-                    {row[column.key]}
+                  <TableCell 
+                    key={`${row.id}-${column.key}`}
+                    className={column.key === 'objeto' ? 'max-w-md' : ''}
+                  >
+                    {column.key === 'objeto' && row[column.key] && row[column.key].length > 100 ? (
+                      <div className="relative group">
+                        <div className="line-clamp-2">{row[column.key]}</div>
+                        <div className="hidden group-hover:block absolute z-10 p-3 bg-white border shadow-lg rounded-md w-full max-w-lg">
+                          {row[column.key]}
+                        </div>
+                      </div>
+                    ) : (
+                      row[column.key]
+                    )}
                   </TableCell>
                 ))}
                 <TableCell className="text-right space-x-2">
