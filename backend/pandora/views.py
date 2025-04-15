@@ -17,7 +17,7 @@ from .models import (
     Categorias, Especialidades, Marca, Procedencia,
     TipoContratacion, Procesos_auditados, Unidades,
     EmpresaClc, PreciosSie, MsPref, Proveedores,
-    Vendedores, Contactos
+    Vendedores, Contactos, RelacionesBlue
 )
 
 # Importar serializers de la app pandora
@@ -28,7 +28,7 @@ from .serializers import (
     TipoContratacionSerializer, Procesos_auditadosSerializer,
     UnidadesSerializer, EmpresaClcSerializer, PreciosSieSerializer,
     MsPrefSerializer, ProveedoresSerializer, VendedoresSerializer,
-    ContactosSerializer
+    ContactosSerializer, RelacionesBluSerializer
 )
 
 # Importar throttles (si los estás usando)
@@ -473,3 +473,41 @@ class ContactosViewSet(BaseModelViewSet):
     }
     search_fields = ['nombre', 'alias', 'telefono', 'email', 'direccion']
     ordering_fields = ['nombre', 'created_at', 'updated_at']
+
+
+class RelacionesBlueViewSet(BaseModelViewSet):
+    """ViewSet para gestión de Relaciones Blue."""
+    queryset = RelacionesBlue.objects.select_related('cliente', 'contacto').all()
+    serializer_class = RelacionesBluSerializer
+    filterset_fields = {
+        **BaseModelViewSet.filterset_fields,
+        'cliente': ['exact'],
+        'contacto': ['exact'],
+        'nivel': ['exact', 'gte', 'lte'],
+    }
+    search_fields = ['cliente__nombre', 'contacto__nombre']
+    ordering_fields = ['nivel', 'created_at', 'updated_at']
+
+    @action(detail=False, methods=['get'])
+    def por_cliente(self, request):
+        """Obtiene todas las relaciones agrupadas por cliente"""
+        cliente_id = request.query_params.get('cliente_id')
+        if cliente_id:
+            relaciones = self.queryset.filter(cliente_id=cliente_id)
+        else:
+            relaciones = self.queryset
+        
+        serializer = self.get_serializer(relaciones, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def por_contacto(self, request):
+        """Obtiene todas las relaciones agrupadas por contacto"""
+        contacto_id = request.query_params.get('contacto_id')
+        if contacto_id:
+            relaciones = self.queryset.filter(contacto_id=contacto_id)
+        else:
+            relaciones = self.queryset
+        
+        serializer = self.get_serializer(relaciones, many=True)
+        return Response(serializer.data)

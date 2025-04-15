@@ -1,6 +1,7 @@
 # /backend/pandora/models.py
 
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class TimeStampedModel(models.Model):
     """Abstract model to add created and modified timestamps"""
@@ -194,7 +195,9 @@ class Clientes(TimeStampedModel):
     email = models.EmailField(max_length=50)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     direccion = models.CharField(max_length=100)
+    nota = models.TextField(blank=True, null=True)
     activo = models.BooleanField(default=True)
+
 
     class Meta:
         verbose_name_plural = "Clientes"
@@ -308,3 +311,23 @@ class Contactos(TimeStampedModel):
 
     def __str__(self):
         return self.nombre
+
+
+class RelacionesBlue(TimeStampedModel):
+    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE, related_name='relaciones_blue')
+    contacto = models.ForeignKey(Contactos, on_delete=models.CASCADE, related_name='relaciones_blue')
+    nivel = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(9)],
+        help_text="Valor numérico entre 1 y 9"
+    )
+
+    class Meta:
+        db_table = 'relaciones_blue'
+        unique_together = (('cliente', 'contacto'),)
+        verbose_name = "Relación Blue"
+        verbose_name_plural = "Relaciones Blue"
+
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.contacto.nombre} (Nivel: {self.nivel})"
+
+

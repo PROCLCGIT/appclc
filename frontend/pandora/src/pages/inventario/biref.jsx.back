@@ -1,0 +1,810 @@
+import React, { useState, useRef, useEffect } from 'react';
+import './brief.css';
+
+const Brief = () => {
+  // Generar código automático BF-2025xx
+  const generateBriefCode = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const sequentialNumber = Math.floor(1 + Math.random() * 99).toString().padStart(2, '0');
+    return `BF-${year}${sequentialNumber}`;
+  };
+
+  // Estado para los datos del brief
+  const [briefData, setBriefData] = useState({
+    codigo: generateBriefCode(),
+    fecha: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+    cliente: '',
+    origen: '',
+    presupuesto: '',
+    observaciones: ''
+  });
+
+  // Estado para errores de validación del brief
+  const [briefErrors, setBriefErrors] = useState({});
+
+  // Función para actualizar los datos del brief
+  const handleBriefDataChange = (e) => {
+    const { name, value } = e.target;
+    setBriefData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Limpiar error cuando el usuario escribe
+    if (briefErrors[name]) {
+      setBriefErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+  
+  // Función para validar y guardar el brief
+  const handleSaveBrief = () => {
+    const errors = {};
+    
+    // Validar campos obligatorios
+    if (!briefData.cliente.trim()) {
+      errors.cliente = 'El cliente es obligatorio';
+    }
+    
+    if (!briefData.fecha) {
+      errors.fecha = 'La fecha es obligatoria';
+    }
+    
+    if (!briefData.origen) {
+      errors.origen = 'Seleccione un origen';
+    }
+    
+    // Actualizar errores y verificar si hay alguno
+    setBriefErrors(errors);
+    
+    if (Object.keys(errors).length === 0) {
+      // Aquí iría la lógica para guardar el brief
+      setSubmitStatus({
+        type: 'success',
+        message: `Brief ${briefData.codigo} guardado exitosamente`
+      });
+      
+      // Limpiar algunos campos después de guardar
+      setBriefData(prev => ({
+        ...prev,
+        observaciones: ''
+      }));
+    } else {
+      setSubmitStatus({
+        type: 'error',
+        message: 'Por favor complete todos los campos obligatorios del brief'
+      });
+    }
+  };
+
+  const [products, setProducts] = useState([
+    { id: 1, codigo: 'P001', name: 'Producto 1', description: 'Descripción del producto 1', unit: 'Unidad', quantity: 4 },
+    { id: 2, codigo: 'P002', name: 'Producto 2', description: 'Descripción del producto 2', unit: 'Kilogramo', quantity: 8 }
+  ]);
+  
+  const [newProduct, setNewProduct] = useState({
+    codigo: '',
+    name: '',
+    description: '',
+    unit: 'UND',
+    quantity: 0
+  });
+
+  const [validationErrors, setValidationErrors] = useState({});
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState('nombre');
+  const [viewType, setViewType] = useState('full'); // 'full' o 'compact'
+  
+  const refs = {
+    codigoRef: useRef(null),
+    nameRef: useRef(null),
+    descriptionRef: useRef(null),
+    unitRef: useRef(null),
+    quantityRef: useRef(null),
+    clienteRef: useRef(null)
+  };
+  
+  useEffect(() => {
+    // Focus cliente field on initial load
+    refs.clienteRef.current?.focus();
+  }, []);
+
+  // Calculate total items
+  const totalItems = products.reduce((sum, product) => sum + Number(product.quantity), 0);
+
+  // Validate form fields
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!newProduct.codigo.trim()) {
+      errors.codigo = 'El código es obligatorio';
+    }
+    
+    if (!newProduct.name.trim()) {
+      errors.name = 'El nombre es obligatorio';
+    }
+    
+    // Siempre validamos la descripción, incluso en vista compacta
+    if (!newProduct.description.trim()) {
+      errors.description = 'La descripción es obligatoria';
+      
+      // Si estamos en vista compacta, mostrar una alerta o mensaje global
+      if (viewType === 'compact') {
+        setSubmitStatus({
+          type: 'error',
+          message: 'Por favor ingrese una descripción para el producto'
+        });
+      }
+    }
+    
+    if (!newProduct.unit.trim()) {
+      errors.unit = 'La unidad es obligatoria';
+    }
+    
+    if (!newProduct.quantity) {
+      errors.quantity = 'La cantidad es obligatoria';
+    } else if (Number(newProduct.quantity) <= 0) {
+      errors.quantity = 'La cantidad debe ser mayor a 0';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle adding a new product
+  const handleAddProduct = (e) => {
+    if (e) e.preventDefault();
+    
+    // Reset previous status
+    setSubmitStatus(null);
+    
+    // Validate form
+    if (!validateForm()) {
+      setSubmitStatus({
+        type: 'error',
+        message: 'Por favor complete todos los campos requeridos'
+      });
+      return;
+    }
+    
+    // Create new product object
+    const product = {
+      id: Date.now(),
+      codigo: newProduct.codigo.trim(),
+      name: newProduct.name.trim(),
+      description: newProduct.description.trim(),
+      unit: newProduct.unit.trim(),
+      quantity: Number(newProduct.quantity)
+    };
+    
+    // Add to products array
+    setProducts([...products, product]);
+    
+    // Reset form
+    setNewProduct({ 
+      codigo: '',
+      name: '', 
+      description: '', 
+      unit: 'UND', 
+      quantity: 0 
+    });
+    
+    setValidationErrors({});
+    
+    // Show success message
+    setSubmitStatus({
+      type: 'success',
+      message: `Item "${product.name}" agregado exitosamente`
+    });
+    
+    // Focus on codigo input for next entry
+    setTimeout(() => {
+      if (refs.codigoRef.current) {
+        refs.codigoRef.current.focus();
+      }
+    }, 100);
+  };
+  
+  // Handle pressing Enter key in form fields to navigate between fields
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const currentElement = e.target;
+      
+      if (viewType === 'full') {
+        // Navegación en vista completa
+        switch (currentElement.id) {
+          case 'codigo':
+            refs.nameRef.current?.focus();
+            break;
+          case 'name':
+            refs.descriptionRef.current?.focus();
+            break;
+          case 'description':
+            refs.unitRef.current?.focus();
+            break;
+          case 'unit':
+            refs.quantityRef.current?.focus();
+            break;
+          case 'quantity':
+            handleAddProduct();
+            break;
+        }
+      } else {
+        // Navegación en vista compacta (sin campo descripción)
+        switch (currentElement.id) {
+          case 'codigo':
+            refs.nameRef.current?.focus();
+            break;
+          case 'name':
+            refs.unitRef.current?.focus();
+            break;
+          case 'unit':
+            refs.quantityRef.current?.focus();
+            break;
+          case 'quantity':
+            handleAddProduct();
+            break;
+        }
+      }
+    }
+  };
+
+  // Handle changing form values
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({
+      ...prev,
+      [name]: name === 'quantity' ? Number(value) : value
+    }));
+  };
+
+  // Handle removing a product
+  const handleRemoveProduct = (id) => {
+    const productToRemove = products.find(product => product.id === id);
+    setProducts(products.filter(product => product.id !== id));
+    
+    setSubmitStatus({
+      type: 'info',
+      message: `Item "${productToRemove.name}" eliminado`
+    });
+  };
+
+  // Handle sorting
+  const handleSort = (field) => {
+    setSortField(field);
+    
+    // Sort products based on the selected field
+    const sortedProducts = [...products].sort((a, b) => {
+      if (field === 'nombre') {
+        return a.name.localeCompare(b.name);
+      } else if (field === 'description') {
+        return a.description.localeCompare(b.description);
+      } else if (field === 'cantidad') {
+        return a.quantity - b.quantity;
+      } else if (field === 'codigo') {
+        return a.codigo.localeCompare(b.codigo);
+      }
+      return 0;
+    });
+    
+    setProducts(sortedProducts);
+  };
+
+  // Filter products by search term
+  const filteredProducts = products.filter(product => 
+    product.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.unit.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="bg-blue-50 min-h-screen py-6">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="bg-white rounded-xl shadow-md p-6">
+          {/* Header Title */}
+          <div className="flex justify-between items-center mb-6">
+            {/* Title */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight">Brief</h1>
+                <p className="text-sm text-gray-500">Formulario de requerimientos</p>
+              </div>
+            </div>
+
+            {/* Counter */}
+            <div className="flex items-center bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2">
+              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                <svg className="w-4 h-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 font-medium">Total Items</div>
+                <div className="text-base font-semibold text-gray-900">{totalItems}</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Brief Form Header */}
+          <div className="bg-gray-50 rounded-lg p-5 mb-6 border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Primera fila */}
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">Código Brief</label>
+                  <input
+                    type="text"
+                    id="codigo"
+                    name="codigo"
+                    value={briefData.codigo}
+                    disabled
+                    className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm text-sm cursor-not-allowed"
+                  />
+                </div>
+              </div>
+              
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="fecha"
+                    name="fecha"
+                    value={briefData.fecha}
+                    onChange={handleBriefDataChange}
+                    className={`w-full px-3 py-2 border ${briefErrors.fecha ? 'border-red-300 ring-1 ring-red-300' : 'border-gray-300'} rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500`}
+                  />
+                  {briefErrors.fecha && (
+                    <p className="mt-1 text-xs text-red-600">{briefErrors.fecha}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cliente <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="cliente"
+                    name="cliente"
+                    ref={refs.clienteRef}
+                    value={briefData.cliente}
+                    onChange={handleBriefDataChange}
+                    className={`w-full px-3 py-2 border ${briefErrors.cliente ? 'border-red-300 ring-1 ring-red-300' : 'border-gray-300'} rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500`}
+                    placeholder="Nombre del cliente"
+                  />
+                  {briefErrors.cliente && (
+                    <p className="mt-1 text-xs text-red-600">{briefErrors.cliente}</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Segunda fila */}
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="origen" className="block text-sm font-medium text-gray-700 mb-1">
+                    Origen <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="origen"
+                    name="origen"
+                    value={briefData.origen}
+                    onChange={handleBriefDataChange}
+                    className={`w-full px-3 py-2 border ${briefErrors.origen ? 'border-red-300 ring-1 ring-red-300' : 'border-gray-300'} rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500`}
+                  >
+                    <option value="">Seleccionar origen</option>
+                    <option value="Llamada">Llamada</option>
+                    <option value="Email">Email</option>
+                    <option value="Reunión">Reunión</option>
+                    <option value="Web">Web</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                  {briefErrors.origen && (
+                    <p className="mt-1 text-xs text-red-600">{briefErrors.origen}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="presupuesto" className="block text-sm font-medium text-gray-700 mb-1">Presupuesto</label>
+                  <input
+                    type="text"
+                    id="presupuesto"
+                    name="presupuesto"
+                    value={briefData.presupuesto}
+                    onChange={handleBriefDataChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: $10,000"
+                  />
+                </div>
+              </div>
+              
+              <div className="col-span-3 md:col-span-2 lg:col-span-1">
+                <div className="mb-4">
+                  <label htmlFor="observaciones" className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                  <textarea
+                    id="observaciones"
+                    name="observaciones"
+                    value={briefData.observaciones}
+                    onChange={handleBriefDataChange}
+                    rows="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Observaciones adicionales..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            
+            {/* Botones de acción para el encabezado */}
+            <div className="flex justify-end mt-2">
+              <button 
+                type="button" 
+                onClick={handleSaveBrief}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                Guardar Brief
+              </button>
+            </div>
+          </div>
+          
+          {/* Status Messages */}
+          {submitStatus && (
+            <div className={`mb-4 p-3 rounded-lg ${
+              submitStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+              submitStatus.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' :
+              'bg-blue-50 text-blue-800 border border-blue-200'
+            }`}>
+              <div className="flex items-center">
+                {submitStatus.type === 'success' && (
+                  <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                
+                {submitStatus.type === 'error' && (
+                  <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+                
+                {submitStatus.type === 'info' && (
+                  <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 7a1 1 0 100 2h.01a1 1 0 100-2H10z" clipRule="evenodd" />
+                  </svg>
+                )}
+                
+                <span className="font-medium">{submitStatus.message}</span>
+                <button 
+                  className="ml-auto text-gray-500 hover:text-gray-700" 
+                  onClick={() => setSubmitStatus(null)}
+                  aria-label="Cerrar notificación"
+                >
+                  <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Table with Search and View Toggle */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center space-x-4">
+                <div className="relative w-64">
+                  <input 
+                    type="text" 
+                    className="pl-9 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Buscar items..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                
+                {/* View Toggle */}
+                <div className="flex items-center space-x-2 p-1 bg-gray-100 rounded-lg">
+                  <button
+                    className={`flex items-center px-3 py-1.5 text-sm rounded-md ${viewType === 'full' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-700 hover:bg-gray-200'}`}
+                    onClick={() => setViewType('full')}
+                  >
+                    <svg className="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Completa
+                  </button>
+                  <button
+                    className={`flex items-center px-3 py-1.5 text-sm rounded-md ${viewType === 'compact' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-700 hover:bg-gray-200'}`}
+                    onClick={() => setViewType('compact')}
+                  >
+                    <svg className="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Compacta
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">Ordenar por:</span>
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${sortField === 'codigo' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={() => handleSort('codigo')}
+                >
+                  Código
+                </button>
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${sortField === 'nombre' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={() => handleSort('nombre')}
+                >
+                  Nombre
+                </button>
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${sortField === 'cantidad' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  onClick={() => handleSort('cantidad')}
+                >
+                  Cantidad
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200">
+              {/* Table Header - Vista completa o compacta según viewType */}
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="w-16 py-3 px-4 text-center text-xs font-medium text-gray-500 uppercase">ID</th>
+                  <th scope="col" className="w-36 py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                  <th scope="col" className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                  {viewType === 'full' && (
+                    <th scope="col" className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                  )}
+                  <th scope="col" className="w-36 py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Unidad</th>
+                  <th scope="col" className="w-36 py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                  <th scope="col" className="w-20 py-3 px-4 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody className="bg-white divide-y divide-gray-200">
+                {/* Input Form Row - Siempre visible en ambas vistas para ingresar datos */}
+                <tr className="bg-blue-50">
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-xs text-blue-600 font-medium">
+                      {filteredProducts.length + 1}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      ref={refs.codigoRef}
+                      type="text"
+                      id="codigo"
+                      name="codigo"
+                      value={newProduct.codigo}
+                      onChange={handleChange}
+                      onKeyDown={handleKeyDown}
+                      className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 px-3"
+                      placeholder="Ingrese código"
+                      required
+                    />
+                    {validationErrors.codigo && (
+                      <div className="mt-1 text-xs text-red-600">{validationErrors.codigo}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <input
+                        ref={refs.nameRef}
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={newProduct.name}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 px-3"
+                        placeholder="Nombre del producto"
+                        required
+                      />
+                      {validationErrors.name && (
+                        <div className="mt-1 text-xs text-red-600">{validationErrors.name}</div>
+                      )}
+                    </div>
+                    
+                    {/* Campo de descripción oculto en vista compacta pero accesible con ícono */}
+                    {viewType === 'compact' && (
+                      <div className="mt-2">
+                        <div className="flex items-center space-x-1">
+                          <label htmlFor="description" className="text-xs text-gray-500 flex items-center">
+                            <svg className="w-4 h-4 mr-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            Descripción:
+                          </label>
+                        </div>
+                        <input
+                          ref={refs.descriptionRef}
+                          type="text"
+                          id="description"
+                          name="description"
+                          value={newProduct.description}
+                          onChange={handleChange}
+                          onKeyDown={handleKeyDown}
+                          className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 px-3 mt-1"
+                          placeholder="Descripción del producto"
+                          required
+                        />
+                        {validationErrors.description && (
+                          <div className="mt-1 text-xs text-red-600">{validationErrors.description}</div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  {viewType === 'full' && (
+                    <td className="px-4 py-3">
+                      <input
+                        ref={refs.descriptionRef}
+                        type="text"
+                        id="description"
+                        name="description"
+                        value={newProduct.description}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 px-3"
+                        placeholder="Descripción del producto"
+                        required
+                      />
+                      {validationErrors.description && (
+                        <div className="mt-1 text-xs text-red-600">{validationErrors.description}</div>
+                      )}
+                    </td>
+                  )}
+                  <td className="px-4 py-3">
+                    <select
+                      ref={refs.unitRef}
+                      id="unit"
+                      name="unit"
+                      value={newProduct.unit}
+                      onChange={handleChange}
+                      onKeyDown={handleKeyDown}
+                      className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 pl-3 pr-8"
+                      required
+                    >
+                      <option value="UND">UND</option>
+                      <option value="KG">KG</option>
+                      <option value="LT">LT</option>
+                      <option value="MT">MT</option>
+                    </select>
+                    {validationErrors.unit && (
+                      <div className="mt-1 text-xs text-red-600">{validationErrors.unit}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      ref={refs.quantityRef}
+                      type="number"
+                      id="quantity"
+                      name="quantity"
+                      value={newProduct.quantity}
+                      onChange={handleChange}
+                      onKeyDown={handleKeyDown}
+                      min="0"
+                      step="0.01"
+                      className="w-full text-sm rounded-md border-gray-300 shadow-sm py-2 px-3"
+                      placeholder="0.00"
+                      required
+                    />
+                    {validationErrors.quantity && (
+                      <div className="mt-1 text-xs text-red-600">{validationErrors.quantity}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={handleAddProduct}
+                      className="inline-flex items-center justify-center p-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                {/* Items List - Adaptable según viewType */}
+                {filteredProducts.map((product, index) => (
+                  <tr 
+                    key={product.id} 
+                    className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                  >
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-xs text-blue-600 font-medium">
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{product.codigo}</td>
+                    <td className="px-4 py-3 text-gray-900">{product.name}</td>
+                    {viewType === 'full' && (
+                      <td className="px-4 py-3 text-gray-900">{product.description}</td>
+                    )}
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {product.unit}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900 text-center">
+                      {product.quantity}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button 
+                        className="text-red-600 hover:text-red-900" 
+                        onClick={() => handleRemoveProduct(product.id)}
+                        title="Eliminar este item"
+                      >
+                        <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+
+                {filteredProducts.length === 0 && (
+                  <tr>
+                    <td colSpan={viewType === 'full' ? 7 : 6} className="px-4 py-8 text-center text-gray-500 font-medium">
+                      No hay items registrados aún
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+
+              {filteredProducts.length > 0 && (
+                <tfoot className="bg-gray-50 border-t border-gray-200">
+                  <tr>
+                    <td colSpan={viewType === 'full' ? 5 : 4} className="px-4 py-3 text-right text-sm font-medium text-gray-500">Total Items:</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">{totalItems}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+
+          {/* Save Button */}
+          {products.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <button className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+                </svg>
+                Guardar Inventario
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Brief;

@@ -26,6 +26,8 @@ INSTALLED_APPS = [
     'products',
     'proformas',
     'blegal',
+    'brief',
+    'docmanager',
     
 ]
 
@@ -45,7 +47,10 @@ ROOT_URLCONF = 'appclc.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'proformas' / 'templates'],  # Modificado para usar Path
+        'DIRS': [
+            BASE_DIR / 'proformas' / 'templates',
+            BASE_DIR / 'brief' / 'templates',
+        ],  # Modificado para usar Path
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

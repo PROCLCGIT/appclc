@@ -5,7 +5,8 @@ from .models import (
     ProductoOfertado, ProductoDisponible,
     ImagenReferenciaProductoOfertado,
     ImagenProductoDisponible, DocumentoProductoDisponible,
-    DocumentoProductoOfertado, HistorialDeVentas, HistorialDeCompras
+    DocumentoProductoOfertado, HistorialDeVentas, HistorialDeCompras,
+    ProductsPrice
 )
 
 
@@ -236,6 +237,29 @@ class HistorialDeComprasAdmin(admin.ModelAdmin):
                 'cantidad',
                 'valor',
                 'iva'
+            )
+        }),
+        (_('Información del Sistema'), {
+            'fields': (
+                'created_at',
+                'updated_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(ProductsPrice)
+class ProductsPriceAdmin(admin.ModelAdmin):
+    list_display = ['producto_disponible', 'valor', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['producto_disponible__nombre', 'producto_disponible__code', 'valor']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        (_('Producto y Precio'), {
+            'fields': (
+                'producto_disponible',
+                'valor'
             )
         }),
         (_('Información del Sistema'), {

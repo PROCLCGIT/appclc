@@ -35,6 +35,7 @@ urlpatterns = [
         path('products/', include('products.urls')),
         path('proformas/', include('proformas.urls', namespace='proformas')),
         path('blegal/', include('blegal.urls')),
+        path('brief/', include('brief.urls')),
         path('auth/', include([
             path('token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
             path('login/', MyTokenObtainPairView.as_view(), name='login_no_throttle'),  # Ruta adicional para login sin limitaciones

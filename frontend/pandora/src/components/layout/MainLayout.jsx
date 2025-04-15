@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -7,12 +7,19 @@ import { navigation } from './Navigation';
 import SideNav from './SideNav';
 import Header from './Header';
 import Footer from './Footer';
+import TabsBar from './TabsBar';
 import useAuthStore from '../../store/authStore';
+import useTabsStore from '../../store/tabsStore';
 
 function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const logout = useAuthStore(state => state.logout);
+  
+  // Estado de pestañas desde el store
+  const tabs = useTabsStore((state) => state.tabs);
+  const setTabs = useTabsStore((state) => state.setTabs);
 
   const handleLogout = () => {
     // Usar la función de logout del store de Zustand
@@ -40,9 +47,12 @@ function MainLayout() {
       >
         {/* Top Navigation */}
         <Header toggleSidebar={toggleSidebar} handleLogout={handleLogout} />
+        
+        {/* Barra de pestañas */}
+        {Array.isArray(tabs) && <TabsBar tabs={tabs} setTabs={setTabs} />}
 
         {/* Contenido principal */}
-        <main className="p-6 flex-grow">
+        <main className={`p-6 flex-grow transition-all ${Array.isArray(tabs) && tabs.length > 0 ? 'pt-4' : ''}`}>
           <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-[0_2px_5px_rgba(0,0,0,0.03)] p-6">
             <Outlet />
           </div>

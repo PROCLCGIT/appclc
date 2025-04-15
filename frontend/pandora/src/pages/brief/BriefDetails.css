@@ -1,0 +1,233 @@
+.brief-card-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  
+  .brief-nav {
+    margin-bottom: 1rem;
+  }
+  
+  .back-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+  }
+  
+  .back-button:hover {
+    background-color: #e5e7eb;
+  }
+  
+  .brief-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .brief-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .brief-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .brief-icon {
+    color: #3b82f6;
+  }
+  
+  .brief-card-title h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+  
+  .brief-card-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    color: #4b5563;
+    cursor: pointer;
+  }
+  
+  .icon-button:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .brief-card-body {
+    padding: 1rem;
+  }
+  
+  .info-row {
+    margin-bottom: 1rem;
+    display: flex;
+  }
+  
+  .info-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    width: 150px;
+  }
+  
+  .info-value {
+    font-size: 0.875rem;
+    color: #111827;
+  }
+  
+  .info-value.observations {
+    padding: 0.5rem;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .brief-items-section {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+  
+  .brief-items-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 0.5rem;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .items-table th {
+    font-weight: 500;
+    color: #4b5563;
+    background-color: #f9fafb;
+    font-size: 0.875rem;
+  }
+  
+  .text-right {
+    text-align: right;
+  }
+  
+  .no-items-message {
+    padding: 1rem;
+    text-align: center;
+    color: #6b7280;
+  }
+  
+  .brief-actions-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .action-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  
+  .export-button {
+    background-color: #f9fafb;
+    color: #1f2937;
+  }
+  
+  .export-button:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .print-button {
+    background-color: #f9fafb;
+    color: #1f2937;
+  }
+  
+  .print-button:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .brief-details-error {
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  .brief-details-error h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ef4444;
+    margin: 0;
+  }
+  
+  .brief-details-error p {
+    color: #4b5563;
+    margin: 0;
+  }
+  
+  /* Print styles */
+  @media print {
+    .print-hide {
+      display: none !important;
+    }
+  
+    .brief-card-container {
+      padding: 0;
+    }
+  
+    .brief-card,
+    .brief-items-section {
+      border: none;
+      margin-bottom: 1rem;
+    }
+  
+    .brief-card-header {
+      padding: 0.5rem 0;
+      background-color: transparent;
+      border-bottom: 1px solid #e5e7eb;
+    }
+  
+    .items-table th {
+      background-color: transparent;
+    }
+  }

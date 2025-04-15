@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proforma {{ proforma.numero }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap');
+        
+        :root {
+            --primary-color: #2563EB;
+            --secondary-color: #1E40AF;
+            --accent-color: #3B82F6;
+            --text-color: #1F2937;
+            --light-text: #6B7280;
+            --light-bg: #F9FAFB;
+            --border-color: #E5E7EB;
+            --header-bg: #EFF6FF;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            background-color: white;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: white;
+            position: relative;
+        }
+        
+        /* Watermark for draft/demo */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px;
+            opacity: 0.04;
+            color: var(--primary-color);
+            z-index: 0;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        
+        /* Document Header */
+        .document-header {
+            padding: 1cm 0 0.5cm 0;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .logo-container {
+            flex: 0 0 auto;
+        }
+        
+        .logo {
+            max-width: 160px;
+            max-height: 80px;
+            object-fit: contain;
+        }
+        
+        .company-info {
+            text-align: right;
+            flex: 0 0 50%;
+        }
+        
+        .company-info h2 {
+            margin: 0;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .company-info p {
+            margin: 0 0 2px 0;
+            color: var(--light-text);
+            font-size: 12px;
+        }
+        
+        /* Document Title */
+        .proforma-title {
+            text-align: center;
+            margin: 15px 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--accent-color);
+            padding-bottom: 5px;
+            position: relative;
+        }
+        
+        .proforma-title h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            margin: 0;
+            padding: 0;
+            font-weight: 700;
+        }
+        
+        .proforma-title .estado {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #10B981;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            transform: translateY(-50%);
+        }
+        
+        .proforma-title .estado.borrador {
+            background-color: #F59E0B;
+        }
+        
+        .proforma-title .estado.rechazada {
+            background-color: #EF4444;
+        }
+        
+        .proforma-title .estado.vencida {
+            background-color: #6B7280;
+        }
+        
+        /* Client and Proforma Info */
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            background-color: var(--light-bg);
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        .client-info, .proforma-info {
+            width: 48%;
+        }
+        
+        .info-section h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            margin: 0 0 8px 0;
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 3px;
+        }
+        
+        .info-section p {
+            margin: 2px 0;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .info-section strong {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        
+        /* Table Styles */
+        .table-container {
+            margin: 10px 0;
+            overflow: hidden;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: none;
+            overflow: hidden;
+        }
+        
+        thead {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        th {
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            border: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        td {
+            padding: 4px 8px;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        
+        tbody tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .num-cell {
+            text-align: right;
+        }
+        
+        /* Totals */
+        .totals {
+            width: 35%;
+            margin-left: auto;
+            margin-bottom: 15px;
+        }
+        
+        .totals table {
+            box-shadow: none;
+        }
+        
+        .totals table td {
+            border: none;
+            padding: 3px 8px;
+            font-size: 10px;
+        }
+        
+        .totals table tr:last-child {
+            background-color: var(--header-bg);
+            border-top: 1px solid var(--primary-color);
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .total-row {
+            font-weight: 700;
+        }
+        
+        /* Terms */
+        .terms {
+            margin-top: 15px;
+            background-color: var(--light-bg);
+            padding: 10px;
+            border-radius: 6px;
+            position: relative;
+        }
+        
+        .terms h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            margin: 0 0 5px 0;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .terms p {
+            margin: 3px 0;
+            font-size: 10px;
+            color: var(--light-text);
+            line-height: 1.3;
+        }
+        
+        /* Signature */
+        .signature {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-line {
+            width: 45%;
+            border-top: 1px solid var(--border-color);
+            padding-top: 5px;
+            text-align: center;
+            font-size: 10px;
+            color: var(--light-text);
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 9px;
+            color: var(--light-text);
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+        
+        .footer p {
+            margin: 2px 0;
+        }
+        
+        /* Page Numbers */
+        @page {
+            margin: 0.5cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 8px;
+                color: var(--light-text);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if proforma.estado == 'borrador' %}
+        <div class="watermark">BORRADOR</div>
+        {% endif %}
+        
+        <div class="document-header">
+            <div class="header">
+                {% if config.mostrar_logo and empresa.logo %}
+                <div class="logo-container">
+                    <img src="{{ BASE_URL }}{{ empresa.logo.url }}" alt="{{ empresa.nombre }}" class="logo">
+                </div>
+                {% endif %}
+                <div class="company-info">
+                    <h2>{{ empresa.nombre }}</h2>
+                    <p>{{ empresa.direccion }}</p>
+                    <p>RUC: {{ empresa.ruc }}</p>
+                    <p>Tel: {{ empresa.telefono }}</p>
+                    <p>{{ empresa.email }}</p>
+                </div>
+            </div>
+
+            <div class="proforma-title">
+                <h1>PROFORMA #{{ proforma.numero }}</h1>
+                <span class="estado {{ proforma.estado }}">{{ estado }}</span>
+            </div>
+
+            <div class="info-section">
+                <div class="client-info">
+                    <h3>Cliente</h3>
+                    <p><strong>{{ cliente.nombre }}</strong></p>
+                    <p>RUC: {{ cliente.ruc }}</p>
+                    <p>{{ cliente.direccion }}</p>
+                    <p>Tel: {{ cliente.telefono }}</p>
+                    <p>Email: {{ cliente.email }}</p>
+                    {% if proforma.atencion_a %}
+                    <p><strong>Atención a:</strong> {{ proforma.atencion_a }}</p>
+                    {% endif %}
+                </div>
+                <div class="proforma-info">
+                    <h3>Detalles de la Proforma</h3>
+                    <p><strong>Fecha de Emisión:</strong> {{ proforma.fecha_emision|date:"d/m/Y" }}</p>
+                    <p><strong>Válida hasta:</strong> {{ proforma.fecha_vencimiento|date:"d/m/Y" }}</p>
+                    <p><strong>Forma de Pago:</strong> {{ proforma.condiciones_pago }}</p>
+                    <p><strong>Tiempo de Entrega:</strong> {{ proforma.tiempo_entrega }}</p>
+                    {% if proforma.nombre %}
+                    <p><strong>Referencia:</strong> {{ proforma.nombre }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 3%">#</th>
+                        {% if config.mostrar_codigos %}
+                        <th style="width: 10%">Código</th>
+                        {% endif %}
+                        <th>Descripción</th>
+                        <th style="width: 6%">Unidad</th>
+                        <th style="width: 8%" class="num-cell">Cant.</th>
+                        <th style="width: 12%" class="num-cell">P.Unit.</th>
+                        {% if config.mostrar_descuento %}
+                        <th style="width: 8%" class="num-cell">Desc.</th>
+                        {% endif %}
+                        <th style="width: 12%" class="num-cell">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        {% if config.mostrar_codigos %}
+                        <td>{{ item.codigo }}</td>
+                        {% endif %}
+                        <td>{{ item.descripcion }}</td>
+                        <td>{{ item.unidad }}</td>
+                        <td class="num-cell">{{ item.cantidad }}</td>
+                        <td class="num-cell">{{ config.formato_moneda }}{{ item.precio_unitario }}</td>
+                        {% if config.mostrar_descuento %}
+                        <td class="num-cell">{{ item.porcentaje_descuento }}%</td>
+                        {% endif %}
+                        <td class="num-cell">{{ config.formato_moneda }}{{ item.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="totals">
+            <table>
+                <tr>
+                    <td>Subtotal:</td>
+                    <td class="num-cell">{{ config.formato_moneda }}{{ proforma.subtotal }}</td>
+                </tr>
+                {% if config.mostrar_impuesto %}
+                <tr>
+                    <td>Impuesto ({{ proforma.porcentaje_impuesto }}%):</td>
+                    <td class="num-cell">{{ config.formato_moneda }}{{ proforma.impuesto }}</td>
+                </tr>
+                {% endif %}
+                <tr class="total-row">
+                    <td>Total:</td>
+                    <td class="num-cell">{{ config.formato_moneda }}{{ proforma.total }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="terms">
+            <h3>Notas y Condiciones</h3>
+            <p>{{ proforma.notas|linebreaks }}</p>
+        </div>
+
+        <div class="signature">
+            <div class="signature-line">
+                Por {{ empresa.nombre }}
+            </div>
+            <div class="signature-line">
+                Aceptado por {{ cliente.nombre }}
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ empresa.nombre }}</strong> | RUC: {{ empresa.ruc }}</p>
+            <p>{{ empresa.direccion }} | Tel: {{ empresa.telefono }} | {{ empresa.email }}</p>
+            <p>Esta proforma no constituye una factura o comprobante fiscal</p>
+        </div>
+    </div>
+</body>
+</html>

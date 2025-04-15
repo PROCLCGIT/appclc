@@ -25,6 +25,12 @@ class Proforma(TimeStampedModel):
         unique=True, 
         verbose_name=_('Número de Proforma')
     )
+    nombre = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_('Nombre descriptivo')
+    )
     fecha_emision = models.DateField(
         verbose_name=_('Fecha de Emisión')
     )

@@ -1,6 +1,7 @@
-// src/pages/madvance/ClientesPage.jsx
 import { useState, useEffect } from 'react';
-import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
 import {
   zonasService,
   ciudadesService,
@@ -23,25 +24,21 @@ function getVisiblePages(currentPage, totalPages, maxVisible = 5) {
   let start = currentPage - half;
   let end = currentPage + half;
 
-  // Ajustar si estamos muy cerca del inicio
   if (start < 1) {
     start = 1;
     end = maxVisible;
   }
 
-  // Ajustar si estamos muy cerca del final
   if (end > totalPages) {
     end = totalPages;
     start = totalPages - maxVisible + 1;
     if (start < 1) start = 1;
   }
 
-  // Generar el rango de páginas
   for (let i = start; i <= end; i++) {
     pages.push(i);
   }
 
-  // Agregar la primera página si no está incluida
   if (start > 1) {
     if (start > 2) {
       pages.unshift('...');
@@ -49,7 +46,6 @@ function getVisiblePages(currentPage, totalPages, maxVisible = 5) {
     pages.unshift(1);
   }
 
-  // Agregar la última página si no está incluida
   if (end < totalPages) {
     if (end < totalPages - 1) {
       pages.push('...');
@@ -61,30 +57,23 @@ function getVisiblePages(currentPage, totalPages, maxVisible = 5) {
 }
 
 const ClientesPage = () => {
-  // Estados
   const [data, setData] = useState({
     clientes: [],
     zonas: [],
     ciudades: [],
     tiposCliente: [],
   });
-
-  // Página actual en el frontend
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Total de páginas que nos manda el backend
   const [totalPages, setTotalPages] = useState(0);
-
   const [loading, setLoading] = useState(true);
+  // Estados para edición (la creación se hace en otra página)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCliente, setCurrentCliente] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [notification, setNotification] = useState({
     show: false,
     message: '',
     type: '',
   });
-
   const [formData, setFormData] = useState({
     zona: '',
     ciudad: '',
@@ -98,27 +87,21 @@ const ClientesPage = () => {
     direccion: '',
     activo: true,
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Notificaciones
   const showNotification = (message, type = 'success') => {
     setNotification({ show: true, message, type });
-    setTimeout(
-      () => setNotification({ show: false, message: '', type: '' }),
-      3000
-    );
+    setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
   };
 
-  // Carga inicial de datos
   const fetchAllData = async () => {
     try {
       setLoading(true);
       const [clientesResponse, zonasResponse, ciudadesResponse, tiposResponse] =
         await Promise.all([
-          // Importante: pasar `page: currentPage` y `searchTerm`
           clientesService.getAll({
             page: currentPage,
             search: searchTerm,
-            // page_size: 10, // si quisieras forzar 10 items en vez de 40
           }),
           zonasService.getAll(),
           ciudadesService.getAll(),
@@ -132,12 +115,8 @@ const ClientesPage = () => {
         tiposCliente: tiposResponse.results || [],
       });
 
-      // Ajustar paginación según los metadatos del backend:
-      // total_pages, current_page, etc.
       setTotalPages(clientesResponse.total_pages || 0);
 
-      // Opcional: si el backend ya te dice en qué página estás,
-      // sincronizar con el estado:
       if (clientesResponse.current_page) {
         setCurrentPage(clientesResponse.current_page);
       }
@@ -149,13 +128,10 @@ const ClientesPage = () => {
     }
   };
 
-  // Cada vez que cambie currentPage o searchTerm, recargamos
   useEffect(() => {
     fetchAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchTerm]);
 
-  // Manejo del formulario
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -185,24 +161,17 @@ const ClientesPage = () => {
     e.preventDefault();
     try {
       setLoading(true);
-
-      if (currentCliente) {
-        await clientesService.update(currentCliente.id, formData);
-        showNotification('Cliente actualizado exitosamente');
-      } else {
-        await clientesService.create(formData);
-        showNotification('Cliente creado exitosamente');
+      if (!currentCliente) {
+        throw new Error('No se puede crear cliente desde aquí');
       }
-
+      await clientesService.update(currentCliente.id, formData);
+      showNotification('Cliente actualizado exitosamente');
       setIsModalOpen(false);
       resetForm();
       await fetchAllData();
     } catch (error) {
       console.error('Error al procesar cliente:', error);
-      showNotification(
-        error.message || 'Error al procesar la solicitud',
-        'error'
-      );
+      showNotification(error.message || 'Error al procesar la solicitud', 'error');
     } finally {
       setLoading(false);
     }
@@ -242,7 +211,6 @@ const ClientesPage = () => {
     setIsModalOpen(true);
   };
 
-  // Renderizado condicional para el estado de carga inicial
   if (loading && !data.clientes.length) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -280,45 +248,26 @@ const ClientesPage = () => {
               className="pl-10 pr-4 py-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+          {/* El botón de "Nuevo" redirige a la página de agregar cliente */}
+          <Link to="/madvance/add-cliente" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             <Plus className="h-4 w-4" />
             Nuevo
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla de Clientes */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Alias
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                RUC
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Zona
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ciudad
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alias</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RUC</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zona</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -331,26 +280,14 @@ const ClientesPage = () => {
             ) : (
               data.clientes.map((cliente) => (
                 <tr key={cliente.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">{cliente.nombre || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{cliente.alias || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{cliente.ruc || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {cliente.nombre || '-'}
+                    {data.zonas.find((z) => z.id === cliente.zona)?.nombre || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {cliente.alias || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {cliente.ruc || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {
-                      data.zonas.find((z) => z.id === cliente.zona)?.nombre ||
-                      '-'
-                    }
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {
-                      data.ciudades.find((c) => c.id === cliente.ciudad)
-                        ?.nombre || '-'
-                    }
+                    {data.ciudades.find((c) => c.id === cliente.ciudad)?.nombre || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -386,7 +323,7 @@ const ClientesPage = () => {
         </table>
       </div>
 
-      {/* Paginación con botones */}
+      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-4">
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
@@ -401,7 +338,6 @@ const ClientesPage = () => {
             >
               Anterior
             </button>
-
             {getVisiblePages(currentPage, totalPages, 5).map((page, index) => {
               if (page === '...') {
                 return (
@@ -427,7 +363,6 @@ const ClientesPage = () => {
                 </button>
               );
             })}
-
             <button
               onClick={() =>
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
@@ -445,25 +380,21 @@ const ClientesPage = () => {
         </div>
       )}
 
-      {/* Modal de Formulario */}
-      {isModalOpen && (
+      {/* Modal para editar cliente (solo aparece si se está editando) */}
+      {isModalOpen && currentCliente && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            {/* Fondo gris */}
             <div className="fixed inset-0 transition-opacity">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
-            {/* Trick para centrar en pantalla */}
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
               &#8203;
             </span>
-
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                {/* Encabezado del Modal */}
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">
-                    {currentCliente ? 'Editar Cliente' : 'Nuevo Cliente'}
+                    Editar Cliente
                   </h3>
                   <button
                     onClick={() => {
@@ -472,13 +403,23 @@ const ClientesPage = () => {
                     }}
                     className="text-gray-400 hover:text-gray-500"
                   >
-                    <X className="h-6 w-6" />
+                    <span className="sr-only">Cerrar</span>
+                    <svg
+                      className="h-6 w-6"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                   </button>
                 </div>
-
-                {/* Formulario */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Selects de Zona, Ciudad y Tipo Cliente */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -499,7 +440,6 @@ const ClientesPage = () => {
                         ))}
                       </select>
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Ciudad
@@ -519,7 +459,6 @@ const ClientesPage = () => {
                         ))}
                       </select>
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tipo de Cliente
@@ -540,8 +479,6 @@ const ClientesPage = () => {
                       </select>
                     </div>
                   </div>
-
-                  {/* Campos de Nombre y Alias */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -557,7 +494,6 @@ const ClientesPage = () => {
                         placeholder="Ingrese nombre"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Alias
@@ -573,8 +509,6 @@ const ClientesPage = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Campos de RUC y Razón Social */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -590,7 +524,6 @@ const ClientesPage = () => {
                         placeholder="Ingrese RUC"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Razón Social
@@ -606,8 +539,6 @@ const ClientesPage = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Campos de Contacto */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -623,7 +554,6 @@ const ClientesPage = () => {
                         placeholder="correo@ejemplo.com"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Teléfono
@@ -638,8 +568,6 @@ const ClientesPage = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Campo Dirección */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Dirección
@@ -654,8 +582,6 @@ const ClientesPage = () => {
                       placeholder="Ingrese dirección"
                     />
                   </div>
-
-                  {/* Checkbox Estado */}
                   <div>
                     <label className="flex items-center space-x-2">
                       <input
@@ -668,8 +594,6 @@ const ClientesPage = () => {
                       <span className="text-sm text-gray-700">Activo</span>
                     </label>
                   </div>
-
-                  {/* Botones del formulario */}
                   <div className="flex justify-end space-x-3 mt-6">
                     <button
                       type="button"
@@ -685,7 +609,7 @@ const ClientesPage = () => {
                       type="submit"
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      {currentCliente ? 'Actualizar' : 'Crear'}
+                      Actualizar
                     </button>
                   </div>
                 </form>

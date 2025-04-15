@@ -1,405 +1,432 @@
 import React, { useState, useEffect } from "react";
+import { Search, Plus, Trash2, X, List, Grid, Package, Truck, Archive, ArrowDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Plus, Printer, Save, Trash, FileDown } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts, fetchInventory, fetchOfferedProducts } from "@/redux/actions";
+import { toast } from "sonner";
+import { proformasService } from "@/services/api";
+import "./ProductSearchPage.css";
 
-const Testing21 = () => {
-  const dispatch = useDispatch();
-  const products = useSelector((state) => state.products);
-  const inventory = useSelector((state) => state.inventory);
-  const offeredProducts = useSelector((state) => state.offeredProducts);
-
-  const [client, setClient] = useState({
-    name: "Empresa ABC S.A.",
-    attention: "Ing. Juan Martínez",
-    email: "jmartinez@empresaabc.com",
-    phone: "099-555-1234",
-    address: "Av. de las Américas y Juan Tanca Marengo, Guayaquil",
+export default function ProductSearchPage() {
+  // Estados para la búsqueda de productos
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchSource, setSearchSource] = useState("ofertados"); // Por defecto buscar en productos ofertados
+  const [searchResults, setSearchResults] = useState([]);
+  const [viewType, setViewType] = useState("grid"); // o "list"
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  // Estados para los productos seleccionados
+  const [selectedItems, setSelectedItems] = useState([]);
+  
+  // Config
+  const [config] = useState({
+    currencySymbol: "$",
+    decimalPlaces: 2,
+    showItemCodes: true
   });
-
-  const [quote, setQuote] = useState({
-    number: "PRO-2025-0042",
-    date: new Date(),
-    expiryDate: new Date(new Date().setDate(new Date().getDate() + 15)),
-    paymentTerms: "50% anticipo, 50% contra entrega",
-    deliveryTime: "5 días hábiles",
-    validityDays: 15,
-    notes: "Precios incluyen IVA. Entrega sin costo adicional.",
-    subtotal: 0,
-    discount: 0,
-    tax: 0,
-    total: 0,
-    template: "template1",
-    taxRate: 12, // Configurable tax rate
-  });
-
-  const [items, setItems] = useState([]);
-
-  // Fetch data from databases on mount
+  
+  // Cargar productos iniciales
   useEffect(() => {
-    dispatch(fetchProducts());
-    dispatch(fetchInventory());
-    dispatch(fetchOfferedProducts());
-  }, [dispatch]);
-
-  // Calculate totals
-  useEffect(() => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * (quote.taxRate / 100);
-    const total = subtotal + tax - quote.discount;
-
-    setQuote((prev) => ({
-      ...prev,
-      subtotal: subtotal.toFixed(2),
-      tax: tax.toFixed(2),
-      total: total.toFixed(2),
-    }));
-  }, [items, quote.taxRate, quote.discount]);
-
-  const addItem = () => {
-    const newItem = {
-      id: items.length + 1,
-      code: "",
-      description: "",
-      unit: "Unidad",
-      quantity: 1,
-      unitPrice: 0,
-      discount: 0,
-      total: 0,
+    const loadInitialProducts = async () => {
+      try {
+        // Cargar productos ofertados recientes para mostrar inicialmente
+        await searchProducts("", "ofertados");
+      } catch (error) {
+        console.error("Error al cargar productos iniciales:", error);
+      }
     };
-    setItems([...items, newItem]);
+    
+    loadInitialProducts();
+  }, []);
+
+  // Buscar productos con la API
+  const searchProducts = async (term, source = "ofertados") => {
+    try {
+      setLoadingProducts(true);
+      
+      // Si no hay término de búsqueda y es "ofertados", cargamos los últimos 5-10 productos ofertados
+      const searchQuery = (!term || term.length < 2) ? "" : term;
+      
+      console.log(`Buscando "${searchQuery}" en la fuente: ${source}`);
+      
+      // Llamar al servicio de búsqueda de productos
+      const response = await proformasService.buscarProductos(searchQuery, source);
+      
+      console.log("Respuesta de búsqueda:", response);
+      
+      // Transformar la respuesta del API a un formato uniforme
+      const results = response.map(product => {
+        // Determinar el tipo de fuente y aplicar etiquetas visuales
+        let sourceType = product.source || 'personalizado';
+        let sourceLabel = '';
+        
+        if (sourceType === 'ofertados') {
+          sourceLabel = 'Producto Ofertado';
+        } else if (sourceType === 'disponibles') {
+          sourceLabel = 'Producto Disponible';
+        } else if (sourceType === 'inventario') {
+          sourceLabel = 'Inventario';
+        }
+        
+        // Extraer el ID real para cada tipo de producto
+        let realId;
+        if (product.id && typeof product.id === 'string') {
+          // El backend puede devolver IDs en formato "of-123" o "disp-456"
+          const parts = product.id.split('-');
+          if (parts.length > 1) {
+            realId = parseInt(parts[1], 10);
+          } else {
+            realId = product.id;
+          }
+        } else {
+          realId = product.id;
+        }
+        
+        return {
+          id: product.id, // ID formateado que devuelve el backend
+          realId: realId, // ID numérico extraído
+          code: product.code || '',
+          description: product.description || '',
+          source: sourceType,
+          sourceLabel: sourceLabel,
+          price: parseFloat(product.price || 0),
+          unit: product.unit || 'Unidad',
+          stock: product.stock || 'Disponible',
+          // Objeto original con datos para el backend
+          original: {
+            id: realId,
+            tipo: sourceType,
+            codigo: product.code || '',
+            descripcion: product.description || '',
+            precio: parseFloat(product.price || 0),
+            unidad: product.unit || 'Unidad'
+          }
+        };
+      });
+      
+      setSearchResults(results);
+      return results;
+    } catch (error) {
+      console.error("Error al buscar productos:", error);
+      toast.error("No se pudieron cargar los productos. Verifica tu conexión.");
+      setSearchResults([]);
+      return [];
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
+  // Agregar producto desde búsqueda a la lista de seleccionados
+  const addProductFromSearch = (product) => {
+    const newItem = {
+      id: selectedItems.length > 0 ? Math.max(...selectedItems.map((it) => it.id || 0)) + 1 : 1,
+      code: product.code,
+      description: product.description,
+      unit: product.unit,
+      quantity: 1,
+      unitPrice: product.price,
+      discount: 0,
+      total: product.price,
+      // Guardar información del origen del producto para el backend
+      source: product.source,
+      productId: product.realId || product.id,
+      original: product.original // Guardar objeto completo para referencia futura
+    };
+    
+    // Agregar a los ítems seleccionados
+    setSelectedItems([...selectedItems, newItem]);
+    
+    // Notificar al usuario
+    toast.success(`${product.description} agregado a la lista`);
+  };
+
+  // Actualizar un ítem seleccionado
   const updateItem = (id, field, value) => {
-    const updatedItems = items.map((item) => {
+    const updatedItems = selectedItems.map((item) => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
-        if (field === "quantity" || field === "unitPrice" || field === "discount") {
-          const quantity = field === "quantity" ? value : item.quantity;
-          const unitPrice = field === "unitPrice" ? value : item.unitPrice;
-          const discount = field === "discount" ? value : item.discount;
-          const discountAmount = (unitPrice * quantity * discount) / 100;
-          updatedItem.total = unitPrice * quantity - discountAmount;
+        // Recalcular total si es necesario
+        if (["quantity", "unitPrice", "discount"].includes(field)) {
+          const qty = field === "quantity" ? Number(value) || 0 : Number(item.quantity) || 0;
+          const price = field === "unitPrice" ? Number(value) || 0 : Number(item.unitPrice) || 0;
+          const disc = field === "discount" ? Number(value) || 0 : Number(item.discount) || 0;
+          
+          const discountAmount = (price * qty * disc) / 100;
+          updatedItem.total = Number(((price * qty) - discountAmount).toFixed(config.decimalPlaces));
         }
         return updatedItem;
       }
       return item;
     });
-    setItems(updatedItems);
+    
+    setSelectedItems(updatedItems);
   };
 
+  // Eliminar ítem seleccionado
   const removeItem = (id) => {
-    setItems(items.filter((item) => item.id !== id));
+    const updatedItems = selectedItems.filter((item) => item.id !== id);
+    setSelectedItems(updatedItems);
+  };
+
+  // Cambiar fuente de búsqueda
+  const handleSourceChange = (source) => {
+    setSearchSource(source);
+    searchProducts(searchTerm, source);
+  };
+
+  // Formatear moneda
+  const formatCurrency = (value) => {
+    const numValue = typeof value === 'number' ? value : Number(value) || 0;
+    return `${config.currencySymbol}${numValue.toFixed(config.decimalPlaces)}`;
+  };
+
+  // Manejar cambios en la búsqueda
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Búsqueda automática si hay al menos 2 caracteres o si se borra la búsqueda
+    if (value.length >= 2 || value === '') {
+      searchProducts(value, searchSource);
+    }
+  };
+
+  // Limpiar búsqueda
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    searchProducts('', searchSource);
+  };
+
+  // Limpiar selección
+  const handleClearSelection = () => {
+    if (selectedItems.length > 0 && window.confirm('¿Está seguro de eliminar todos los productos seleccionados?')) {
+      setSelectedItems([]);
+      toast.info("Se han eliminado todos los productos seleccionados");
+    }
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-white">
-      {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-blue-800">Proforma</h1>
-          <p className="text-gray-600 mt-1">#{quote.number}</p>
-        </div>
-        <div className="flex items-center">
-          <Avatar className="h-12 w-12 mr-3">
-            <AvatarImage src="/company-logo.png" alt="Company Logo" />
-            <AvatarFallback className="bg-blue-500 text-white">CLC</AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-xl font-bold text-blue-800">Su Empresa S.A.</h2>
-            <p className="text-sm text-gray-600">comercial@suempresa.com</p>
-            <p className="text-sm text-gray-600">+593 98-765-4321</p>
+    <div className="product-search-container">
+      <div className="search-header">
+        <h1 className="search-title">Productos y Servicios</h1>
+        
+        <div className="search-actions">
+          <div className="view-toggle">
+            <button 
+              className={`toggle-button ${viewType === 'list' ? 'active' : ''}`}
+              onClick={() => setViewType('list')}
+              title="Vista de lista"
+            >
+              <List size={18} />
+            </button>
+            <button 
+              className={`toggle-button ${viewType === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewType('grid')}
+              title="Vista de cuadrícula"
+            >
+              <Grid size={18} />
+            </button>
+          </div>
+          
+          <div className="source-selector">
+            <button 
+              className={`source-button ${searchSource === 'ofertados' ? 'active' : ''}`}
+              onClick={() => handleSourceChange('ofertados')}
+            >
+              <Package size={16} />
+              <span>Ofertados</span>
+            </button>
+            <button 
+              className={`source-button ${searchSource === 'disponibles' ? 'active' : ''}`}
+              onClick={() => handleSourceChange('disponibles')}
+            >
+              <Truck size={16} />
+              <span>Disponibles</span>
+            </button>
+            <button 
+              className={`source-button ${searchSource === 'inventario' ? 'active' : ''}`}
+              onClick={() => handleSourceChange('inventario')}
+            >
+              <Archive size={16} />
+              <span>Inventario</span>
+            </button>
           </div>
         </div>
-      </header>
-
-      {/* Template Selection */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Seleccionar Plantilla</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select
-            value={quote.template}
-            onValueChange={(value) => setQuote({ ...quote, template: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccione una plantilla" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="template1">Plantilla 1 - Moderna</SelectItem>
-              <SelectItem value="template2">Plantilla 2 - Clásica</SelectItem>
-              <SelectItem value="template3">Plantilla 3 - Minimalista</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Client and Quote Details */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Cliente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="grid grid-cols-[100px_1fr] gap-1">
-                <Label className="text-sm font-medium text-gray-500">Empresa:</Label>
-                <Input
-                  value={client.name}
-                  onChange={(e) => setClient({ ...client, name: e.target.value })}
-                  className="h-8"
-                />
-              </div>
-              <div className="grid grid-cols-[100px_1fr] gap-1">
-                <Label className="text-sm font-medium text-gray-500">Atención:</Label>
-                <Input
-                  value={client.attention}
-                  onChange={(e) => setClient({ ...client, attention: e.target.value })}
-                  className="h-8"
-                />
-              </div>
-              {/* Add more editable fields as needed */}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Detalles de la Proforma</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="grid grid-cols-[120px_1fr] gap-1">
-                <Label className="text-sm font-medium text-gray-500">Fecha:</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-8 w-full justify-start text-left">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {quote.date ? format(quote.date, "PPP") : "Seleccionar fecha"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={quote.date}
-                      onSelect={(date) => setQuote({ ...quote, date })}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              {/* Add more fields as needed */}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Products and Services */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Productos y Servicios</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead>Código</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
-                <TableHead className="text-right">Precio Unit.</TableHead>
-                <TableHead className="text-right">Desc. %</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Select
-                      value={item.code}
-                      onValueChange={(value) => updateItem(item.id, "code", value)}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Seleccionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((prod) => (
-                          <SelectItem key={prod.code} value={prod.code}>
-                            {prod.code} - {prod.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={item.description}
-                      onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                      className="h-8"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={item.unit}
-                      onValueChange={(value) => updateItem(item.id, "unit", value)}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Unidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Unidad">Unidad</SelectItem>
-                        <SelectItem value="Kit">Kit</SelectItem>
-                        <SelectItem value="Caja">Caja</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, "quantity", parseFloat(e.target.value))}
-                      className="h-8 text-right"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, "unitPrice", parseFloat(e.target.value))}
-                      className="h-8 text-right"
-                      step="0.01"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={item.discount}
-                      onChange={(e) => updateItem(item.id, "discount", parseFloat(e.target.value))}
-                      className="h-8 text-right"
-                      step="0.01"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right font-medium">${item.total.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Button onClick={addItem} variant="outline" className="mt-4">
-            <Plus className="h-4 w-4 mr-2" /> Agregar ítem
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Configuration and Summary */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración y Notas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label>Tasa de Impuesto (%)</Label>
-                <Input
-                  type="number"
-                  value={quote.taxRate}
-                  onChange={(e) => setQuote({ ...quote, taxRate: parseFloat(e.target.value) })}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <Label>Descuento Global ($)</Label>
-                <Input
-                  type="number"
-                  value={quote.discount}
-                  onChange={(e) => setQuote({ ...quote, discount: parseFloat(e.target.value) })}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <Label>Notas</Label>
-                <Textarea
-                  value={quote.notes}
-                  onChange={(e) => setQuote({ ...quote, notes: e.target.value })}
-                  rows={4}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-1">
-                <span className="text-sm font-medium text-gray-500">Subtotal:</span>
-                <span className="text-sm text-right">${quote.subtotal}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <span className="text-sm font-medium text-gray-500">Impuesto ({quote.taxRate}%):</span>
-                <span className="text-sm text-right">${quote.tax}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <span className="text-sm font-medium text-gray-500">Descuento:</span>
-                <span className="text-sm text-right">${quote.discount}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1 pt-2 border-t">
-                <span className="text-lg font-bold text-gray-800">Total:</span>
-                <span className="text-lg font-bold text-right text-blue-700">${quote.total}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Export Buttons */}
-      <div className="flex justify-between mt-8">
-        <div>
-          <Button variant="outline" className="mr-2">
-            <Printer className="h-4 w-4 mr-2" /> Imprimir
-          </Button>
-          <Button variant="outline" className="mr-2">
-            <FileDown className="h-4 w-4 mr-2" /> Descargar PDF
-          </Button>
-          <Button variant="outline">
-            <FileDown className="h-4 w-4 mr-2" /> Descargar Excel
-          </Button>
+      
+      <div className="search-bar">
+        <div className="search-input-container">
+          <Search className="search-icon" size={18} />
+          <input
+            type="text"
+            placeholder="Buscar productos por nombre, código..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="search-input"
+          />
+          {searchTerm && (
+            <button className="clear-search" onClick={handleClearSearch}>
+              <X size={18} />
+            </button>
+          )}
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Save className="h-4 w-4 mr-2" /> Guardar Proforma
+      </div>
+      
+      <div className="product-content">
+        <div className="product-results">
+          <Card>
+            <CardHeader className="results-header">
+              <CardTitle>Resultados de búsqueda</CardTitle>
+              {loadingProducts && <span className="loading-indicator">Buscando...</span>}
+            </CardHeader>
+            <CardContent>
+              {searchResults.length === 0 ? (
+                <div className="no-results">
+                  {loadingProducts ? (
+                    <div className="loading-animation">
+                      <div className="spinner"></div>
+                      <p>Cargando productos...</p>
+                    </div>
+                  ) : (
+                    <p>No se encontraron productos. Intente con otra búsqueda.</p>
+                  )}
+                </div>
+              ) : (
+                <div className={`results-container ${viewType}`}>
+                  {searchResults.map((product) => (
+                    <div key={product.id} className="product-item">
+                      <div className="product-details">
+                        <div className="product-code">{product.code}</div>
+                        <div className="product-description">{product.description}</div>
+                        <div className="product-meta">
+                          <span className="product-price">{formatCurrency(product.price)}</span>
+                          <span className="product-unit">{product.unit}</span>
+                          <span className={`product-source source-${product.source}`}>
+                            {product.sourceLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        className="add-product-btn"
+                        onClick={() => addProductFromSearch(product)}
+                      >
+                        <Plus size={16} />
+                        Agregar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="selected-items">
+          <Card>
+            <CardHeader className="selected-header">
+              <CardTitle>Productos seleccionados ({selectedItems.length})</CardTitle>
+              {selectedItems.length > 0 && (
+                <button className="clear-all-btn" onClick={handleClearSelection}>
+                  Limpiar todo
+                </button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {selectedItems.length === 0 ? (
+                <div className="no-items">
+                  <p>No hay productos seleccionados</p>
+                  <p className="hint">Busque y seleccione productos para agregarlos a la lista</p>
+                </div>
+              ) : (
+                <div className="items-list">
+                  <table className="items-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedItems.map((item, index) => (
+                        <tr key={item.id}>
+                          <td>{index + 1}</td>
+                          <td>{item.code}</td>
+                          <td>{item.description}</td>
+                          <td>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                              className="quantity-input"
+                            />
+                          </td>
+                          <td>{formatCurrency(item.unitPrice)}</td>
+                          <td>{formatCurrency(item.total)}</td>
+                          <td>
+                            <button 
+                              className="remove-item-btn"
+                              onClick={() => removeItem(item.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="5" className="total-label">Total:</td>
+                        <td className="total-value">
+                          {formatCurrency(
+                            selectedItems.reduce((sum, item) => sum + Number(item.total || 0), 0)
+                          )}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      
+      <div className="action-buttons">
+        <Button
+          variant="outline"
+          onClick={() => {
+            // Exportar a Excel o CSV
+            toast.info("Exportación a Excel disponible próximamente");
+          }}
+        >
+          Exportar lista
+        </Button>
+        
+        <Button
+          variant="primary"
+          onClick={() => {
+            if (selectedItems.length === 0) {
+              toast.error("Debe seleccionar al menos un producto");
+              return;
+            }
+            
+            // Enviar productos seleccionados al módulo correspondiente
+            // Por ahora solo mostramos un mensaje
+            toast.success(`Lista con ${selectedItems.length} productos guardada`);
+            
+            // En un caso real, aquí se enviaría al backend o se usaría en otro componente
+            console.log("Productos seleccionados:", selectedItems);
+          }}
+        >
+          Guardar lista
         </Button>
       </div>
-
-      {/* Footer */}
-      <footer className="mt-8 text-center text-gray-500 text-sm">
-        <p>Su Empresa S.A. - Todos los derechos reservados © 2023</p>
-        <p>Dirección: Av. Principal 123, Ciudad, País</p>
-        <p>Tel: +593 98-765-4321 | Email: info@suempresa.com</p>
-      </footer>
     </div>
   );
-};
-
-export default Testing21;
+}

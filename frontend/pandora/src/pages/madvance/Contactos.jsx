@@ -1,5 +1,6 @@
 // src/pages/madvance/Contactos.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import FormDialog from '@/components/common/FormDialog';
 import { contactosService } from '@/services/api';
 
 const Contactos = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,7 +163,7 @@ const Contactos = () => {
               className="max-w-sm"
             />
           </div>
-          <Button onClick={handleAdd} className="mt-2 sm:mt-0">
+          <Button onClick={() => navigate('/contactos/nuevo')} className="mt-2 sm:mt-0">
             <Plus className="mr-2 h-4 w-4" />
             Agregar Contacto
           </Button>

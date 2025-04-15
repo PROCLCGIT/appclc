@@ -121,3 +121,13 @@
 [data-radix-select-content] {
   animation: slideDown 0.2s ease-out !important;
 }
+
+/* Para ocultar la barra de desplazamiento pero mantener la funcionalidad */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

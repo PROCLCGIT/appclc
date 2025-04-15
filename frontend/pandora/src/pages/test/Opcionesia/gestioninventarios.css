@@ -1,0 +1,132 @@
+/* Contenedor general con fondo claro */
+.gestion-container {
+    background: #f5f9ff;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: sans-serif;
+    color: #333;
+  }
+  
+  /* Encabezado */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .cart-info {
+    display: flex;
+    align-items: center;
+  }
+  
+  .cart-icon {
+    font-size: 24px;
+    color: #555;
+    margin-right: 10px;
+  }
+  
+  .cart-details {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .items-count,
+  .total-value {
+    margin: 0;
+    font-size: 14px;
+  }
+  
+  /* Tarjetas con sombra */
+  .inventory-card,
+  .table-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    /* Sombra suave */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Inputs del formulario */
+  .form-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .product-input {
+    flex: 1;
+    min-width: 160px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  /* Botón para agregar producto */
+  .add-button {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 0 20px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .add-button:hover {
+    background: #0056b3;
+  }
+  
+  /* Buscador */
+  .search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+  
+  /* Tabla */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+  
+  thead {
+    background: #f2f2f2;
+  }
+  
+  th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  /* Botón eliminar */
+  .delete-button {
+    background: none;
+    border: none;
+    color: #d9534f;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .delete-button:hover {
+    text-decoration: underline;
+  }
+  
+  /* Totales */
+  .totals {
+    margin-top: 10px;
+    text-align: right;
+  }
+  
+  .totals-text {
+    font-weight: bold;
+  }
+  

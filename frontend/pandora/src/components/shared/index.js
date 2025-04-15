@@ -1,0 +1,9 @@
+// Export all shared components for easier imports
+export { default as ActionBar } from './ActionBar';
+export { default as ConfirmationDialog } from './ConfirmationDialog';
+export { default as DataCard } from './DataCard';
+export { default as EmptyState } from './EmptyState';
+export { default as LoadingSpinner } from './LoadingSpinner';
+export { default as SearchBar } from './SearchBar';
+export { default as SearchDialog } from './SearchDialog';
+export { default as StatusBadge } from './StatusBadge';

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 import json
 import csv
@@ -317,14 +317,66 @@ class ProformaViewSet(viewsets.ModelViewSet):
                     'total': mes['total'] or 0
                 })
         
-        # Devolver estadísticas
-        return Response({
+        # Obtener proformas recientes (últimas 5)
+        proformas_recientes = []
+        recientes = Proforma.objects.select_related('cliente', 'created_by').order_by('-created_at')[:5]
+        
+        for proforma in recientes:
+            try:
+                # Obtener nombres para el estado
+                estado_label = dict(Proforma.ESTADO_CHOICES).get(proforma.estado, proforma.estado)
+                
+                # Formatear fechas
+                fecha_emision = proforma.fecha_emision.strftime('%d/%m/%Y') if proforma.fecha_emision else ''
+                fecha_vencimiento = proforma.fecha_vencimiento.strftime('%d/%m/%Y') if proforma.fecha_vencimiento else ''
+                
+                # Iniciales del cliente para el avatar
+                cliente_nombre = proforma.cliente.nombre if proforma.cliente else 'N/A'
+                cliente_avatar = ''.join([word[0] for word in cliente_nombre.split()[:2]]) if cliente_nombre != 'N/A' else 'NA'
+                
+                # Vendedor (usuario que creó la proforma)
+                vendedor = f"{proforma.created_by.first_name} {proforma.created_by.last_name}" if proforma.created_by else 'N/A'
+                if vendedor.strip() == '':
+                    vendedor = proforma.created_by.username if proforma.created_by else 'N/A'
+                
+                proformas_recientes.append({
+                    'id': proforma.numero,  # Usamos 'numero' como ID para la interfaz
+                    'numero': proforma.numero,
+                    'cliente': cliente_nombre,
+                    'clienteAvatar': cliente_avatar,
+                    'fecha': fecha_emision,
+                    'expira': fecha_vencimiento,
+                    'monto': float(proforma.total),
+                    'estado': estado_label,
+                    'vendedor': vendedor
+                })
+            except Exception as e:
+                print(f"Error al procesar proforma {proforma.id}: {str(e)}")
+                # Continuar con la siguiente proforma en caso de error
+        
+        # Devolver estadísticas y proformas recientes
+        # Crear datos de respuesta
+        response_data = {
             'total_proformas': queryset.count(),
-            'total_monto': sum(queryset.values_list('total', flat=True)),
+            'total_monto': float(sum(queryset.values_list('total', flat=True))),
             'por_estado': estado_stats,
             'por_cliente': cliente_stats,
-            'por_mes': mes_stats
-        })
+            'por_mes': mes_stats,
+            'proformasRecientes': proformas_recientes,
+            # Añadir campos totales para las estadísticas principales
+            'totalStats': {
+                'totalProformas': queryset.count(),
+                'proformasAprobadas': queryset.filter(estado='aprobada').count(),
+                'tasaConversion': round((queryset.filter(estado='aprobada').count() / queryset.count()) * 100, 1) if queryset.count() > 0 else 0,
+                'montoTotal': float(sum(queryset.values_list('total', flat=True)))
+            }
+        }
+        
+        # Log para depuración
+        print("Respuesta dashboard API:")
+        print(json.dumps(response_data, indent=2, default=str))
+        
+        return Response(response_data)
     
     @action(detail=True, methods=['get'])
     def exportar_csv(self, request, pk=None):
@@ -372,6 +424,120 @@ class ProformaViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="proforma_{proforma.numero}.csv"'
         
         return response
+        
+    @action(detail=True, methods=['get'])
+    def exportar_pdf(self, request, pk=None):
+        """Exportar una proforma a formato PDF"""
+        from django.template.loader import render_to_string
+        from weasyprint import HTML, CSS
+        from django.core.files.base import ContentFile
+        import tempfile
+        from rest_framework_simplejwt.tokens import AccessToken, TokenError
+        
+        # Manejar token pasado como parámetro GET para compatibilidad con iframe
+        token = request.GET.get('token')
+        if token and not request.user.is_authenticated:
+            try:
+                # Decodificar el token y obtener el usuario
+                access_token = AccessToken(token)
+                user_id = access_token['user_id']
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                user = User.objects.get(id=user_id)
+                # Simular autenticación asignando el usuario a la solicitud
+                request.user = user
+            except (TokenError, User.DoesNotExist) as e:
+                # Si el token no es válido, continuamos con la autenticación estándar
+                pass
+        
+        # Obtener la proforma (esto ya aplica los permisos)
+        proforma = self.get_object()
+        items = proforma.items.all().order_by('orden')
+        
+        # Obtener configuración global de proformas
+        configuracion = ConfiguracionProforma.objects.first()
+        if not configuracion:
+            configuracion = ConfiguracionProforma.objects.create()
+        
+        # Preparar contexto para la plantilla
+        context = {
+            'proforma': proforma,
+            'items': items,
+            'cliente': proforma.cliente,
+            'empresa': proforma.empresa,
+            'config': configuracion,
+            'estado': dict(Proforma.ESTADO_CHOICES)[proforma.estado],
+            'BASE_URL': request.build_absolute_uri('/').rstrip('/')
+        }
+        
+        # Generar HTML a partir de la plantilla
+        html_string = render_to_string('proformas/pdf_template.html', context)
+        
+        # Crear archivo PDF temporal
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as output:
+            try:
+                # Generar PDF con WeasyPrint
+                html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+                css = CSS(string='''
+                    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap');
+                    
+                    @page {
+                        size: letter;
+                        margin: 1.5cm;
+                        @bottom-right {
+                            content: "Página " counter(page) " de " counter(pages);
+                            font-size: 10px;
+                            color: #6B7280;
+                        }
+                    }
+                    
+                    /* No se necesita mucho CSS aquí ya que la mayoría está incrustado en el template */
+                    /* Esto solo se usa para sobreescribir propiedades si es necesario */
+                    
+                    .num-cell {
+                        text-align: right !important;
+                    }
+                    
+                    /* Un pequeño ajuste para asegurar márgenes en el documento impreso */
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    /* Asegurar que las tablas tengan el ancho correcto en PDF */
+                    table { 
+                        table-layout: fixed;
+                    }
+                    
+                    /* Mejora las líneas de firma */
+                    .signature-line {
+                        margin-top: 3em;
+                        border-top: 1px solid #000 !important;
+                    }
+                ''')
+                
+                html.write_pdf(target=output.name, stylesheets=[css])
+                
+                # Devolver el archivo PDF como respuesta HTTP
+                with open(output.name, 'rb') as pdf_file:
+                    response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+                    
+                    # Por defecto abrir en navegador en lugar de forzar descarga
+                    inline_param = request.GET.get('inline', 'true')
+                    if inline_param.lower() == 'true':
+                        response['Content-Disposition'] = f'inline; filename="proforma_{proforma.numero}.pdf"'
+                    else:
+                        response['Content-Disposition'] = f'attachment; filename="proforma_{proforma.numero}.pdf"'
+                    
+                    return response
+            except Exception as e:
+                import traceback
+                print(f"Error generando PDF: {str(e)}")
+                print(traceback.format_exc())
+                return Response(
+                    {"error": f"Error al generar PDF: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
     
     @action(detail=False, methods=['get'])
     def buscar_productos(self, request):

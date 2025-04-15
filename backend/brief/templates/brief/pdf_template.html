@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brief {{ brief.codigo }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #555;
+            padding-bottom: 10px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .document-title {
+            font-size: 18px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: #555;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 12px;
+            display: block;
+        }
+        .info-value {
+            font-size: 13px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .observations {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 10px;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">EMPRESA CLC</div>
+        <div class="document-title">BRIEF #{{ brief.codigo }}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Información General</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Código:</span>
+                <span class="info-value">{{ brief.codigo }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Fecha:</span>
+                <span class="info-value">{{ fecha }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Cliente:</span>
+                <span class="info-value">{{ cliente.nombre }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Origen:</span>
+                <span class="info-value">{{ brief.origen }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Presupuesto Ref.:</span>
+                <span class="info-value">${{ brief.presupuestoref|floatformat:2 }}</span>
+            </div>
+        </div>
+        
+        <div class="section-title" style="margin-top: 20px;">Observaciones</div>
+        <div class="observations">
+            {{ brief.observaciones|default:"Sin observaciones" }}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Ítems del Brief</div>
+        {% if items %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 25%;">Nombre</th>
+                    <th style="width: 40%;">Descripción</th>
+                    <th style="width: 15%;">Unidad</th>
+                    <th style="width: 15%;">Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.nombre }}</td>
+                    <td>{{ item.descripcion|default:"Sin descripción" }}</td>
+                    <td>{{ item.unidad.nombre }}</td>
+                    <td>{{ item.cantidad }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay ítems asociados a este brief.</p>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p>Brief generado el {{ now|date:"d/m/Y H:i" }}</p>
+        <p>Este documento es confidencial y para uso interno.</p>
+    </div>
+</body>
+</html>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ClipboardCopy, Building, List, Grid3X3, Database } from "lucide-react";
-import { getEmpresas, createEmpresa } from "@/services/empresaService";
+import { ClipboardCopy, Building, List, Grid3X3, Database, RefreshCcw, AlertCircle } from "lucide-react";
+import { getEmpresas, createEmpresa, reloadEmpresas } from "@/services/empresaService";
 import useAuthStore from "@/store/authStore";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ export default function EmpresaInfo() {
   const [empresas, setEmpresas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("card");
@@ -25,84 +26,137 @@ export default function EmpresaInfo() {
   const { isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   
+  // Useref para trackear cambios y prevenir peticiones innecesarias
+  const prevEntityRef = useRef(entidadSeleccionada);
+  const refreshTimerRef = useRef(null);
+  const refreshButtonRef = useRef(null);
+  
   // Función para copiar texto al portapapeles
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copiado", description: "Texto copiado al portapapeles" });
   };
   
-  // Cargar datos al montar el componente o cuando cambie la entidad seleccionada
-  useEffect(() => {
-    console.log("EmpresaInfo - Cargando datos para:", entidadSeleccionada);
-    fetchData(entidadSeleccionada);
-  }, [isAuthenticated, entidadSeleccionada]); 
+  // Control del montaje inicial para evitar solicitudes innecesarias
+  const isMountedRef = useRef(false);
   
-  // Función para cargar datos
-  const fetchData = async (entityType = entidadSeleccionada) => {
+  // Cargar datos solo al montar inicialmente
+  useEffect(() => {
+    // Solo realizar una carga inicial si no hay datos
+    if (!isMountedRef.current) {
+      console.log("EmpresaInfo - Montaje inicial para:", entidadSeleccionada);
+      isMountedRef.current = true;
+      
+      // En el montaje inicial, intentar obtener datos
+      if (empresas.length === 0) {
+        fetchData(entidadSeleccionada);
+      }
+    }
+    
+    // Cleanup function
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Manejar cambios de autenticación o entidad
+  useEffect(() => {
+    // No hacer nada en el montaje inicial (ya manejado por el efecto anterior)
+    if (!isMountedRef.current) return;
+    
+    console.log("EmpresaInfo - Cambio de entidad a:", entidadSeleccionada);
+    
+    // Evitar recargas innecesarias si la entidad no ha cambiado realmente
+    if (prevEntityRef.current !== entidadSeleccionada) {
+      fetchData(entidadSeleccionada);
+      prevEntityRef.current = entidadSeleccionada;
+    }
+  }, [isAuthenticated, entidadSeleccionada]);
+  
+  // Función para cargar datos con manejo de errores mejorado
+  const fetchData = async (entityType = entidadSeleccionada, forceReload = false) => {
+    // Desactivar botón de refresh mientras se carga
+    if (refreshButtonRef.current) {
+      refreshButtonRef.current.disabled = true;
+    }
+    
     try {
       setLoading(true);
       setError(null);
+      setIsRateLimited(false);
       
       // Verificar autenticación
       if (!isAuthenticated) {
-        console.log("No autenticado, redirigiendo a login");
         navigate('/auth/login');
         return;
       }
       
-      console.log(`Iniciando petición para entidad "${entityType}"...`);
-      
       try {
-        // Usar el servicio para obtener los datos
-        console.log("Llamando a getEmpresas con:", entityType);
-        const jsonData = await getEmpresas(entityType);
-        console.log(`Respuesta de API (${entityType}):`, jsonData);
+        // Usar el servicio para obtener los datos (forzar recarga si se solicita)
+        const jsonData = forceReload 
+          ? await reloadEmpresas(entityType)
+          : await getEmpresas(entityType);
         
-        // Procesar la respuesta
-        let resultados = jsonData;
+        // Actualizar estado directamente (el procesamiento está en el servicio)
+        setEmpresas(Array.isArray(jsonData) ? jsonData : []);
         
-        // Si la respuesta tiene un campo 'results', usar ese
-        if (jsonData && jsonData.results) {
-          resultados = jsonData.results;
+        // Notificar si se forzó una recarga
+        if (forceReload) {
+          toast({
+            title: "Datos actualizados",
+            description: "Se han refrescado los datos correctamente",
+            variant: "success"
+          });
         }
-        
-        // Si no es un array, convertirlo
-        if (!Array.isArray(resultados)) {
-          resultados = resultados ? [resultados] : [];
-        }
-        
-        console.log("Datos procesados:", resultados);
-        
-        // Actualizar estado
-        setEmpresas(resultados);
       } catch (serviceError) {
-        console.error("Error del servicio:", serviceError);
-        
+        // Manejar error de autenticación
         if (serviceError.response?.status === 401) {
-          console.log("Token inválido o expirado");
           logout();
           navigate('/auth/login');
           return;
         }
         
+        // Detectar error de rate limiting
+        if (serviceError.response?.status === 429) {
+          setIsRateLimited(true);
+          throw new Error("Demasiadas solicitudes. Por favor, espere unos momentos antes de intentar nuevamente.");
+        }
+        
         throw serviceError;
       }
-      
-      setLoading(false);
     } catch (err) {
-      console.error("Error general:", err);
-      
       // Mensaje de error más descriptivo
       let errorMessage = "No se pudieron cargar los datos";
       
       if (err.response?.data?.detail) {
-        errorMessage = `Error del servidor: ${err.response.data.detail}`;
+        errorMessage = err.response.data.detail;
       } else if (err.message) {
-        errorMessage = `Error: ${err.message}`;
+        errorMessage = err.message;
       }
       
       setError(errorMessage);
+      
+      // Mostrar toast solo para errores graves, no de rate limiting
+      if (!isRateLimited) {
+        toast({
+          title: "Error al cargar datos",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
+    } finally {
       setLoading(false);
+      
+      // Reactivar botón de refresh después de un tiempo
+      if (refreshButtonRef.current) {
+        refreshTimerRef.current = setTimeout(() => {
+          if (refreshButtonRef.current) {
+            refreshButtonRef.current.disabled = false;
+          }
+        }, 2000); // 2 segundos de cooldown
+      }
     }
   };
 
@@ -115,8 +169,6 @@ export default function EmpresaInfo() {
   
   // Manejar cuando se agrega una nueva empresa
   const handleEmpresaAdded = async (entityType, newData) => {
-    console.log("Manejando empresa agregada:", { entityType, newData });
-    
     try {
       // Si se especifica un tipo de entidad, actualizar la selección
       if (entityType) {
@@ -127,18 +179,16 @@ export default function EmpresaInfo() {
       
       if (newData) {
         // Eliminar campos que no deben enviarse a la API
-        delete newData.id;
-        delete newData.fecha_creacion;
-        delete newData.fecha_actualizacion;
-        
-        console.log("Creando nueva empresa:", newData);
+        const cleanedData = { ...newData };
+        delete cleanedData.id;
+        delete cleanedData.fecha_creacion;
+        delete cleanedData.fecha_actualizacion;
         
         // Usar el servicio para crear la nueva empresa en la API
-        const response = await createEmpresa(newData, currentEntityType);
-        console.log("Empresa creada exitosamente:", response);
+        const response = await createEmpresa(cleanedData, currentEntityType);
         
-        // Recargar los datos desde la API
-        await fetchData(currentEntityType);
+        // Recargar los datos desde la API (siempre forzar recarga)
+        await fetchData(currentEntityType, true);
         
         toast({
           title: "Éxito",
@@ -148,25 +198,48 @@ export default function EmpresaInfo() {
       }
     } catch (error) {
       console.error("Error al agregar empresa:", error);
+      
+      // Mensaje más amigable para errores de rate limiting
+      let errorMessage = "No se pudo agregar el registro";
+      
+      if (error.response?.status === 429) {
+        errorMessage = "Demasiadas solicitudes. Por favor, espere unos momentos antes de intentar nuevamente.";
+      } else if (error.message) {
+        errorMessage += ": " + error.message;
+      }
+      
       toast({
         title: "Error",
-        description: "No se pudo agregar el registro: " + (error.message || "Error desconocido"),
+        description: errorMessage,
         variant: "destructive"
       });
     }
   };
   
-  // Manejar cambio de entidad seleccionada
+  // Manejar cambio de entidad seleccionada con throttling para prevenir rate limiting
   const handleEntidadChange = (value) => {
-    console.log("Cambiando entidad a:", value);
-    setEntidadSeleccionada(value);
-    // Los datos se cargarán gracias al useEffect
+    // Solo actualizar si realmente cambió (prevenir recargas innecesarias)
+    if (value !== entidadSeleccionada) {
+      setEntidadSeleccionada(value);
+    }
+  };
+  
+  // Función para recargar con delay configurable para manejar rate limiting
+  const retryWithDelay = (delay = 5000) => {
+    toast({
+      title: "Reintentando",
+      description: `Esperando ${delay/1000} segundos antes de reintentar...`,
+      variant: "default"
+    });
+    
+    setTimeout(() => {
+      fetchData(entidadSeleccionada, true);
+    }, delay);
   };
   
   // Crear registro demo
   const createDemoRecord = async () => {
     try {
-      console.log("Creando registro demo para:", entidadSeleccionada);
       const nuevoRegistro = {
         empresa: `Nueva Empresa ${entidadSeleccionada.toUpperCase()}`,
         ruc: `${Math.floor(Math.random() * 10000000000)}001`,
@@ -183,12 +256,11 @@ export default function EmpresaInfo() {
         nuevoRegistro.url = "https://www.ejemplo.com";
       }
       
-      console.log("Datos a enviar a la API:", nuevoRegistro);
-      const respuesta = await createEmpresa(nuevoRegistro, entidadSeleccionada);
-      console.log("Respuesta de API al crear:", respuesta);
+      // Crear empresa
+      await createEmpresa(nuevoRegistro, entidadSeleccionada);
       
-      // Recargar datos
-      await fetchData(entidadSeleccionada);
+      // Recargar datos forzando actualización
+      await fetchData(entidadSeleccionada, true);
       
       toast({
         title: "Éxito",
@@ -196,10 +268,18 @@ export default function EmpresaInfo() {
         variant: "success"
       });
     } catch (error) {
-      console.error("Error al crear registro demo:", error);
+      let errorMessage = "No se pudo crear el registro";
+      
+      // Mensaje especial para rate limiting
+      if (error.response?.status === 429) {
+        errorMessage = "Demasiadas solicitudes. Por favor, espere unos momentos antes de intentar nuevamente.";
+      } else if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      
       toast({
         title: "Error", 
-        description: `No se pudo crear: ${error.message || "Error desconocido"}`,
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -208,7 +288,10 @@ export default function EmpresaInfo() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-blue-500 font-medium">Cargando datos...</p>
+        </div>
       </div>
     );
   }
@@ -217,8 +300,50 @@ export default function EmpresaInfo() {
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-8">
-          <div className="text-red-500 mb-4">Error: {error}</div>
-          <Button onClick={() => fetchData(entidadSeleccionada)}>Reintentar</Button>
+          <div className="flex items-center justify-center mb-4">
+            <AlertCircle className="h-10 w-10 text-red-500 mr-2" />
+            <h2 className="text-xl font-bold text-gray-800">Error al cargar datos</h2>
+          </div>
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+          
+          {isRateLimited ? (
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Se ha detectado un límite de peticiones. Por favor, espere unos momentos antes de reintentar.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  onClick={() => fetchData(entidadSeleccionada)}
+                  variant="outline"
+                >
+                  Reintentar ahora
+                </Button>
+                <Button 
+                  onClick={() => retryWithDelay(5000)}
+                  variant="default"
+                >
+                  Reintentar en 5 segundos
+                </Button>
+                <Button 
+                  onClick={() => retryWithDelay(30000)}
+                  variant="secondary"
+                >
+                  Reintentar en 30 segundos
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button 
+              onClick={() => fetchData(entidadSeleccionada)}
+              className="w-full"
+            >
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Reintentar
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -247,8 +372,12 @@ export default function EmpresaInfo() {
                 <Database className="h-5 w-5 mr-2 text-blue-600" />
                 <span className="font-medium">Tipo de entidad:</span>
                 <div className="w-64 ml-3">
-                  <Select value={entidadSeleccionada} onValueChange={handleEntidadChange}>
-                    <SelectTrigger className="bg-white">
+                  <Select 
+                    value={entidadSeleccionada} 
+                    onValueChange={handleEntidadChange}
+                    disabled={loading || isRateLimited} // Deshabilitar durante la carga o rate limiting
+                  >
+                    <SelectTrigger className={`bg-white ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}>
                       <SelectValue placeholder="Seleccione una entidad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -264,9 +393,11 @@ export default function EmpresaInfo() {
               <div className="flex items-center space-x-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => fetchData(entidadSeleccionada)}
-                  className="bg-white"
+                  onClick={() => fetchData(entidadSeleccionada, true)}
+                  className="bg-white flex items-center"
+                  ref={refreshButtonRef}
                 >
+                  <RefreshCcw className="h-4 w-4 mr-2" />
                   Refrescar
                 </Button>
                 <EmpresaForm 

@@ -1,11 +1,14 @@
 // src/config/axios.js
 import axios from 'axios';
 
-// Si tienes VITE_API_URL apuntando a http://localhost:8000/api/v1, úsalo:
-// El backend corre en el puerto 8000 por defecto
-const BASE_URL = 'http://localhost:8000/api/v1/';
+// Usamos VITE_API_URL desde las variables de entorno si está disponible
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/';
+console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
 
 console.log('BASE_URL configurada:', BASE_URL);
+
+// Para debug
+window._baseApiUrl = BASE_URL; // Exponer para depuración en consola
 
 
 
@@ -20,11 +23,67 @@ const api = axios.create({
 
 // ============ Interceptores ============
 
-// 1) Interceptor REQUEST: agrega Bearer token con más robustez
+// 1) Interceptor REQUEST: agrega Bearer token, controla concurrencia y maneja caché
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Verificar si podemos usar caché para esta solicitud
+    if (config.method === 'get' && !config._bypassCache) {
+      const cacheKey = apiCache.createKey(config);
+      const cachedResponse = apiCache.get(cacheKey);
+      
+      if (cachedResponse) {
+        console.log(`Usando respuesta cacheada para: ${config.url}`);
+        
+        // El interceptor debe regresar un objeto compatible con Promise.reject para que 
+        // axios piense que la petición falló, pero en realidad regresará un objeto personalizado
+        // que será procesado por nuestro interceptor de respuesta
+        return Promise.reject({
+          __cachedResponse: true,
+          cachedData: cachedResponse,
+          config
+        });
+      }
+    }
+    
+    // Si hay demasiados errores de rate limiting recientes, aumentamos el tiempo entre solicitudes
+    const shouldThrottle = consecutiveRateLimitErrors > 2 && 
+                           Date.now() - lastRateLimitTime < 60000;
+    
+    if (shouldThrottle && !config._highPriority) {
+      const throttleTime = Math.min(
+        baseRetryDelay * consecutiveRateLimitErrors,
+        maxDelay
+      );
+      
+      console.log(`Throttling para proteger contra rate limiting. Esperando ${throttleTime/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, throttleTime));
+    }
+    
+    // Control de concurrencia para evitar sobrecarga al servidor
+    if (activeRequests >= maxConcurrentRequests && !config._bypassConcurrencyCheck) {
+      console.log(`Limitando concurrencia. Esperando... (${activeRequests}/${maxConcurrentRequests} activas)`);
+      
+      // Esperamos hasta que haya un slot disponible
+      await new Promise(resolve => {
+        const checkSlot = () => {
+          if (activeRequests < maxConcurrentRequests) {
+            resolve();
+          } else {
+            setTimeout(checkSlot, 500);
+          }
+        };
+        checkSlot();
+      });
+    }
+    
+    // Incrementar contador de peticiones activas
+    activeRequests++;
+    
+    // Agregar timestamp para monitoreo
+    config._requestTime = Date.now();
+    
+    // Manejo del token de autenticación
     const token = localStorage.getItem('auth-token');
-    console.log('Interceptor de request ejecutándose. ¿Hay token?', !!token);
     
     if (token) {
       // Asegurar que el token está formateado correctamente
@@ -41,16 +100,105 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    // Decrementar contador incluso en error de request
+    activeRequests = Math.max(0, activeRequests - 1);
+    return Promise.reject(error);
+  }
 );
 
-// 2) Manejo de Rate Limiting: si viene status 429, reintentamos con backoff exponencial
-let retryDelay = 2000; // Comenzamos con 2 segundos
-const maxRetries = 3;
+// 2) Manejo de Rate Limiting mejorado con backoff exponencial más conservador
+const baseRetryDelay = 10000; // Aumentado a 10 segundos para ser aún más conservador
+const maxRetries = 8;        // Aumentado a 8 reintentos para ser más persistente
+const maxDelay = 120000;     // Aumentado a 120 segundos máximo de espera
+
+// Contador global para registrar errores consecutivos de rate limiting
+let consecutiveRateLimitErrors = 0;
+let lastRateLimitTime = 0;
+
+// Limitamos el número de peticiones concurrentes
+let activeRequests = 0;
+const maxConcurrentRequests = 1; // Mantenemos 1 para evitar sobrecargar el servidor
+
+// Objeto para almacenar caché de respuestas por URL
+const apiCache = {
+  data: new Map(),
+  ttl: 300000, // 5 minutos de tiempo de vida
+  
+  // Obtener una respuesta cacheada
+  get(cacheKey) {
+    if (!this.data.has(cacheKey)) return null;
+    
+    const cached = this.data.get(cacheKey);
+    if (Date.now() - cached.timestamp > this.ttl) {
+      this.data.delete(cacheKey);
+      return null;
+    }
+    
+    return cached.response;
+  },
+  
+  // Guardar una respuesta en caché
+  set(cacheKey, response) {
+    this.data.set(cacheKey, {
+      timestamp: Date.now(),
+      response: JSON.parse(JSON.stringify(response)) // Copia profunda
+    });
+  },
+  
+  // Crear clave de caché para una configuración de request
+  createKey(config) {
+    const { url, method, params, data } = config;
+    return `${method}-${url}-${JSON.stringify(params || {})}-${JSON.stringify(data || {})}`;
+  }
+};
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Si la respuesta es exitosa, restablecer el contador de errores de rate limiting
+    consecutiveRateLimitErrors = 0;
+    
+    // Decrementar contador de peticiones activas
+    activeRequests = Math.max(0, activeRequests - 1);
+    
+    // Log para monitoreo de tiempos de respuesta
+    if (response.config._requestTime) {
+      const duration = Date.now() - response.config._requestTime;
+      if (duration > 1000) {
+        console.log(`Petición a ${response.config.url} completada en ${duration}ms (lenta)`);
+      }
+    }
+    
+    // Almacenar respuesta en caché para GET requests
+    if (response.config.method === 'get' && !response.config._bypassCache) {
+      const cacheKey = apiCache.createKey(response.config);
+      apiCache.set(cacheKey, response.data);
+    }
+    
+    return response;
+  },
   async (error) => {
+    // Manejo especial para respuestas cacheadas
+    if (error.__cachedResponse) {
+      console.log('Usando respuesta de caché para:', error.config.url);
+      return Promise.resolve({ 
+        data: error.cachedData,
+        config: error.config,
+        status: 200,
+        statusText: 'OK (cached)',
+        headers: {},
+        cached: true
+      });
+    }
+    
+    // Decrementar contador de peticiones activas (excepto cuando vamos a reintentar)
+    const willRetry = error.response?.status === 429 && 
+                     (!error.config._retryCount || error.config._retryCount < maxRetries);
+    
+    if (!willRetry) {
+      activeRequests = Math.max(0, activeRequests - 1);
+    }
+    
     // Si la solicitud tiene _disableRetry, no intentamos el retry automático
     if (error.config?._disableRetry) {
       console.log('Retry automático desactivado para esta solicitud');
@@ -59,6 +207,12 @@ api.interceptors.response.use(
 
     // Solo manejamos este interceptor para errores 429 (Too Many Requests)
     if (error.response?.status === 429) {
+      // Registrar tiempo del último error de rate limiting
+      lastRateLimitTime = Date.now();
+      
+      // Incrementar contador global de errores consecutivos
+      consecutiveRateLimitErrors = Math.min(consecutiveRateLimitErrors + 1, 10);
+      
       // Si no existe la propiedad retryCount en la configuración, la inicializamos
       if (!error.config._retryCount) {
         error.config._retryCount = 0;
@@ -67,11 +221,42 @@ api.interceptors.response.use(
       // Incrementamos el contador de reintentos
       error.config._retryCount += 1;
       
+      // Verificar si podemos usar caché como fallback para este error
+      if (error.config.method === 'get' && !error.config._bypassCache) {
+        const cacheKey = apiCache.createKey(error.config);
+        const cachedResponse = apiCache.get(cacheKey);
+        
+        if (cachedResponse) {
+          console.log('Usando caché como fallback para error 429 en:', error.config.url);
+          return Promise.resolve({ 
+            data: cachedResponse,
+            config: error.config,
+            status: 200,
+            statusText: 'OK (cached fallback)',
+            headers: {},
+            cached: true
+          });
+        }
+      }
+      
       // Si aún no alcanzamos el máximo de reintentos
       if (error.config._retryCount <= maxRetries) {
-        // Calculamos un delay con backoff exponencial (2s, 4s, 8s, etc.)
-        const delay = retryDelay * Math.pow(2, error.config._retryCount - 1);
-        console.log(`Rate limit detectado. Intento ${error.config._retryCount}/${maxRetries}. Esperando ${delay/1000}s...`);
+        // Calculamos un delay con backoff exponencial que también considera
+        // el número de errores consecutivos de rate limiting
+        // Esto hace que el sistema sea más conservador después de múltiples errores
+        const baseMultiplier = Math.pow(2, error.config._retryCount - 1);
+        const globalMultiplier = Math.max(1, consecutiveRateLimitErrors * 0.5); // Factor adicional basado en errores globales
+        
+        const delay = Math.min(
+          baseRetryDelay * baseMultiplier * globalMultiplier,
+          maxDelay
+        );
+        
+        console.log(
+          `Rate limit detectado. Intento ${error.config._retryCount}/${maxRetries}. ` +
+          `Errores consecutivos: ${consecutiveRateLimitErrors}. ` +
+          `Esperando ${Math.round(delay/1000)}s...`
+        );
         
         // Esperamos antes de reintentar
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -83,6 +268,39 @@ api.interceptors.response.use(
       // Si llegamos al máximo de reintentos, rechazamos con un mensaje claro
       console.log('Máximo de reintentos alcanzado para errores de rate limit');
       error.message = 'Demasiadas solicitudes en poco tiempo. Por favor, espere unos minutos e intente nuevamente.';
+    } else if (error.response?.status === 404) {
+      // Para errores 404, no tiene sentido reintentar
+      console.log('Recurso no encontrado (404):', error.config.url);
+    } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      // Para errores de timeout, incrementar contador de rate limiting también
+      // ya que a menudo los timeouts son un síntoma de sobrecarga del servidor
+      console.log('Timeout detectado, incrementando contador de rate limiting');
+      lastRateLimitTime = Date.now();
+      consecutiveRateLimitErrors = Math.min(consecutiveRateLimitErrors + 0.5, 10);
+      
+      // Verificar si podemos usar caché como fallback para este error
+      if (error.config.method === 'get' && !error.config._bypassCache) {
+        const cacheKey = apiCache.createKey(error.config);
+        const cachedResponse = apiCache.get(cacheKey);
+        
+        if (cachedResponse) {
+          console.log('Usando caché como fallback para timeout en:', error.config.url);
+          return Promise.resolve({ 
+            data: cachedResponse,
+            config: error.config,
+            status: 200,
+            statusText: 'OK (cached fallback for timeout)',
+            headers: {},
+            cached: true
+          });
+        }
+      }
+    } else {
+      // Si no es un error de rate limiting, reducir gradualmente el contador global
+      // Esto permite que el sistema se recupere después de un periodo sin errores
+      if (Date.now() - lastRateLimitTime > 60000 && consecutiveRateLimitErrors > 0) {
+        consecutiveRateLimitErrors = Math.max(0, consecutiveRateLimitErrors - 1);
+      }
     }
     
     // Para cualquier otro error, simplemente lo rechazamos

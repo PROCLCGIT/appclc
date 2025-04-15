@@ -29,9 +29,14 @@ const ProcesosAuditadosPage = lazy(() => import('@/pages/mbasic/ProcesosAuditado
 
 // Pandora - Modulo Bases Generales
 const ProveedoresPage = lazy(() => import('@/pages/madvance/ProveedoresPage'));
+const AddProveedorPage = lazy(() => import('@/pages/madvance/AddProveedorPage'));
 const ClientesPage = lazy(() => import('@/pages/madvance/ClientesPage'));
+const AddClientePage = lazy(() => import('@/pages/madvance/AddClientePage'));
 const VendedoresPage = lazy(() => import('@/pages/madvance/VendedoresPage'));
+const AddVendedorPage = lazy(() => import('@/pages/madvance/AddVendedorPage'));
 const ContactosPage = lazy(() => import('@/pages/madvance/Contactos'));
+const AddContactoPage = lazy(() => import('@/pages/madvance/AddContactoPage'));
+const RelacionesBlue = lazy(() => import('@/pages/madvance/RelacionesBlue'));
 const PreciosSiePage = lazy(() => import('@/pages/madvance/PresiosSie/PreciosSiePage'));
 const MsprefPage = lazy(() => import('@/pages/madvance/MsprefPage'));
 
@@ -42,11 +47,25 @@ const VentasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/V
 const ComprasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/ComprasHistoricaProducto'));
 
 // Proformas
-
-const Proformamain = lazy(() => import('@/pages/proformas/Proformamain'));
 const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProforma'));
 const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformas'));
+const ProformasGuardadas = lazy(() => import('@/pages/proformas/ProformasGuardadas'));
 
+// Brief
+const BriefsPage = lazy(() => import('@/pages/brief/BriefsPage'));
+const AddBriefPage = lazy(() => import('@/pages/brief/AddBriefPage'));
+const BriefDetailsPage = lazy(() => import('@/pages/brief/BriefDetailsPage'));
+const EditBriefPage = lazy(() => import('@/pages/brief/EditBriefPage'));
+
+
+// Invenrario
+const InventarioPage = lazy(() => import('@/pages/inventario/InventorioPage'));
+const Brief = lazy(() => import('@/pages/inventario/brief'));
+const WizardForm = lazy(() => import('@/pages/inventario/wizardform'));
+
+
+// Docmanager 
+const GestorDocumentalPage = lazy(() => import('@/pages/docmanager/GestorDocumentalPage'));
 
 
 // Páginas básicas que no necesitan carga diferida
@@ -99,9 +118,9 @@ const Testing29 = lazy(() => import('@/pages/test/Modelos/Testing29'));
 const Testing30 = lazy(() => import('@/pages/test/Modelos/Testing30'));
 const ExpenseControlForm = lazy(() => import('@/pages/test/ExpenseControlForm'));
 const OP01 = lazy(() => import('@/pages/test/Opcionesia/01'));
-const OP02 = lazy(() => import('@/pages/test/ExpenseControlForm'));
-const OP03 = lazy(() => import('@/pages/test/ExpenseControlForm2'));
-const OP04 = lazy(() => import('@/pages/test/Opcionesia/04'));
+const OP02 = lazy(() => import('@/pages/test/Opcionesia/02'));
+const OP03 = lazy(() => import('@/pages/test/Opcionesia/03'));
+const OP04 = lazy(() => import('@/pages/inventario/wizardform'));
 const OP05 = lazy(() => import('@/pages/test/Opcionesia/05'));
 
 
@@ -161,9 +180,14 @@ export const router = createBrowserRouter([
       
       // Pandora - Módulo Bases Generales
       { path: 'proveedores', element: <PageWrapper component={ProveedoresPage} /> },
+      { path: 'madvance/add-proveedor', element: <PageWrapper component={AddProveedorPage} /> },
       { path: 'clientes', element: <PageWrapper component={ClientesPage} /> },
+      { path: 'madvance/add-cliente', element: <PageWrapper component={AddClientePage} /> },
       { path: 'vendedores', element: <PageWrapper component={VendedoresPage} /> },
+      { path: 'vendedores/nuevo', element: <PageWrapper component={AddVendedorPage} /> },
       { path: 'contactos', element: <PageWrapper component={ContactosPage} /> },
+      { path: 'contactos/nuevo', element: <PageWrapper component={AddContactoPage} /> },
+      { path: 'relaciones-blue', element: <PageWrapper component={RelacionesBlue} /> },
       { path: 'preciossie', element: <PageWrapper component={PreciosSiePage} /> },
       { path: 'mspref', element: <PageWrapper component={MsprefPage} /> },
       
@@ -174,23 +198,40 @@ export const router = createBrowserRouter([
       { path: 'historico-compras', element: <PageWrapper component={ComprasHistoricaProducto} /> },
       
       // Proformas
-      { path: 'proformamain', element: <PageWrapper component={Proformamain} /> },
       { path: 'enhancedproforma', element: <PageWrapper component={EnhancedProforma} /> },
       { path: 'dashboardproformas', element: <PageWrapper component={DashboardProformas} /> },
+      { path: 'proformas-guardadas', element: <PageWrapper component={ProformasGuardadas} /> },
       
-    
+      // Brief
+      { path: 'briefs', element: <PageWrapper component={BriefsPage} /> },
+      { path: 'briefs/add', element: <PageWrapper component={AddBriefPage} /> },
+      { path: 'briefs/view/:id', element: <PageWrapper component={BriefDetailsPage} /> },
+      { path: 'briefs/edit/:id', element: <PageWrapper component={EditBriefPage} /> },
 
-  
+      //Inventerio
+      { path: 'inventariopage', element: <PageWrapper component={InventarioPage} /> },
+      { path: 'brief', element: <PageWrapper component={Brief} /> },
+      { path: 'wizardform', element: <PageWrapper component={WizardForm} /> },
+
+      
       { path: 'error', element: <ConstructionPage /> },
       
       // Legal Base
       { path: 'empresainfo', element: <PageWrapper component={EmpresaInfo} /> },
       { path: 'empresainfo2', element: <PageWrapper component={EmpresaInfo2} /> },
       { path: 'empresainfo3', element: <PageWrapper component={EmpresaInfo3} /> },
+
+
+      // Modulo Docmanager
+      { path: 'docmanager', element: <PageWrapper component={GestorDocumentalPage} /> },
+
       
       // Módulo de importaciones
       { path: 'msprefimport', element: <PageWrapper component={MsprefImportPage} /> },
       { path: 'productosofertadosimport', element: <PageWrapper component={ProductosOfertadosImportPage} /> },
+
+
+
       
       // Testing
       { path: 'testing1', element: <PageWrapper component={Testing1} /> },

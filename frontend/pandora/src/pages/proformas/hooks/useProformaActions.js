@@ -1,0 +1,624 @@
+// src/pages/proformas/hooks/useProformaActions.js
+
+import { toast } from 'sonner';
+import { proformasService, proformaItemsService } from '@/services/api';
+
+/**
+ * Hook personalizado para manejar acciones de proforma (guardar, exportar, etc.)
+ */
+export const useProformaActions = ({
+  proformas, 
+  activeProformaId, 
+  updateProforma, 
+  addNewProforma, 
+  closeProforma, 
+  loadProforma,
+  formatCurrency,
+  showSuccessDialog,
+  showErrorDialog,
+  showWarningDialog
+}) => {
+  /**
+   * Maneja la acción principal solicitada por el usuario
+   */
+  const handleAction = async (action) => {
+    console.log(`Acción: ${action}`);
+
+    // Nueva proforma es un caso especial que no requiere verificación
+    if (action === "new") {
+      // Evitamos crear múltiples proformas en sucesión rápida
+      // implementando un bloqueo de 1 segundo
+      const now = Date.now();
+      if (now - (window.lastNewProformaTime || 0) < 1000) {
+        console.log("Ignorando solicitud de nueva proforma (muy rápida)");
+        return;
+      }
+      window.lastNewProformaTime = now;
+      
+      addNewProforma();
+      return;
+    }
+
+    // Para todas las demás acciones, verificar que existe una proforma activa
+    const activeProforma = proformas.find(p => p.id === activeProformaId);
+    if (!activeProforma) {
+      toast.error("No hay una proforma activa para realizar esta acción");
+      return;
+    }
+    
+    if (action === "save") {
+      await saveProforma(activeProforma);
+    }
+    else if (action === "export") {
+      exportProforma(activeProforma);
+    }
+    else if (action === "print") {
+      printProforma();
+    }
+    else if (action === "generate") {
+      await generateProforma(activeProforma);
+    }
+    else if (action === "configure") {
+      configureProforma();
+    }
+    else if (action === "share") {
+      toast.info("Función de compartir proforma estará disponible próximamente");
+    }
+  };
+
+  /**
+   * Guarda una proforma en el backend
+   */
+  const saveProforma = async (currentProforma) => {
+    if (!currentProforma) {
+      toast.error("No hay una proforma activa para guardar", {
+        description: "Ocurrió un error al identificar la proforma que desea guardar"
+      });
+      return;
+    }
+    
+    const currentClient = currentProforma.client || {};
+    const currentItems = Array.isArray(currentProforma.items) ? currentProforma.items : [];
+    const currentQuote = currentProforma.quote || {};
+    
+    // Lista para almacenar todos los errores de validación
+    const validationErrors = [];
+    
+    // Validación del cliente
+    if (!currentClient.name) {
+      validationErrors.push("Falta seleccionar un cliente");
+    }
+    
+    if (!currentClient.id) {
+      validationErrors.push("El cliente seleccionado no tiene un ID válido");
+    }
+    
+    // Validación de ítems
+    if (currentItems.length === 0) {
+      validationErrors.push("Debe agregar al menos un ítem a la proforma");
+    } else {
+      // Verificar datos de los ítems - asegurándonos de convertir a números antes de comparar
+      const itemsWithIssues = currentItems.filter(item => {
+        const quantity = parseFloat(item.quantity);
+        const unitPrice = parseFloat(item.unitPrice);
+        return !item.description || 
+               isNaN(quantity) || 
+               isNaN(unitPrice) || 
+               quantity <= 0 || 
+               unitPrice <= 0;
+      });
+      
+      if (itemsWithIssues.length > 0) {
+        validationErrors.push(`Hay ${itemsWithIssues.length} ítem(s) con datos incompletos o inválidos`);
+      }
+    }
+    
+    // Validación de datos de la proforma
+    if (!currentQuote.number) {
+      validationErrors.push("Falta el número de proforma");
+    }
+    
+    if (!currentQuote.paymentTerms) {
+      validationErrors.push("Falta definir las condiciones de pago");
+    }
+    
+    if (!currentQuote.deliveryTime) {
+      validationErrors.push("Falta definir el tiempo de entrega");
+    }
+    
+    // Si hay errores de validación, informar al usuario y detener el proceso
+    if (validationErrors.length > 0) {
+      const errorList = validationErrors.map(err => `• ${err}`).join('\n');
+      
+      // Si hay diálogo disponible, usarlo
+      if (showErrorDialog) {
+        showErrorDialog(
+          "No se puede guardar la proforma", 
+          "Por favor, corrija los siguientes errores antes de guardar:", 
+          errorList
+        );
+      } else {
+        // De lo contrario, usar toast
+        toast.error("No se puede guardar la proforma", {
+          description: errorList
+        });
+      }
+      return null;
+    }
+    
+    // Mostrar indicador de carga
+    const loadingToast = toast.loading("Guardando proforma...", {
+      description: "Por favor espere mientras se procesan los datos"
+    });
+    
+    try {
+      // Preparar los datos de la proforma asegurando que los valores sean del tipo adecuado
+      const proformaData = {
+        numero: currentQuote.number,
+        nombre: currentQuote.name || "",
+        fecha_emision: typeof currentQuote.date === 'object' && currentQuote.date instanceof Date 
+          ? currentQuote.date.toISOString().split('T')[0] 
+          : new Date(currentQuote.date).toISOString().split('T')[0],
+        fecha_vencimiento: typeof currentQuote.expiryDate === 'object' && currentQuote.expiryDate instanceof Date 
+          ? currentQuote.expiryDate.toISOString().split('T')[0] 
+          : new Date(currentQuote.expiryDate).toISOString().split('T')[0],
+        cliente: currentClient.id,
+        empresa: 1, // ID de la empresa, podría ser dinámica
+        atencion_a: currentClient.attention || "",
+        condiciones_pago: currentQuote.paymentTerms || "",
+        tiempo_entrega: currentQuote.deliveryTime || "",
+        subtotal: typeof currentQuote.subtotal === 'number' ? currentQuote.subtotal : parseFloat(currentQuote.subtotal) || 0,
+        porcentaje_impuesto: typeof currentQuote.taxRate === 'number' ? currentQuote.taxRate : parseFloat(currentQuote.taxRate) || 0,
+        impuesto: typeof currentQuote.tax === 'number' ? currentQuote.tax : parseFloat(currentQuote.tax) || 0,
+        total: typeof currentQuote.total === 'number' ? currentQuote.total : parseFloat(currentQuote.total) || 0,
+        notas: currentQuote.notes || "",
+        estado: 'borrador'
+      };
+      
+      // Guardar la proforma
+      let proformaId;
+      let isNewProforma = !currentProforma.savedId;
+      
+      try {
+        // Comprobar si es una nueva proforma o una actualización
+        if (currentProforma.savedId) {
+          // Es una actualización
+          const response = await proformasService.update(currentProforma.savedId, proformaData);
+          proformaId = response.id;
+        } else {
+          // Es una nueva proforma
+          const response = await proformasService.create(proformaData);
+          proformaId = response.id;
+          
+          // Actualizar el ID guardado en la proforma activa
+          updateProforma(currentProforma.id, { savedId: proformaId });
+        }
+      } catch (error) {
+        console.error("Error al guardar la proforma:", error);
+        toast.dismiss(loadingToast);
+        
+        // Proporcionar mensaje de error más específico si está disponible
+        if (error.message) {
+          toast.error(`Error: ${error.message}`);
+        } else {
+          toast.error("Error al guardar la proforma. Revise los datos e intente nuevamente.");
+        }
+        return null;
+      }
+      
+      // Guardar los ítems de la proforma
+      const itemErrors = [];
+      // Array para almacenar los ítems actualizados con sus savedIds
+      const updatedItems = [...currentItems];
+      
+      for (let i = 0; i < currentItems.length; i++) {
+        const item = currentItems[i];
+        try {
+          // Asegurarse de que todos los campos numéricos sean números válidos
+          const itemData = {
+            proforma: proformaId,
+            tipo_item: 'personalizado', // Por defecto es personalizado
+            codigo: item.code || "",
+            descripcion: item.description || "",
+            unidad: item.unit || "Unidad",
+            cantidad: typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity) || 0,
+            precio_unitario: typeof item.unitPrice === 'number' ? item.unitPrice : parseFloat(item.unitPrice) || 0,
+            porcentaje_descuento: typeof item.discount === 'number' ? item.discount : parseFloat(item.discount) || 0,
+            total: typeof item.total === 'number' ? item.total : parseFloat(item.total) || 0,
+            orden: i
+          };
+          
+          // Determinar el tipo de producto según la fuente
+          if (item.source) {
+            const productId = item.productId || (item.original && item.original.id);
+            
+            if (productId) {
+              if (item.source === 'ofertados') {
+                itemData.tipo_item = 'producto_ofertado';
+                itemData.producto_ofertado = productId;
+              } else if (item.source === 'disponibles') {
+                itemData.tipo_item = 'producto_disponible';
+                itemData.producto_disponible = productId;
+              } else if (item.source === 'inventario') {
+                // Si hay un modelo específico para inventario, se agregaría aquí
+                itemData.tipo_item = 'personalizado';
+              }
+            }
+          }
+          
+          let savedItem;
+          // Guardar o actualizar según si tiene savedId
+          if (item.savedId) {
+            savedItem = await proformaItemsService.update(item.savedId, itemData);
+            console.log(`Ítem actualizado: ${item.description}, savedId: ${item.savedId}`);
+          } else {
+            savedItem = await proformaItemsService.create(itemData);
+            console.log(`Ítem creado: ${item.description}, nuevo savedId: ${savedItem.id}`);
+          }
+          
+          // Actualizar el ítem con su ID guardado
+          if (savedItem && savedItem.id) {
+            updatedItems[i] = {
+              ...updatedItems[i],
+              savedId: savedItem.id
+            };
+          }
+        } catch (itemError) {
+          console.error(`Error al guardar ítem ${item.description}:`, itemError);
+          itemErrors.push(item.description || `Ítem #${i + 1}`);
+        }
+      }
+      
+      // Actualizar la proforma con los ítems actualizados
+      if (updatedItems.length > 0) {
+        updateProforma(currentProforma.id, { items: updatedItems });
+        console.log("Ítems actualizados con IDs guardados:", updatedItems);
+      }
+      
+      // Ocultar indicador de carga
+      toast.dismiss(loadingToast);
+      
+      // Preparar información para mostrar al usuario
+      const savedDetails = `
+ID: ${proformaId}
+Cliente: ${currentClient.name}
+Fecha: ${new Date().toLocaleString()}
+Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.total}
+Ítems: ${currentItems.length}`;
+      
+      // Informar al usuario del resultado
+      if (itemErrors.length > 0) {
+        if (itemErrors.length === currentItems.length) {
+          // Todos los ítems fallaron
+          if (showErrorDialog) {
+            showErrorDialog(
+              "Error al guardar los ítems de la proforma",
+              "Ningún ítem pudo ser registrado en el sistema. Verifique la información e intente nuevamente.",
+              `ID de la proforma: ${proformaId}\nCliente: ${currentClient.name}\nFecha: ${new Date().toLocaleString()}`
+            );
+          } else {
+            toast.error("Error al guardar los ítems de la proforma", {
+              description: "Ningún ítem pudo ser registrado en el sistema."
+            });
+          }
+          return null;
+        } else {
+          // Algunos ítems fallaron, pero la proforma se guardó
+          const errorDetails = itemErrors.length <= 3 
+            ? `Ítems con error: ${itemErrors.join(", ")}` 
+            : `${itemErrors.length} ítems no pudieron ser guardados`;
+          
+          const title = isNewProforma 
+            ? `Proforma #${currentQuote.number} guardada con advertencias` 
+            : `Proforma #${currentQuote.number} actualizada con advertencias`;
+          
+          if (showWarningDialog) {
+            showWarningDialog(
+              title,
+              `La proforma se guardó correctamente, pero ${errorDetails}`,
+              savedDetails + "\nEstado: Guardada con " + itemErrors.length + " ítem(s) con errores",
+              proformaId
+            );
+          } else {
+            toast.warning(title, {
+              description: errorDetails
+            });
+          }
+        }
+      } else {
+        // Todo fue guardado correctamente
+        const title = isNewProforma 
+          ? `¡Proforma #${currentQuote.number} guardada correctamente!` 
+          : `¡Proforma #${currentQuote.number} actualizada correctamente!`;
+          
+        const message = isNewProforma
+          ? `Se ha creado una nueva proforma para ${currentClient.name} por un total de ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.total}`
+          : `Se han actualizado los datos de la proforma para ${currentClient.name} por un total de ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.total}`;
+        
+        if (showSuccessDialog) {
+          showSuccessDialog(
+            title,
+            message,
+            savedDetails + "\nEstado: Guardada con éxito",
+            proformaId
+          );
+        } else {
+          toast.success(title);
+        }
+      }
+      
+      return proformaId; // Devolver el ID para posibles usos posteriores
+      
+    } catch (error) {
+      console.error("Error general al guardar la proforma:", error);
+      toast.dismiss(loadingToast);
+      
+      let errorMessage = "Error al guardar la proforma. Verifica tu conexión e inténtalo de nuevo.";
+      
+      // Tratar de extraer un mensaje más específico del error
+      if (error.errors?.detail) {
+        errorMessage = `Error: ${error.errors.detail}`;
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      if (showErrorDialog) {
+        showErrorDialog(
+          "Error al guardar la proforma",
+          errorMessage,
+          `Fecha y hora: ${new Date().toLocaleString()}\nCliente: ${currentClient.name || "No especificado"}\nDetalles técnicos: ${error.toString()}`
+        );
+      } else {
+        toast.error(errorMessage);
+      }
+      
+      return null;
+    }
+  };
+
+  /**
+   * Exporta la proforma como PDF
+   */
+  const exportProforma = async (currentProforma) => {
+    try {
+      if (!currentProforma) {
+        toast.error("No hay una proforma activa para exportar");
+        return;
+      }
+      
+      // Verificar que la proforma ha sido guardada
+      if (!currentProforma.savedId) {
+        // Usar el diálogo más claro en lugar de confirm
+        if (showWarningDialog) {
+          const confirmed = await new Promise(resolve => {
+            showWarningDialog(
+              "Se requiere guardar la proforma",
+              "Para exportar a PDF, primero debe guardar la proforma.",
+              "¿Desea guardar la proforma ahora?",
+              null,
+              () => resolve(true),
+              () => resolve(false)
+            );
+          });
+          
+          if (confirmed) {
+            const proformaId = await saveProforma(currentProforma);
+            if (!proformaId) {
+              toast.error("No se pudo guardar la proforma para exportar a PDF.");
+              return;
+            }
+            // Recargar la proforma actualizada para obtener el savedId
+            await loadProforma(proformaId);
+          } else {
+            return;
+          }
+        } else {
+          // Si no hay diálogo disponible, usar el confirm estándar
+          const shouldSave = window.confirm("Para exportar a PDF, primero debe guardar la proforma. ¿Desea guardar la proforma ahora?");
+          if (shouldSave) {
+            const proformaId = await saveProforma(currentProforma);
+            if (!proformaId) {
+              toast.error("No se pudo guardar la proforma para exportar a PDF.");
+              return;
+            }
+            // Recargar la proforma actualizada para obtener el savedId
+            await loadProforma(proformaId);
+          } else {
+            return;
+          }
+        }
+      }
+      
+      // Mostrar indicador de carga
+      const loadingToast = toast.loading("Generando PDF...", {
+        description: "Espere mientras se procesa el documento"
+      });
+      
+      try {
+        // Usar la API de proformas que ya tiene configurada la autenticación
+        const proformaId = currentProforma.savedId;
+        console.log(`Exportando proforma ID: ${proformaId} a PDF usando ProformaService`);
+        
+        // Importar la clase de servicio para usar su método exportPdf
+        const { ProformaService } = await import('@/services/classes/ProformaService');
+        const proformaService = new ProformaService();
+        
+        try {
+          // Método 1: Usar axios con el servicio para obtener el PDF (mejor manejo de autenticación)
+          const pdfBlob = await proformaService.exportPdf(proformaId);
+          
+          // Una vez obtenido el blob, crear URL y abrirlo
+          const url = window.URL.createObjectURL(new Blob([pdfBlob]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank'; // Abrir en nueva pestaña
+          document.body.appendChild(link);
+          link.click();
+          
+          // Limpiar
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+          }, 100);
+          
+          toast.dismiss(loadingToast);
+          toast.success("PDF generado correctamente", {
+            description: `Proforma #${currentProforma.quote?.number || proformaId}`
+          });
+          
+        } catch (serviceError) {
+          console.error("Error usando ProformaService.exportPdf:", serviceError);
+          
+          // Método 2: Usar proformasService.api directamente (como fallback)
+          try {
+            console.log("Intentando con método alternativo usando axios directamente");
+            
+            const apiBase = window._baseApiUrl || 'http://localhost:8000/api/v1/';
+            let pdfUrl = `${apiBase.replace(/\/+$/, '')}/proformas/proformas/${proformaId}/exportar_pdf/`;
+            
+            // Usar axios (que ya tiene el token configurado) para obtener el archivo
+            const response = await proformasService.api({
+              url: pdfUrl,
+              method: 'GET',
+              responseType: 'blob',
+              timeout: 30000 // Timeout extendido para archivos grandes
+            });
+            
+            // Crear URL y abrirlo
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank'; // Abrir en nueva pestaña
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpiar
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(link);
+            }, 100);
+            
+            toast.dismiss(loadingToast);
+            toast.success("PDF generado correctamente", {
+              description: `Proforma #${currentProforma.quote?.number || proformaId}`
+            });
+            
+          } catch (axiosError) {
+            console.error("Error usando axios directo:", axiosError);
+            
+            // Método 3: Última opción - usar una iframe embebida 
+            toast.dismiss(loadingToast);
+            toast.info("Abriendo PDF en ventana emergente...", {
+              description: "Si se bloquea, permita ventanas emergentes en su navegador"
+            });
+            
+            // Obtener token actual
+            const token = localStorage.getItem('auth-token');
+            if (!token) {
+              throw new Error("No se puede obtener el token de autenticación");
+            }
+            
+            // Crear un iframe oculto con un formulario que hará POST con el token
+            const iframe = document.createElement('iframe');
+            iframe.name = 'pdf_iframe';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            // Crear formulario para enviar el token como Authorization header
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = pdfUrl;
+            form.target = 'pdf_iframe';
+            
+            // Añadir token como campo oculto (el backend necesitará extraerlo)
+            const tokenField = document.createElement('input');
+            tokenField.type = 'hidden';
+            tokenField.name = 'token';
+            tokenField.value = token;
+            form.appendChild(tokenField);
+            
+            // Añadir formulario al documento y enviarlo
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Limpiar después de un momento
+            setTimeout(() => {
+              document.body.removeChild(form);
+              document.body.removeChild(iframe);
+            }, 5000);
+          }
+        }
+      } catch (error) {
+        console.error("Error general al exportar PDF:", error);
+        toast.dismiss(loadingToast);
+        toast.error("Error al generar el PDF", {
+          description: "Intente de nuevo más tarde o contacte al soporte técnico"
+        });
+      }
+    } catch (error) {
+      console.error("Error general en exportProforma:", error);
+      toast.error("Ocurrió un error inesperado al exportar el PDF");
+    }
+  };
+
+  /**
+   * Imprime la proforma actual
+   */
+  const printProforma = () => {
+    window.print();
+  };
+
+  /**
+   * Genera/envía la proforma (cambia su estado a enviada)
+   */
+  const generateProforma = async (currentProforma) => {
+    if (!currentProforma.savedId) {
+      toast.error("Debe guardar la proforma antes de enviarla");
+      const shouldSave = window.confirm("¿Desea guardar la proforma ahora?");
+      if (shouldSave) {
+        await saveProforma(currentProforma);
+        if (!currentProforma.savedId) return; // Si no se guardó, salir
+      } else {
+        return;
+      }
+    }
+    
+    try {
+      // Enviar la proforma al cliente (cambio de estado "borrador" a "enviada")
+      const response = await proformasService.enviar(currentProforma.savedId);
+      
+      toast.success(`Proforma #${currentProforma.quote.number} enviada al cliente`);
+      
+      // Cerramos esta proforma ya que se ha enviado
+      closeProforma(currentProforma.id);
+      
+      // Si no quedaron proformas abiertas, crear una nueva
+      if (proformas.length === 0) {
+        addNewProforma();
+      }
+      
+    } catch (error) {
+      console.error("Error al enviar la proforma:", error);
+      toast.error("No se pudo enviar la proforma. Verifica los datos e inténtalo de nuevo.");
+    }
+  };
+
+  /**
+   * Configura las opciones de la proforma
+   */
+  const configureProforma = () => {
+    toast.info("La configuración de proformas estará disponible próximamente");
+  };
+
+  return {
+    handleAction,
+    saveProforma,
+    exportProforma,
+    printProforma,
+    generateProforma,
+    configureProforma
+  };
+};
+
+export default useProformaActions;

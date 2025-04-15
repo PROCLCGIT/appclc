@@ -25,6 +25,7 @@ import {
   Download,
   Layers,
   Zap,
+  FileBox,
   BookMarked
 } from "lucide-react";
 
@@ -101,9 +102,21 @@ export const navigation = [
     children: [
       { name: "Info Empresa", path: "/empresainfo" },
       { name: "Info Empresa 2", path: "/empresainfo2" },
-      { name: "Info Empresa 3", path: "/empresainfo3" }
+      { name: "Info Empresa 3", path: "/empresainfo3" },
+      
     ]
   },
+  {
+    section: "WEB APPS",
+    name: "Doc Manager",
+    icon: FileBox,
+    badge: "New",
+    children: [
+   
+      { name: "Gestor Documental", path: "/docmanager" },
+    ]
+  },
+
   
   {
     section: "WEB APPS",
@@ -121,16 +134,37 @@ export const navigation = [
     section: "WEB APPS",
     name: "Proformas",
     icon: Clipboard,
-    badge: "20",
+    badge: "2",
     children: [
-      { name: "Pro Main", path: "/Proformamain" },
       { name: "DashBoard Proformas", path: "/dashboardproformas" },
-      { name: "Lauch" , path: "/enhancedproforma" },
-   
-     
-    
+      { name: "Mis Proformas", path: "/proformas-guardadas" },
+      { name: "Nueva Proforma" , path: "/enhancedproforma?new=true" },
     ]
   },
+  
+  {
+    section: "WEB APPS",
+    name: "Briefs",
+    icon: BookMarked,
+    children: [
+      { name: "Gestión de Briefs", path: "/briefs" },
+      { name: "Nuevo Brief", path: "/briefs/add" },
+    ]
+  },
+
+  {
+    section: "WEB APPS",
+    name: "Inventario",
+    icon: BookMarked,
+    children: [
+      { name: "Inventario", path: "/inventariopage" },
+      { name: "Brief", path: "/brief" },
+      { name: "Wizard Form", path: "/wizardform" },
+      
+    ]
+  },
+
+
   // Sección ANÁLISIS
   {
     section: "ANÁLISIS",
@@ -151,7 +185,8 @@ export const navigation = [
       { name: "Clientes", path: "/clientes" },
       { name: "Proveedores", path: "/proveedores" },
       { name: "Vendedores", path: "/vendedores" },
-      { name: "Contactos", path: "/contactos" }
+      { name: "Contactos", path: "/contactos" },
+      { name: "Relaciones Blue", path: "/relaciones-blue", badge: "Nuevo" }
     ]
   },
   

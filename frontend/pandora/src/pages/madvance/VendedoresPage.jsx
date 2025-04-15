@@ -1,9 +1,11 @@
 // src/pages/VendedoresPage.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
 import { vendedoresService, proveedoresService } from '@/services/api';
 
 const VendedoresPage = () => {
+  const navigate = useNavigate();
   const [vendedores, setVendedores] = useState([]);
   const [proveedores, setProveedores] = useState([]);
 
@@ -178,10 +180,7 @@ const VendedoresPage = () => {
             />
           </div>
           <button
-            onClick={() => {
-              resetForm();
-              setIsModalOpen(true);
-            }}
+            onClick={() => navigate('/vendedores/nuevo')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" />

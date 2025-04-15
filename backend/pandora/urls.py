@@ -31,6 +31,8 @@ router.register(r'proveedores', views.ProveedoresViewSet, basename='proveedores'
 router.register(r'vendedores', views.VendedoresViewSet, basename='vendedores')
 router.register(r'procesosauditados', views.Procesos_auditadosViewSet, basename='procesosauditados')
 router.register(r'mspref', views.MsprefViewSet, basename='mspref')
+router.register(r'contactos', views.ContactosViewSet, basename='contactos')
+router.register(r'relacionesblue', views.RelacionesBlueViewSet, basename='relacionesblue')
 
 
 

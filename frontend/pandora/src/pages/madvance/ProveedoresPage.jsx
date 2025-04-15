@@ -1,6 +1,7 @@
 // src/pages/ProveedoresPage.jsx
 import { useState, useEffect } from 'react';
 import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { proveedoresService } from '@/services/api';
 
 const ProveedoresPage = () => {
@@ -172,16 +173,10 @@ const ProveedoresPage = () => {
               className="pl-10 pr-4 py-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+          <Link to="/madvance/add-proveedor" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             <Plus className="h-4 w-4" />
             Nuevo
-          </button>
+          </Link>
         </div>
       </div>
 

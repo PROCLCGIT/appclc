@@ -1,0 +1,129 @@
+// src/pages/proformas/components/ProformaDialogs.jsx
+
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import ClientSearchDialog from "./ClientSearchDialog";
+import ProformasDialog from "./ProformasDialog";
+
+/**
+ * Componente que agrupa todos los diálogos/modales usados en el módulo de proformas
+ * Esto reduce la complejidad del componente principal
+ */
+export default function ProformaDialogs({
+  // Diálogo de búsqueda de clientes
+  showClientSearch,
+  closeClientSearch,
+  handleClientSelection,
+  clientes,
+  loadingClientes,
+  
+  // Diálogo de proformas guardadas
+  showProformasDialog,
+  closeProformasDialog,
+  handleSelectProforma,
+  
+  // Diálogo de confirmación/guardado
+  showSaveDialog,
+  saveDialogType,
+  saveDialogTitle,
+  saveDialogMessage,
+  saveDialogDetails,
+  savedProformaId,
+  closeSaveDialog,
+  proformas,
+  activeProformaId,
+  handleAction,
+  onLoadProformas
+}) {
+  return (
+    <>
+      {/* Diálogo de búsqueda de clientes */}
+      <ClientSearchDialog
+        isOpen={showClientSearch}
+        onClose={closeClientSearch}
+        onSelectClient={handleClientSelection}
+        clientes={clientes}
+        loadingClientes={loadingClientes}
+      />
+      
+      {/* Diálogo de proformas guardadas */}
+      <ProformasDialog 
+        isOpen={showProformasDialog} 
+        onClose={closeProformasDialog}
+        onSelectProforma={handleSelectProforma}
+        onLoadProformas={onLoadProformas} // Pasar la función de carga
+      />
+
+      {/* Diálogo de confirmación para guardar proforma */}
+      <Dialog 
+        open={showSaveDialog} 
+        onOpenChange={closeSaveDialog}>
+        <DialogContent className="max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className={
+              saveDialogType === "success" ? "text-green-600" : 
+              saveDialogType === "warning" ? "text-amber-600" : 
+              "text-red-600"
+            }>
+              {saveDialogTitle}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {saveDialogMessage}
+            </DialogDescription>
+            
+            {/* Detalles de la proforma o del error */}
+            {saveDialogDetails && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-md border text-sm font-mono whitespace-pre-line">
+                {saveDialogDetails}
+              </div>
+            )}
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-4">
+            <Button variant="outline" onClick={closeSaveDialog}>
+              Cerrar
+            </Button>
+            
+            {/* Opciones adicionales para proformas guardadas exitosamente */}
+            {saveDialogType === "success" && savedProformaId && (
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  // Función para exportar la proforma
+                  const proforma = proformas.find(p => p.id === activeProformaId);
+                  if (proforma) {
+                    handleAction("export");
+                    closeSaveDialog();
+                  }
+                }}
+              >
+                Exportar PDF
+              </Button>
+            )}
+            
+            {/* Opción para reintentar en caso de advertencias */}
+            {saveDialogType === "warning" && (
+              <Button
+                className="bg-amber-600 hover:bg-amber-700"
+                onClick={() => {
+                  // Volver a intentar guardar 
+                  closeSaveDialog();
+                  setTimeout(() => handleAction("save"), 100);
+                }}
+              >
+                Reintentar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

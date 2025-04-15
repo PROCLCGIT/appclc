@@ -22,4 +22,7 @@ urlpatterns = [
     path('buscar-productos/', views.ProformaViewSet.as_view({'get': 'buscar_productos'}), name='buscar-productos'),
     path('dashboard/', views.ProformaViewSet.as_view({'get': 'dashboard'}), name='dashboard'),
     path('configuracion-actual/', views.ProformaViewSet.as_view({'get': 'obtener_configuracion'}), name='configuracion-actual'),
+    
+    # Rutas de exportación
+    path('proformas/<int:pk>/exportar_pdf/', views.ProformaViewSet.as_view({'get': 'exportar_pdf'}), name='exportar-pdf'),
 ]

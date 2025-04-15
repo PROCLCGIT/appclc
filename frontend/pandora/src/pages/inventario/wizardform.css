@@ -1,0 +1,308 @@
+/* Estilos personalizados para WizardForm - Versión refinada */
+
+/* Variables de colores */
+:root {
+  --color-primary: #4876fb;
+  --color-primary-hover: #3b61d1;
+  --color-primary-light: #e6eeff;
+  --color-primary-focus: rgba(72, 118, 251, 0.1);
+  --color-green: #3cb179;
+  --color-text-dark: #1a202c;
+  --color-text-gray: #4a5568;
+  --color-text-light: #64748b;
+  --color-background: #f0f4fd;
+  --color-border: #e2e8f0;
+  --color-border-focus: #bfdbfe;
+  --color-white: #ffffff;
+  --color-table-header: #f8fafc;
+  --color-blue-light: #ebf4ff;
+  --color-red: #e53e3e;
+  --color-red-light: #fff5f5;
+  
+  /* Tipografía */
+  --font-small: 12px;
+  --font-normal: 14px;
+  --font-medium: 16px;
+  --font-large: 18px;
+  
+  /* Bordes y espaciado */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Efectos suaves para los inputs */
+.form-input, .form-select {
+  font-size: var(--font-normal);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  background-color: var(--color-white);
+  color: var(--color-text-dark);
+  width: 100%;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-focus);
+}
+
+.form-input::placeholder {
+  color: #a0aec0;
+  opacity: 0.7;
+}
+
+/* Estilos para las tarjetas */
+.inventory-card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s ease;
+  border: none;
+}
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Estilos para los botones */
+.add-inventory-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: var(--font-normal);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+  height: 36px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.add-inventory-button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+.add-inventory-button:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.add-inventory-button:active {
+  transform: translateY(0);
+}
+
+/* Estilos para badges y etiquetas */
+.quantity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background-color: var(--color-blue-light);
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  font-size: var(--font-small);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.quantity-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-normal);
+  font-weight: 600;
+  color: var(--color-text-dark);
+  line-height: 1;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background-color: var(--color-table-header);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-small);
+  color: var(--color-text-gray);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Estilos para tablas */
+.inventory-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.inventory-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--color-text-light);
+  background-color: var(--color-table-header);
+  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.inventory-table th:first-child {
+  border-top-left-radius: var(--radius-md);
+}
+
+.inventory-table th:last-child {
+  border-top-right-radius: var(--radius-md);
+}
+
+.inventory-table td {
+  padding: 12px 16px;
+  font-size: var(--font-normal);
+  color: var(--color-text-dark);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+/* Estilos para filas alternadas */
+.inventory-table tbody tr:nth-child(odd):not(.input-row) {
+  background-color: #f9fafc;
+}
+
+.inventory-table tbody tr:hover:not(.input-row) {
+  background-color: #f0f4ff;
+  transition: background-color 0.15s ease;
+}
+
+/* Estilo para la fila de entrada de datos */
+.input-row {
+  background-color: #ebf5ff;
+  border-bottom: 1px solid #bfdbfe;
+}
+
+/* Estilos para las secciones */
+.summary-counter {
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+.counter-icon {
+  color: var(--color-primary);
+}
+
+.counter-label {
+  font-size: var(--font-small);
+  color: var(--color-text-gray);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.counter-value {
+  font-size: var(--font-medium);
+  font-weight: 600;
+  color: var(--color-text-dark);
+}
+
+/* Estilos para elementos input con label */
+.form-field {
+  position: relative;
+  margin-bottom: 2px;
+}
+
+.input-label {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  padding: 0 4px;
+  background-color: var(--color-white);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-primary);
+  line-height: 1;
+  z-index: 1;
+  letter-spacing: 0.02em;
+}
+
+/* Botón de eliminar */
+.trash-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: none;
+  background-color: transparent;
+  color: var(--color-red);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trash-button:hover {
+  background-color: var(--color-red-light);
+}
+
+.trash-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

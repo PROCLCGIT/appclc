@@ -738,3 +738,20 @@ class HistorialDeVentas(TimeStampedModel):
 
      def __str__(self):
          return f"{self.factura} - {self.cliente}"
+
+class ProductsPrice(TimeStampedModel):
+    producto_disponible = models.ForeignKey(
+         ProductoDisponible,
+         on_delete=models.CASCADE,
+         related_name='prices',
+         verbose_name='Producto Disponible'
+    )
+    valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor')
+
+    class Meta:
+         verbose_name = 'Precio de Producto'
+         verbose_name_plural = 'Precios de Productos'
+         ordering = ['producto_disponible']
+
+    def __str__(self):
+         return f"{self.producto_disponible} - {self.valor}"

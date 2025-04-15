@@ -4,7 +4,8 @@ from .models import (
     Zonas, Ciudades, TipoCliente, Clientes, Pandora,
     Categorias, Especialidades, Marca, Procedencia,
     TipoContratacion, Unidades, EmpresaClc, Procesos_auditados,
-    PreciosSie, MsPref, Proveedores, Vendedores, Contactos
+    PreciosSie, MsPref, Proveedores, Vendedores, Contactos,
+    RelacionesBlue
 )
 from .utils import get_history  # Asegúrate de que este archivo exista y defina get_history
 
@@ -324,6 +325,25 @@ class ContactosSerializer(BaseModelSerializer):
             'direccion',
             'obserbacion',
             'ingerencia',
+            'created_at',
+            'updated_at',
+            'history',
+        ]
+
+
+class RelacionesBluSerializer(BaseModelSerializer):
+    cliente_nombre = serializers.ReadOnlyField(source='cliente.nombre')
+    contacto_nombre = serializers.ReadOnlyField(source='contacto.nombre')
+
+    class Meta:
+        model = RelacionesBlue
+        fields = [
+            'id',
+            'cliente',
+            'cliente_nombre',
+            'contacto',
+            'contacto_nombre',
+            'nivel',
             'created_at',
             'updated_at',
             'history',

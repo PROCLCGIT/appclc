@@ -134,7 +134,7 @@ class ProformaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proforma
         fields = [
-            'id', 'numero', 'fecha_emision', 'fecha_vencimiento', 'cliente', 'cliente_detail',
+            'id', 'numero', 'nombre', 'fecha_emision', 'fecha_vencimiento', 'cliente', 'cliente_detail',
             'empresa', 'empresa_detail', 'tipo_contratacion', 'atencion_a', 'condiciones_pago',
             'tiempo_entrega', 'subtotal', 'porcentaje_impuesto', 'impuesto', 'total',
             'notas', 'estado', 'estado_display', 'created_by', 'created_by_username',
