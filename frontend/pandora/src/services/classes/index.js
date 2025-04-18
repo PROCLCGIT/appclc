@@ -67,3 +67,7 @@ export class MsPrefService extends BaseService {
 
 // Export MsPref service instance
 export const msprefService = new MsPrefService();
+
+// Document Manager Service
+import DocumentService from './DocumentService';
+export const documentService = new DocumentService();

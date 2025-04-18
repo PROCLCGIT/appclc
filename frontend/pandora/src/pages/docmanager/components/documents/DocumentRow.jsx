@@ -1,19 +1,60 @@
-import React from 'react';
-import { Star, Tag, Eye, Download, Trash2, Calendar } from 'lucide-react';
+/* eslint-disable react/prop-types */
+
+import { Star, Tag, Eye, Download, Calendar, Printer, Share2 } from 'lucide-react';
 import { renderFileIcon, formatDate, formatFileSize } from '../../utils/formatters.jsx';
 
 /**
  * Componente de fila de documento para vista de lista
  * @param {Object} props
  * @param {Object} props.document - Datos del documento
- * @param {Function} props.onToggleFavorite - Función para marcar/desmarcar favorito
  * @param {Function} props.onDownload - Función para descargar documento
- * @param {Function} props.onDelete - Función para eliminar documento
  * @param {Function} props.onView - Función para visualizar documento
+ * @param {Function} props.onManageTags - Función para administrar etiquetas de documento
+ * @param {boolean} props.selectionMode - Indica si está activo el modo de selección
+ * @param {boolean} props.isSelected - Indica si el documento está seleccionado
+ * @param {Function} props.onToggleSelection - Función para marcar/desmarcar selección
  */
-const DocumentRow = ({ document, onToggleFavorite, onDownload, onDelete, onView }) => {
+const DocumentRow = ({ 
+  document, 
+  onDownload, 
+  onView,
+  onManageTags,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelection
+}) => {
+  // Manejar checkbox de selección
+  const handleSelectionChange = (e) => {
+    onToggleSelection(document.id, e.target.checked);
+  };
+  
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
+    <tr className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50' : ''}`}>
+      {selectionMode && (
+        <td className="px-4 py-4 w-12">
+          <div className="flex items-center justify-center">
+            <div className="relative w-5 h-5">
+              <input 
+                type="checkbox" 
+                className="absolute w-5 h-5 rounded border-2 border-indigo-400 appearance-none cursor-pointer checked:bg-indigo-600 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors" 
+                checked={isSelected}
+                onChange={handleSelectionChange}
+              />
+              {isSelected && (
+                <svg 
+                  className="absolute top-0 left-0 w-5 h-5 text-white pointer-events-none" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              )}
+            </div>
+          </div>
+        </td>
+      )}
       <td className="px-6 py-4">
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -44,7 +85,9 @@ const DocumentRow = ({ document, onToggleFavorite, onDownload, onDelete, onView 
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
-          {document.category ? document.category.name : 'Sin categoría'}
+          {document.category_name || 
+           (document.category && (typeof document.category === 'object' ? document.category.name : document.category)) || 
+           'Sin categoría'}
         </span>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -73,11 +116,54 @@ const DocumentRow = ({ document, onToggleFavorite, onDownload, onDelete, onView 
             <Download size={18} />
           </button>
           <button 
-            className="p-1 hover:text-red-600 transition"
-            title="Eliminar documento"
-            onClick={() => onDelete(document.id)}
+            className="p-1 hover:text-purple-600 transition"
+            title="Imprimir documento"
+            onClick={() => {
+              // Abrir el documento y mostrar diálogo de impresión
+              const printWindow = window.open(document.file_url, '_blank');
+              if (printWindow) {
+                printWindow.addEventListener('load', () => {
+                  printWindow.print();
+                });
+              } else {
+                alert('Por favor, permita las ventanas emergentes para imprimir este documento');
+              }
+            }}
           >
-            <Trash2 size={18} />
+            <Printer size={18} />
+          </button>
+          <button 
+            className="p-1 hover:text-indigo-600 transition"
+            title="Compartir documento"
+            onClick={() => {
+              // Verificar si la API Web Share está disponible
+              if (navigator.share) {
+                navigator.share({
+                  title: document.title,
+                  text: document.description || 'Compartir documento',
+                  url: document.file_url,
+                })
+                .catch(error => console.log('Error compartiendo documento:', error));
+              } else {
+                // Fallback: Copiar al portapapeles
+                const tempInput = document.createElement('input');
+                document.body.appendChild(tempInput);
+                tempInput.value = document.file_url || window.location.href;
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                alert('Enlace copiado al portapapeles');
+              }
+            }}
+          >
+            <Share2 size={18} />
+          </button>
+          <button 
+            className="p-1 hover:text-yellow-600 transition"
+            title="Administrar etiquetas"
+            onClick={() => onManageTags && onManageTags(document)}
+          >
+            <Tag size={18} />
           </button>
         </div>
       </td>

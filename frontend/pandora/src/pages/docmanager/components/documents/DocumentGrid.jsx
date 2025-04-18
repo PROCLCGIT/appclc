@@ -8,8 +8,9 @@ import DocumentCard from './DocumentCard';
  * @param {Function} props.onToggleFavorite - Función para marcar/desmarcar favorito
  * @param {Function} props.onDownload - Función para descargar documento
  * @param {Function} props.onView - Función para visualizar documento
+ * @param {Function} props.onManageTags - Función para administrar etiquetas
  */
-const DocumentGrid = ({ documents, onToggleFavorite, onDownload, onView }) => {
+const DocumentGrid = ({ documents, onToggleFavorite, onDownload, onView, onManageTags }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {documents.map((document) => (
@@ -19,6 +20,7 @@ const DocumentGrid = ({ documents, onToggleFavorite, onDownload, onView }) => {
           onToggleFavorite={onToggleFavorite}
           onDownload={onDownload}
           onView={onView}
+          onManageTags={onManageTags}
         />
       ))}
     </div>
