@@ -72,8 +72,19 @@ const SimpleDiagnosticComponent = () => {
   const checkApi = async () => {
     try {
       setApiStatus("Verificando...");
-      // Intentar obtener documentos directo con fetch
-      const response = await fetch('http://localhost:8000/api/v1/docmanager/documents/');
+      setError(null);
+      
+      // Usar la constante API_BASE_URL
+      const url = `${API_BASE_URL}/docmanager/documents/`;
+      console.log("Verificando API en:", url);
+      
+      // Simplificar la configuración del fetch
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Error al conectar con API: ${response.status} ${response.statusText}`);
@@ -92,8 +103,9 @@ const SimpleDiagnosticComponent = () => {
           variant: 'default'
         });
       } else {
-        setApiStatus("Respuesta de API con formato incorrecto");
-        setError("La respuesta no contiene un array de documentos");
+        setApiStatus("Respuesta recibida pero sin documentos");
+        setError("La respuesta no contiene un array de documentos en el formato esperado");
+        console.warn("Respuesta de API sin documentos:", data);
       }
     } catch (err) {
       console.error("Error al comprobar API:", err);
@@ -171,7 +183,7 @@ const GestorDocumentalPage = () => {
   const [collectionToView, setCollectionToView] = useState(null);
   const { toast } = useToast();
   
-  // Agregar un estado para controlar el modo de diagnóstico (ahora inicia en falso)
+  // Modo de diagnóstico desactivado por defecto
   const [diagnosticMode, setDiagnosticMode] = useState(false);
   
   // Estados para reemplazar el hook useDocuments
@@ -192,45 +204,66 @@ const GestorDocumentalPage = () => {
     try {
       setIsLoading(true);
       
-      // Preparar parámetros de consulta
+      // Preparar parámetros básicos de consulta
       const queryParams = {
-        page: pagination.current,
-        ordering: sortOrder === 'desc' ? `-${sortBy}` : sortBy,
         ...params
       };
       
-      // Añadir filtros adicionales
-      if (searchQuery) {
+      // Añadir paginación si no se especifica
+      if (!queryParams.page) {
+        queryParams.page = pagination.current || 1;
+      }
+      
+      // Añadir ordenamiento si no se especifica
+      if (!queryParams.ordering) {
+        queryParams.ordering = sortOrder === 'desc' ? `-${sortBy}` : sortBy;
+      }
+      
+      // Añadir búsqueda si existe y no se especifica
+      if (searchQuery && !queryParams.search) {
         queryParams.search = searchQuery;
       }
       
-      if (selectedCategory && selectedCategory !== 'all') {
+      // Añadir categoría si está seleccionada y no se especifica
+      if (selectedCategory && selectedCategory !== 'all' && !queryParams.category) {
         queryParams.category = selectedCategory;
       }
       
-      // Cargar documentos
+      console.log("Cargando documentos con parámetros:", queryParams);
+      
+      // Obtener documentos
       const response = await fetchDocuments(queryParams);
       
-      // Actualizar estado
-      setDocuments(response.results || []);
-      setPagination({
-        current: response.current_page || 1,
-        total_pages: response.total_pages || 1,
-        next: response.next,
-        previous: response.previous,
-        count: response.count
-      });
+      // Actualizar estado si hay respuesta
+      if (response && response.results) {
+        // Actualizar documentos
+        setDocuments(response.results);
+        
+        // Actualizar paginación
+        setPagination({
+          current: response.current_page || queryParams.page,
+          total_pages: response.total_pages || 1,
+          next: response.next,
+          previous: response.previous,
+          count: response.count || response.results.length
+        });
+        
+        console.log(`Documentos cargados: ${response.results.length} resultados`);
+      } else {
+        console.warn("Respuesta de documentos vacía o inválida");
+        setDocuments([]);
+      }
       
       return response;
     } catch (error) {
       console.error('Error al cargar documentos:', error);
       toast({
         title: 'Error',
-        description: error.message || 'No se pudieron cargar los documentos',
+        description: 'No se pudieron cargar los documentos',
         variant: 'destructive'
       });
       setDocuments([]);
-      return null;
+      return { results: [] };
     } finally {
       setIsLoading(false);
     }
@@ -290,31 +323,44 @@ const GestorDocumentalPage = () => {
     });
   }, [loadDocuments]);
   
-  // Función para refrescar todos los datos
+  // Función para refrescar los datos
   const refreshData = useCallback(async () => {
+    // Evitar recargas si ya está cargando
+    if (isLoading) return false;
+    
     try {
       setIsLoading(true);
       
-      // Cargar todo en paralelo
-      await Promise.all([
-        loadDocuments(),
-        loadCategories(),
-        loadTags()
-      ]);
+      // Cargar datos secuencialmente
+      console.log("Refrescando datos...");
+      
+      // 1. Cargar categorías
+      const categories = await fetchCategories();
+      setCategories(categories.results || []);
+      
+      // 2. Cargar documentos con los parámetros actuales
+      const docs = await fetchDocuments({
+        page: pagination.current || 1,
+        search: searchQuery || '',
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        ordering: sortOrder === 'desc' ? `-${sortBy}` : sortBy
+      });
+      
+      setDocuments(docs.results || []);
       
       return true;
     } catch (error) {
       console.error('Error al refrescar datos:', error);
       toast({
         title: 'Error',
-        description: 'No se pudieron refrescar los datos',
+        description: 'No se pudieron actualizar los datos',
         variant: 'destructive'
       });
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [loadCategories, loadDocuments, loadTags, toast]);
+  }, [isLoading, pagination.current, searchQuery, selectedCategory, sortBy, sortOrder, toast]);
   
   // Función para manejar la carga de archivos
   const handleUpload = useCallback(async (formData) => {
@@ -761,56 +807,57 @@ const GestorDocumentalPage = () => {
     }
   }, [toast]);
   
-  // Efecto para recargar datos cuando se cambia de modo diagnóstico a normal
-  useEffect(() => {
-    if (!diagnosticMode) {
-      // Recargar datos cuando se cambia a modo normal
-      refreshData();
-    }
-  }, [diagnosticMode, refreshData]);
+  // Quitamos este efecto porque puede causar loops infinitos
+  // La recarga se maneja directamente en el botón
 
   // Carga inicial de recursos - solo se ejecuta una vez al montar el componente
   useEffect(() => {
     const initialize = async () => {
+      // Comenzar carga
+      setIsLoading(true);
+      
+      // Mostrar toast de carga
+      toast({
+        title: 'Cargando',
+        description: 'Inicializando gestor documental...',
+        duration: 2000
+      });
+      
       try {
-        // Mostrar toast de carga inicial
-        toast({
-          title: 'Cargando',
-          description: 'Inicializando gestor documental...',
-          duration: 2000
-        });
+        // Reiniciar paginación a la primera página
+        setPagination(prev => ({ ...prev, current: 1 }));
         
-        // Reiniciar paginación a la primera página si es necesario
-        if (pagination.current !== 1) {
-          setPagination(prev => ({ ...prev, current: 1 }));
-        }
+        // 1. Cargar categorías (primero, ya que son necesarias para normalizar documentos)
+        console.log("Paso 1: Cargando categorías...");
+        const categories = await fetchCategories();
+        setCategories(categories.results || []);
         
-        // Cargar datos en paralelo usando los métodos directos
-        await Promise.all([
-          loadDocuments({ page: 1 }),
-          loadCategories(),
-          loadTags(),
-          loadGroups(),
-          loadCollections()
-        ]);
+        // 2. Cargar documentos
+        console.log("Paso 2: Cargando documentos...");
+        const docs = await fetchDocuments({ page: 1 });
+        setDocuments(docs.results || []);
         
-        console.log("Inicialización completada con éxito");
-        
-        // No cambiamos a modo normal automáticamente, dejamos que el usuario controle
-        
+        // 3. Cargar etiquetas
+        console.log("Paso 3: Cargando etiquetas...");
+        const tags = await fetchTags();
+        setTags(tags.results || []);
       } catch (error) {
-        console.error('Error en la inicialización:', error);
+        console.error("Error durante la inicialización:", error);
         toast({
           title: 'Error',
-          description: 'No se pudo inicializar correctamente. Algunos recursos pueden no estar disponibles.',
-          variant: 'destructive'
+          description: 'No se pudieron cargar algunos recursos',
+          variant: 'warning'
         });
+      } finally {
+        // Completar la carga
+        setIsLoading(false);
+        console.log("Inicialización completada");
       }
     };
     
+    // Iniciar la carga de datos
     initialize();
     
-    // Incluir todas las dependencias necesarias para evitar advertencias
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -819,10 +866,23 @@ const GestorDocumentalPage = () => {
     setSelectedFile(null);
     
     // Forzar carga de categorías antes de mostrar el modal
-    await forceLoadCategories();
+    if (typeof forceLoadCategories === 'function') {
+      try {
+        await forceLoadCategories();
+      } catch (err) {
+        console.error("Error al cargar categorías:", err);
+      }
+    } else {
+      // Si la función no está disponible, cargar categorías directamente
+      try {
+        await loadCategories();
+      } catch (err) {
+        console.error("Error al cargar categorías:", err);
+      }
+    }
     
     setShowUploadModal(true);
-  }, [setSelectedFile, forceLoadCategories]);
+  }, [setSelectedFile, forceLoadCategories, loadCategories]);
 
   // Subir documento y cerrar modal
   const onUpload = useCallback(async (formData) => {
@@ -1312,7 +1372,7 @@ const GestorDocumentalPage = () => {
     }
   }, []);
 
-  // Renderizar el componente de diagnóstico en lugar del componente completo
+  // Controlar renderizado basado en el modo diagnóstico
   if (diagnosticMode) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -1333,7 +1393,16 @@ const GestorDocumentalPage = () => {
                   description: 'Activando modo normal y cargando documentos',
                   duration: 2000
                 });
+                
+                // Primero actualizar el estado
                 setDiagnosticMode(false);
+                
+                // Esperar un momento antes de intentar cargar datos
+                setTimeout(() => {
+                  if (typeof refreshData === 'function') {
+                    refreshData();
+                  }
+                }, 500);
               }}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
             >
@@ -1341,6 +1410,7 @@ const GestorDocumentalPage = () => {
             </button>
           </div>
           
+          {/* Componente de diagnóstico */}
           <SimpleDiagnosticComponent />
         </main>
       </div>
@@ -1350,26 +1420,6 @@ const GestorDocumentalPage = () => {
   // Componente Normal
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="bg-indigo-700 text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Gestor Documental</h1>
-          <button 
-            onClick={() => {
-              // Mostrar un mensaje antes de cambiar
-              toast({
-                title: 'Cambiando modo',
-                description: 'Activando modo de diagnóstico',
-                duration: 2000
-              });
-              setDiagnosticMode(true);
-            }}
-            className="px-3 py-1 bg-white text-indigo-700 rounded hover:bg-indigo-50 text-sm"
-          >
-            Modo Diagnóstico
-          </button>
-        </div>
-      </div>
-      
       {/* Cabecera */}
       <Header onUploadClick={onUploadClick} />
 

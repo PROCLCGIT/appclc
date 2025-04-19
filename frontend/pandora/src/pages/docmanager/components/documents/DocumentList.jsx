@@ -73,11 +73,11 @@ const DocumentList = ({
           </div>
         </th>
       )}
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actualizado</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tamaño</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12">Documento</th>
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Categoría</th>
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">Actualizado</th>
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Tamaño</th>
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-3/12">
         <div className="flex items-center justify-between">
           <span>Acciones</span>
           {!selectionMode && (
@@ -149,7 +149,7 @@ const DocumentList = ({
   }, [selectionMode, selectedDocuments.length, onShareSelected, onToggleSelectionMode]);
 
   // Validar y registrar documentos para depuración
-  useEffect(() => {
+  React.useEffect(() => {
     if (!documents || !Array.isArray(documents)) {
       console.error("DocumentList recibió documentos en formato inválido:", documents);
     } else if (documents.length === 0) {

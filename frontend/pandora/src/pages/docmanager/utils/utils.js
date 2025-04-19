@@ -417,38 +417,111 @@ export const debounce = (func, wait = 300) => {
    * @returns {Promise<Object>} - Resultado de la consulta
    */
   export const fetchDocuments = async (params = {}) => {
+    // Estructura por defecto para respuestas vacías
+    const emptyResult = {
+      results: [],
+      count: 0,
+      next: null,
+      previous: null,
+      current_page: 1,
+      total_pages: 1
+    };
+    
+    // Asegurarse de que params sea un objeto válido
+    const validParams = params && typeof params === 'object' ? params : {};
+    
     try {
+      // Usar caché para reducir solicitudes (solo si no es búsqueda)
+      if (!validParams.search) {
+        try {
+          const cacheKey = `docmanager_docs_${JSON.stringify(validParams)}`;
+          const cachedData = localStorage.getItem(cacheKey);
+          if (cachedData) {
+            const { timestamp, data } = JSON.parse(cachedData);
+            // Solo usar caché si es reciente (menos de 2 minutos)
+            if (Date.now() - timestamp < 120000) {
+              console.log('Usando documentos desde caché local');
+              return data;
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Error al acceder a la caché de documentos:', cacheError);
+        }
+      }
+      
+      // Preparar parámetros de consulta
       const queryParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
+      // Desactivar caché del navegador añadiendo un timestamp
+      queryParams.append('_t', Date.now());
+      
+      // Añadir todos los parámetros válidos
+      Object.entries(validParams).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           queryParams.append(key, value);
         }
       });
       
+      // Construir URL
       const url = `${API_BASE_URL}/docmanager/documents/?${queryParams.toString()}`;
+      console.log("Consultando documentos en:", url);
+      
+      // Obtener token de autenticación
       const token = getAuthToken();
       
-      const headers = {
-        'Content-Type': 'application/json'
+      // Configurar opciones de fetch
+      const options = { 
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        // Asegurar que no use caché
+        cache: 'no-store'
       };
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Usar fetchWithRetry para manejar errores 429
+      const response = await fetchWithRetry(url, options, 2, 1000);
       
-      const response = await fetch(url, { headers });
-      
+      // Manejar errores de respuesta
       if (!response.ok) {
-        throw new Error(`Error al cargar documentos: ${response.status} ${response.statusText}`);
+        console.error(`Error HTTP: ${response.status} ${response.statusText}`);
+        return emptyResult;
       }
       
+      // Procesar respuesta
       const data = await response.json();
-      console.log('Documentos cargados directamente:', data);
+      console.log('Documentos cargados:', data.results?.length || 0, 'documentos');
+      
+      // Verificar formato de respuesta y normalizar
+      if (!data || !data.results) {
+        console.warn('Respuesta sin resultados válidos');
+        return emptyResult;
+      }
+      
+      // Convertir response.results a array si no lo es
+      if (data.results && !Array.isArray(data.results)) {
+        console.warn('data.results no es un array, convirtiendo...');
+        data.results = [];
+      }
+      
+      // Guardar en caché si no es una búsqueda específica
+      if (!validParams.search) {
+        try {
+          const cacheKey = `docmanager_docs_${JSON.stringify(validParams)}`;
+          localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data
+          }));
+        } catch (cacheError) {
+          console.warn('Error al guardar documentos en caché:', cacheError);
+        }
+      }
       
       return data;
     } catch (error) {
-      console.error('Error en fetchDocuments:', error);
-      throw error;
+      // Manejar cualquier error y devolver estructura vacía
+      console.error('Error al cargar documentos:', error);
+      return emptyResult;
     }
   };
 
@@ -456,32 +529,116 @@ export const debounce = (func, wait = 300) => {
    * Cargar categorías directamente desde la API
    * @returns {Promise<Object>} - Resultado de la consulta
    */
+  /**
+   * Función de ayuda para implementar retrasos
+   * @param {number} ms - Milisegundos a esperar
+   * @returns {Promise} - Promesa que se resuelve después del tiempo indicado
+   */
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  /**
+   * Función para obtener datos con reintentos en caso de error 429
+   * @param {string} url - URL a solicitar
+   * @param {Object} options - Opciones de fetch
+   * @param {number} maxRetries - Número máximo de reintentos
+   * @param {number} initialBackoff - Tiempo inicial de espera en ms
+   * @returns {Promise<Response>} - Respuesta de fetch
+   */
+  const fetchWithRetry = async (url, options, maxRetries = 2, initialBackoff = 1000) => {
+    let retries = 0;
+    let backoff = initialBackoff;
+    
+    while (retries <= maxRetries) {
+      try {
+        const response = await fetch(url, options);
+        
+        // Si la respuesta es 429 (Too Many Requests) y todavía podemos reintentar
+        if (response.status === 429 && retries < maxRetries) {
+          console.warn(`Solicitud limitada (429). Reintentando en ${backoff}ms... (Intento ${retries + 1}/${maxRetries})`);
+          await delay(backoff);
+          retries++;
+          backoff *= 2; // Backoff exponencial
+          continue;
+        }
+        
+        return response;
+      } catch (error) {
+        if (retries >= maxRetries) throw error;
+        
+        console.warn(`Error en fetch: ${error.message}. Reintentando en ${backoff}ms... (Intento ${retries + 1}/${maxRetries})`);
+        await delay(backoff);
+        retries++;
+        backoff *= 2; // Backoff exponencial
+      }
+    }
+    
+    throw new Error(`No se pudo completar la solicitud después de ${maxRetries} intentos`);
+  };
+  
   export const fetchCategories = async () => {
+    // Estructura por defecto para respuestas vacías
+    const emptyResult = {
+      results: [],
+      count: 0
+    };
+    
     try {
-      const url = `${API_BASE_URL}/docmanager/categories/`;
-      const token = getAuthToken();
+      // Intentar usar datos de caché local primero (para reducir solicitudes)
+      try {
+        const cachedData = localStorage.getItem('docmanager_categories_cache');
+        if (cachedData) {
+          const { timestamp, data } = JSON.parse(cachedData);
+          // Solo usar caché si es reciente (menos de 30 minutos)
+          if (Date.now() - timestamp < 1800000) {
+            console.log('Usando datos de categorías desde caché local');
+            return data;
+          }
+        }
+      } catch (cacheError) {
+        console.warn('Error al acceder a la caché local:', cacheError);
+      }
       
-      const headers = {
-        'Content-Type': 'application/json'
+      // Construir URL
+      const url = `${API_BASE_URL}/docmanager/categories/`;
+      console.log("Consultando categorías en:", url);
+      
+      // Configurar opciones de fetch
+      const options = { 
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(getAuthToken() ? { 'Authorization': `Bearer ${getAuthToken()}` } : {})
+        }
       };
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Ejecutar fetch simple
+      const response = await fetch(url, options);
       
-      const response = await fetch(url, { headers });
-      
+      // Manejar errores de respuesta
       if (!response.ok) {
-        throw new Error(`Error al cargar categorías: ${response.status} ${response.statusText}`);
+        console.error(`Error HTTP al cargar categorías: ${response.status} ${response.statusText}`);
+        return emptyResult;
       }
       
+      // Procesar respuesta
       const data = await response.json();
-      console.log('Categorías cargadas directamente:', data);
+      console.log('Categorías cargadas correctamente:', data.results?.length || 0, 'categorías');
       
-      return data;
+      // Guardar en caché local
+      try {
+        localStorage.setItem('docmanager_categories_cache', JSON.stringify({
+          timestamp: Date.now(),
+          data
+        }));
+      } catch (cacheError) {
+        console.warn('Error al guardar categorías en caché:', cacheError);
+      }
+      
+      return data && data.results ? data : emptyResult;
     } catch (error) {
-      console.error('Error en fetchCategories:', error);
-      throw error;
+      console.error('Error general al cargar categorías:', error);
+      return emptyResult;
     }
   };
 
@@ -490,31 +647,44 @@ export const debounce = (func, wait = 300) => {
    * @returns {Promise<Object>} - Resultado de la consulta
    */
   export const fetchTags = async () => {
+    // Estructura por defecto para respuestas vacías
+    const emptyResult = {
+      results: [],
+      count: 0
+    };
+    
     try {
+      // Construir URL
       const url = `${API_BASE_URL}/docmanager/tags/`;
-      const token = getAuthToken();
+      console.log("Consultando etiquetas en:", url);
       
-      const headers = {
-        'Content-Type': 'application/json'
+      // Configurar opciones de fetch
+      const options = { 
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(getAuthToken() ? { 'Authorization': `Bearer ${getAuthToken()}` } : {})
+        }
       };
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Ejecutar fetch simple
+      const response = await fetch(url, options);
       
-      const response = await fetch(url, { headers });
-      
+      // Manejar errores de respuesta
       if (!response.ok) {
-        throw new Error(`Error al cargar etiquetas: ${response.status} ${response.statusText}`);
+        console.error(`Error HTTP al cargar etiquetas: ${response.status} ${response.statusText}`);
+        return emptyResult;
       }
       
+      // Procesar respuesta
       const data = await response.json();
-      console.log('Etiquetas cargadas directamente:', data);
+      console.log('Etiquetas cargadas correctamente:', data.results?.length || 0, 'etiquetas');
       
-      return data;
+      return data && data.results ? data : emptyResult;
     } catch (error) {
-      console.error('Error en fetchTags:', error);
-      throw error;
+      console.error('Error general al cargar etiquetas:', error);
+      return emptyResult;
     }
   };
 
