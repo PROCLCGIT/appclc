@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { useVirtual } from 'react-virtual';
 import DocumentRow from './DocumentRow';
 
@@ -22,27 +22,36 @@ const DocumentList = ({
   // Referencia para el contenedor de filas virtualizadas
   const parentRef = React.useRef(null);
 
+  // Asegurarse de que documents es un array válido para evitar errores
+  const validDocuments = Array.isArray(documents) ? documents : [];
+  
   // Configuración de virtualización para las filas
   const rowVirtualizer = useVirtual({
-    size: documents.length,
+    size: validDocuments.length,
     parentRef,
-    estimateSize: React.useCallback(() => 60, []), // Altura estimada de cada fila en píxeles
+    estimateSize: useCallback(() => 60, []), // Altura estimada de cada fila en píxeles
     overscan: 5 // Número de elementos adicionales a renderizar fuera de la vista
   });
 
   // Manejar la selección de todos los documentos
-  const handleSelectAll = (e) => {
+  const handleSelectAll = useCallback((e) => {
+    if (!onToggleSelection || typeof onToggleSelection !== 'function') {
+      console.warn('onToggleSelection no está definido o no es una función');
+      return;
+    }
+    
     if (e.target.checked) {
       // Seleccionar todos
-      onToggleSelection(documents.map(doc => doc.id), true);
+      onToggleSelection(validDocuments.map(doc => doc.id), true);
     } else {
       // Deseleccionar todos
       onToggleSelection([], false);
     }
-  };
+  }, [validDocuments, onToggleSelection]);
 
   // Verificar si todos están seleccionados
-  const allSelected = documents.length > 0 && selectedDocuments.length === documents.length;
+  const allSelected = validDocuments.length > 0 && selectedDocuments && 
+    Array.isArray(selectedDocuments) && selectedDocuments.length === validDocuments.length;
   
   // Memorizar los encabezados de la tabla para evitar re-renders innecesarios
   const tableHeaders = useMemo(() => (
@@ -73,11 +82,11 @@ const DocumentList = ({
           </div>
         </th>
       )}
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12">Documento</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Categoría</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">Actualizado</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Tamaño</th>
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-3/12">
+      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[42%]">Documento</th>
+      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Categoría</th>
+      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Actualizado</th>
+      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Tamaño</th>
+      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
         <div className="flex items-center justify-between">
           <span>Acciones</span>
           {!selectionMode && (
@@ -148,16 +157,11 @@ const DocumentList = ({
     );
   }, [selectionMode, selectedDocuments.length, onShareSelected, onToggleSelectionMode]);
 
-  // Validar y registrar documentos para depuración
-  React.useEffect(() => {
-    if (!documents || !Array.isArray(documents)) {
-      console.error("DocumentList recibió documentos en formato inválido:", documents);
-    } else if (documents.length === 0) {
-      console.warn("DocumentList: Array de documentos vacío");
-    } else {
-      console.log(`DocumentList: Renderizando ${documents.length} documentos, primer documento:`, documents[0]);
-    }
-  }, [documents]);
+  // Cálculo del número total de columnas para el colSpan del placeholder
+  const totalColumns = React.useMemo(() => {
+    // Calcula el número de columnas basado en el modo de selección
+    return selectionMode ? 6 : 5; // 5 columnas estándar + 1 columna de selección si está activa
+  }, [selectionMode]);
   
   // Mensaje cuando no hay documentos o son inválidos
   if (!documents || !Array.isArray(documents) || documents.length === 0) {
@@ -189,10 +193,18 @@ const DocumentList = ({
             ref={parentRef}
             style={{ height: `${Math.min(600, documents.length * 60)}px` }} // Altura máxima o basada en el número de documentos
           >
-            <tr style={{ height: `${rowVirtualizer.totalSize}px` }} className="virtual-placeholder" />
+            <tr style={{ height: `${rowVirtualizer.totalSize}px` }} className="virtual-placeholder">
+              <td colSpan={totalColumns} aria-hidden="true" />
+            </tr>
             
             {rowVirtualizer.virtualItems.map(virtualRow => {
-              const document = documents[virtualRow.index];
+              const document = validDocuments[virtualRow.index];
+              // Validar que el documento existe y tiene un ID válido
+              if (!document || !document.id) {
+                console.warn(`Documento inválido en índice ${virtualRow.index}:`, document);
+                return null;
+              }
+              
               return (
                 <tr 
                   key={document.id} 
@@ -206,14 +218,14 @@ const DocumentList = ({
                 >
                   <DocumentRow 
                     document={document}
-                    onToggleFavorite={onToggleFavorite}
-                    onDownload={onDownload}
-                    onDelete={onDelete}
-                    onView={onView}
-                    onManageTags={onManageTags}
+                    onToggleFavorite={typeof onToggleFavorite === 'function' ? onToggleFavorite : () => {}}
+                    onDownload={typeof onDownload === 'function' ? onDownload : () => {}}
+                    onDelete={typeof onDelete === 'function' ? onDelete : () => {}}
+                    onView={typeof onView === 'function' ? onView : () => {}}
+                    onManageTags={typeof onManageTags === 'function' ? onManageTags : () => {}}
                     selectionMode={selectionMode}
                     isSelected={selectedDocuments.includes(document.id)}
-                    onToggleSelection={onToggleSelection}
+                    onToggleSelection={typeof onToggleSelection === 'function' ? onToggleSelection : () => {}}
                   />
                 </tr>
               );

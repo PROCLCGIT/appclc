@@ -128,8 +128,8 @@ const DocumentRow = ({
 
   const handleDownload = useCallback((e) => {
     e.stopPropagation();
-    onDownload(document);
-  }, [document, onDownload]);
+    onDownload(document.id, document.title || 'documento');
+  }, [document.id, document.title, onDownload]);
 
   const handleDelete = useCallback((e) => {
     e.stopPropagation();
@@ -212,24 +212,24 @@ const DocumentRow = ({
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="text-sm text-gray-900">
           {document.category_name || 'Sin categoría'}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="text-sm text-gray-900">
           {formatDate(document.updated_at || document.created_at)}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
         {formatFileSize(document.file_size)}
       </td>
       
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <div className="flex items-center justify-end space-x-3">
+        <div className="flex items-center justify-end space-x-4">
           <button 
             onClick={handleToggleFavorite} 
             className={`text-gray-400 hover:text-yellow-500 ${document.is_favorite ? 'text-yellow-500' : ''}`}

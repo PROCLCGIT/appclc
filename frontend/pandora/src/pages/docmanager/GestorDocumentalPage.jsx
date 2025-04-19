@@ -441,7 +441,15 @@ const GestorDocumentalPage = () => {
   // Función para descargar un documento
   const handleDownload = useCallback(async (documentId, fileName) => {
     try {
-      const result = await getDocumentDownloadUrl(documentId);
+      // Validar que documentId es un valor válido
+      if (!documentId) {
+        throw new Error('ID de documento inválido');
+      }
+      
+      // Asegurar que documentId es un valor primitivo, no un objeto
+      const id = typeof documentId === 'object' && documentId.id ? documentId.id : documentId;
+      
+      const result = await getDocumentDownloadUrl(id);
       
       if (result && result.file_url) {
         // Realizar descarga
