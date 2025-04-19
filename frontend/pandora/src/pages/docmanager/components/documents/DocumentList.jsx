@@ -57,7 +57,7 @@ const DocumentList = ({
   const tableHeaders = useMemo(() => (
     <tr>
       {selectionMode && (
-        <th className="px-4 py-3 w-12">
+        <th scope="col" className="px-4 py-3 w-12" aria-label="Seleccionar">
           <div className="flex items-center justify-center">
             <div className="relative w-5 h-5">
               <input 
@@ -65,7 +65,7 @@ const DocumentList = ({
                 className="absolute w-5 h-5 rounded border-2 border-indigo-400 appearance-none cursor-pointer checked:bg-indigo-600 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors" 
                 checked={allSelected}
                 onChange={handleSelectAll}
-                aria-label="Seleccionar todos"
+                aria-label="Seleccionar todos los documentos"
               />
               {allSelected && (
                 <svg 
@@ -74,6 +74,7 @@ const DocumentList = ({
                   stroke="currentColor" 
                   viewBox="0 0 24 24" 
                   xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                 </svg>
@@ -82,11 +83,11 @@ const DocumentList = ({
           </div>
         </th>
       )}
-      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[42%]">Documento</th>
-      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Categoría</th>
-      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Actualizado</th>
-      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Tamaño</th>
-      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[42%]">Documento</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Categoría</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Actualizado</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Tamaño</th>
+      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
         <div className="flex items-center justify-between">
           <span>Acciones</span>
           {!selectionMode && (
@@ -182,7 +183,7 @@ const DocumentList = ({
       {selectionPanel}
       
       <div className="overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" role="grid" aria-rowcount={validDocuments.length}>
           <thead className="bg-gray-50 sticky top-0 z-10">
             {tableHeaders}
           </thead>
@@ -191,10 +192,11 @@ const DocumentList = ({
           <tbody 
             className="bg-white divide-y divide-gray-200 relative"
             ref={parentRef}
-            style={{ height: `${Math.min(600, documents.length * 60)}px` }} // Altura máxima o basada en el número de documentos
+            style={{ height: `${Math.min(600, validDocuments.length * 60)}px` }} // Altura máxima o basada en el número de documentos
+            aria-live="polite"
           >
             <tr style={{ height: `${rowVirtualizer.totalSize}px` }} className="virtual-placeholder">
-              <td colSpan={totalColumns} aria-hidden="true" />
+              <td colSpan={totalColumns} aria-hidden="true" style={{ padding: 0, border: 'none' }} />
             </tr>
             
             {rowVirtualizer.virtualItems.map(virtualRow => {
@@ -215,6 +217,8 @@ const DocumentList = ({
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`
                   }}
+                  role="row"
+                  aria-rowindex={virtualRow.index + 1}
                 >
                   <DocumentRow 
                     document={document}
