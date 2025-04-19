@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MoreHorizontal, Folder, Clock, Eye, Download, Tag, ExternalLink, Printer, Share2 } from 'lucide-react';
+import { Star, MoreHorizontal, Folder, Clock, Eye, Download, Tag, ExternalLink, Printer, Share2, Trash2 } from 'lucide-react';
 import { renderFileIcon, formatDate, formatFileSize } from '../../utils/formatters.jsx';
 import { API_BASE_URL } from '@/config/constants';
 
@@ -11,8 +11,9 @@ import { API_BASE_URL } from '@/config/constants';
  * @param {Function} props.onDownload - Función para descargar documento
  * @param {Function} props.onView - Función para visualizar documento
  * @param {Function} props.onManageTags - Función para administrar etiquetas
+ * @param {Function} props.onDelete - Función para eliminar documento
  */
-const DocumentCard = ({ document, onToggleFavorite, onDownload, onView, onManageTags }) => {
+const DocumentCard = ({ document, onToggleFavorite, onDownload, onView, onManageTags, onDelete }) => {
   // Verificar que el documento existe y tiene los campos mínimos necesarios
   if (!document || !document.id || !document.title) {
     console.error("Documento inválido:", document);
@@ -205,6 +206,13 @@ const DocumentCard = ({ document, onToggleFavorite, onDownload, onView, onManage
               onClick={() => onManageTags && onManageTags(document)}
             >
               <Tag size={18} />
+            </button>
+            <button 
+              className="p-1 text-gray-400 hover:text-red-600 transition"
+              title="Eliminar documento"
+              onClick={() => onDelete && onDelete(document.id)}
+            >
+              <Trash2 size={18} />
             </button>
           </div>
         </div>

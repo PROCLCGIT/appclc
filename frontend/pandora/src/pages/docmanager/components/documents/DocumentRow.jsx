@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 
-import { Star, Tag, Eye, Download, Calendar, Printer, Share2 } from 'lucide-react';
+import { Star, Tag, Eye, Download, Calendar, Printer, Share2, Trash2 } from 'lucide-react';
 import { renderFileIcon, formatDate, formatFileSize } from '../../utils/formatters.jsx';
 
 /**
@@ -10,6 +10,7 @@ import { renderFileIcon, formatDate, formatFileSize } from '../../utils/formatte
  * @param {Function} props.onDownload - Función para descargar documento
  * @param {Function} props.onView - Función para visualizar documento
  * @param {Function} props.onManageTags - Función para administrar etiquetas de documento
+ * @param {Function} props.onDelete - Función para eliminar el documento
  * @param {boolean} props.selectionMode - Indica si está activo el modo de selección
  * @param {boolean} props.isSelected - Indica si el documento está seleccionado
  * @param {Function} props.onToggleSelection - Función para marcar/desmarcar selección
@@ -19,6 +20,7 @@ const DocumentRow = ({
   onDownload, 
   onView,
   onManageTags,
+  onDelete,
   selectionMode = false,
   isSelected = false,
   onToggleSelection
@@ -164,6 +166,13 @@ const DocumentRow = ({
             onClick={() => onManageTags && onManageTags(document)}
           >
             <Tag size={18} />
+          </button>
+          <button 
+            className="p-1 hover:text-red-600 transition"
+            title="Eliminar documento"
+            onClick={() => onDelete && onDelete(document.id)}
+          >
+            <Trash2 size={18} />
           </button>
         </div>
       </td>

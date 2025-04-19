@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Users, Folder, Trash2, PlusCircledIcon, UsersRound, FolderPlus } from 'lucide-react';
+import { PlusCircle, Users, Folder, Trash2, UsersRound, FolderPlus } from 'lucide-react';
 import { documentService } from '@/services/classes';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -51,12 +51,28 @@ const GroupsModal = ({
 
     setLoading(true);
     try {
-      await onCreateGroup({
+      console.log("Intentando crear grupo:", {
         name: newGroupName,
         description: newGroupDescription || '',
         color_code: groupColor
       });
       
+      // Asegurarnos de que onCreateGroup es una función
+      if (typeof onCreateGroup !== 'function') {
+        console.error('onCreateGroup no es una función:', onCreateGroup);
+        throw new Error('Error interno: manejador de creación no válido');
+      }
+      
+      // Llamamos a la función de creación pasada como prop
+      const result = await onCreateGroup({
+        name: newGroupName,
+        description: newGroupDescription || '',
+        color_code: groupColor
+      });
+      
+      console.log("Resultado de creación de grupo:", result);
+      
+      // Reiniciamos los campos solo si la creación fue exitosa
       setNewGroupName('');
       setNewGroupDescription('');
       setGroupColor('#3b82f6');
@@ -70,7 +86,7 @@ const GroupsModal = ({
       console.error('Error al crear grupo:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear el grupo. " + (error.message || ''),
+        description: "No se pudo crear el grupo: " + (error.message || 'Error desconocido'),
         variant: "destructive"
       });
     } finally {

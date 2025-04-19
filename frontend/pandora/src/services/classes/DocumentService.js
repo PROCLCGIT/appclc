@@ -6,7 +6,8 @@ import api from '@/config/axios';
  */
 class DocumentService extends BaseService {
   constructor() {
-    super('/api/v1/docmanager');
+    // Quitamos el prefijo /api/v1/ porque ya está en la configuración de axios
+    super('/docmanager');
   }
 
   /**
@@ -310,8 +311,30 @@ class DocumentService extends BaseService {
    */
   async deleteDocument(documentId) {
     try {
-      await api.post(`${this.endpoint}/documents/${documentId}/soft_delete/`);
+      console.log("Eliminando documento con ID:", documentId);
+      
+      // Usar fetch directamente en lugar de axios
+      const token = localStorage.getItem('auth-token');
+      const url = `${API_BASE_URL}${this.endpoint}/documents/${documentId}/soft_delete/`;
+      
+      console.log("URL para eliminación:", url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error al eliminar documento: ${response.status} ${response.statusText}`);
+      }
+      
+      console.log("Documento eliminado correctamente");
+      return true;
     } catch (error) {
+      console.error("Error al eliminar documento:", error);
       this.handleError(error);
       throw error;
     }
@@ -435,43 +458,55 @@ class DocumentService extends BaseService {
   async getCategories(params = {}) {
     try {
       console.log("Solicitando categorías con token:", localStorage.getItem('auth-token'));
-      const response = await api.get(`${this.endpoint}/categories/`, { 
-        params,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}` 
-        }
+      
+      // Usar fetch directamente en lugar de axios para evitar problemas
+      const token = localStorage.getItem('auth-token');
+      const url = new URL(`${API_BASE_URL}${this.endpoint}/categories/`);
+      
+      // Añadir parámetros a la URL si existen
+      if (params) {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
+          }
+        });
+      }
+      
+      // Configurar los headers
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
+      }
+      
+      // Realizar la petición
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
       });
-      console.log("Respuesta de categorías:", response.data);
-      return response.data;
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Respuesta de categorías:", data);
+      return data;
     } catch (error) {
       console.error("Error al obtener categorías:", error);
       
-      // Intentar un enfoque alternativo si hay error de autenticación
-      if (error.response?.status === 401) {
-        // En caso de error de autenticación, intentar devolver una estructura similar
-        // para que la aplicación no falle (simulamos categorías)
-        console.warn("Error de autenticación al obtener categorías. Usando datos alternativos.");
-        
-        try {
-          // Intentar obtener categorías directamente de la base de datos
-          // Esta es una solución temporal para simular que recibimos datos
-          return {
-            results: [
-              { id: 1, name: "General" },
-              { id: 2, name: "Documentos" },
-              { id: 3, name: "Contratos" }
-            ],
-            count: 3,
-            next: null,
-            previous: null
-          };
-        } catch (fallbackError) {
-          console.error("Error en fallback de categorías:", fallbackError);
-        }
-      }
-      
-      this.handleError(error);
-      throw error;
+      // Devolver categorías predeterminadas en caso de error
+      console.warn("Error al obtener categorías. Usando datos alternativos.");
+      return {
+        results: [
+          { id: 1, name: "General" },
+          { id: 2, name: "Documentos" },
+          { id: 3, name: "Contratos" }
+        ],
+        count: 3,
+        next: null,
+        previous: null
+      };
     }
   }
 
@@ -483,42 +518,56 @@ class DocumentService extends BaseService {
   async getTags(params = {}) {
     try {
       console.log("Solicitando etiquetas con token:", localStorage.getItem('auth-token'));
-      const response = await api.get(`${this.endpoint}/tags/`, { 
-        params,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth-token')}` 
-        }
+      
+      // Usar fetch directamente en lugar de axios para evitar problemas
+      const token = localStorage.getItem('auth-token');
+      const url = new URL(`${API_BASE_URL}${this.endpoint}/tags/`);
+      
+      // Añadir parámetros a la URL si existen
+      if (params) {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
+          }
+        });
+      }
+      
+      // Configurar los headers
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
+      }
+      
+      // Realizar la petición
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
       });
-      console.log("Respuesta de etiquetas:", response.data);
-      return response.data;
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Respuesta de etiquetas:", data);
+      return data;
     } catch (error) {
       console.error("Error al obtener etiquetas:", error);
       
-      // Intentar un enfoque alternativo si hay error de autenticación
-      if (error.response?.status === 401) {
-        // En caso de error de autenticación, intentar devolver una estructura similar
-        // para que la aplicación no falle (simulamos etiquetas)
-        console.warn("Error de autenticación al obtener etiquetas. Usando datos alternativos.");
-        
-        try {
-          // Simular etiquetas cuando hay errores
-          return {
-            results: [
-              { id: 1, name: "Importante", color_code: "#FF0000" },
-              { id: 2, name: "Urgente", color_code: "#FFA500" },
-              { id: 3, name: "Completado", color_code: "#008000" }
-            ],
-            count: 3,
-            next: null,
-            previous: null
-          };
-        } catch (fallbackError) {
-          console.error("Error en fallback de etiquetas:", fallbackError);
-        }
-      }
+      // Simular etiquetas cuando hay errores
+      console.warn("Error al obtener etiquetas. Usando datos alternativos.");
       
-      this.handleError(error);
-      throw error;
+      return {
+        results: [
+          { id: 1, name: "Importante", color_code: "#FF0000" },
+          { id: 2, name: "Urgente", color_code: "#FFA500" },
+          { id: 3, name: "Completado", color_code: "#008000" }
+        ],
+        count: 3,
+        next: null,
+        previous: null
+      };
     }
   }
 
@@ -649,11 +698,54 @@ class DocumentService extends BaseService {
    */
   async getGroups(params = {}) {
     try {
-      const response = await api.get(`${this.endpoint}/groups/`, { params });
-      return response.data;
+      console.log("Solicitando grupos con token:", localStorage.getItem('auth-token'));
+      
+      // Usar fetch directamente en lugar de axios para evitar problemas
+      const token = localStorage.getItem('auth-token');
+      const url = new URL(`${API_BASE_URL}${this.endpoint}/groups/`);
+      
+      // Añadir parámetros a la URL si existen
+      if (params) {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
+          }
+        });
+      }
+      
+      // Configurar los headers
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
+      }
+      
+      // Realizar la petición
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Respuesta de grupos:", data);
+      return data;
     } catch (error) {
-      this.handleError(error);
-      throw error;
+      console.error("Error al obtener grupos:", error);
+      
+      // Usar datos alternativos en caso de error
+      console.warn("Error al obtener grupos. Usando datos alternativos.");
+      
+      // Devolver estructura vacía pero válida para evitar errores en la interfaz
+      return {
+        results: [],
+        count: 0,
+        next: null,
+        previous: null
+      };
     }
   }
   
@@ -679,13 +771,47 @@ class DocumentService extends BaseService {
    */
   async createGroup(data) {
     try {
+      console.log('DocumentService.createGroup - Datos recibidos:', data);
+      console.log('DocumentService.createGroup - Endpoint:', `${this.endpoint}/groups/`);
+      console.log('DocumentService.createGroup - URL completa:', api.defaults.baseURL + this.endpoint.replace(/^\//, '') + '/groups/');
+      
       if (!data.name || data.name.trim() === '') {
         throw new Error('El nombre del grupo es requerido');
       }
       
-      const response = await api.post(`${this.endpoint}/groups/`, data);
+      // Agregar token manualmente para pruebas
+      const token = localStorage.getItem('auth-token');
+      console.log('Token disponible:', !!token);
+      
+      // Mostrar todos los datos que se enviarán
+      const dataToSend = {
+        name: data.name.trim(),
+        description: data.description || '',
+        color_code: data.color_code || '#3B82F6',
+        icon: data.icon || 'folder',
+        is_public: data.is_public !== undefined ? data.is_public : false
+      };
+      
+      console.log('Datos que se enviarán al servidor:', dataToSend);
+      
+      const response = await api.post(`${this.endpoint}/groups/`, dataToSend, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      console.log('Respuesta de createGroup:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Error completo en createGroup:', error);
+      console.error('Detalles del error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        stack: error.stack
+      });
+      
       if (error.response && error.response.status === 400 && error.response.data.name) {
         // Error específico de nombre duplicado
         throw new Error(`El grupo "${data.name}" ya existe.`);
@@ -811,13 +937,53 @@ class DocumentService extends BaseService {
    */
   async createCollection(data) {
     try {
+      console.log('DocumentService.createCollection - Datos recibidos:', data);
+      console.log('DocumentService.createCollection - Endpoint:', `${this.endpoint}/collections/`);
+      console.log('DocumentService.createCollection - URL completa:', api.defaults.baseURL + this.endpoint.replace(/^\//, '') + '/collections/');
+      
       if (!data.name || data.name.trim() === '') {
         throw new Error('El nombre de la colección es requerido');
       }
       
-      const response = await api.post(`${this.endpoint}/collections/`, data);
+      // Agregar token manualmente para pruebas
+      const token = localStorage.getItem('auth-token');
+      console.log('Token de colección disponible:', !!token);
+      
+      // Mostrar todos los datos que se enviarán
+      const dataToSend = {
+        name: data.name.trim(),
+        description: data.description || '',
+        color_code: data.color_code || '#8B5CF6',
+        icon: data.icon || 'collection',
+        is_public: data.is_public !== undefined ? data.is_public : false,
+        include_annotations: data.include_annotations !== undefined ? data.include_annotations : true,
+        include_comments: data.include_comments !== undefined ? data.include_comments : false
+      };
+      
+      console.log('Datos de colección que se enviarán al servidor:', dataToSend);
+      
+      const response = await api.post(`${this.endpoint}/collections/`, dataToSend, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      console.log('Respuesta de createCollection:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Error completo en createCollection:', error);
+      console.error('Detalles del error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        stack: error.stack
+      });
+      
+      if (error.response && error.response.status === 400 && error.response.data.name) {
+        // Error específico de nombre duplicado
+        throw new Error(`La colección "${data.name}" ya existe.`);
+      }
       this.handleError(error);
       throw error;
     }

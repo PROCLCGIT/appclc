@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, X, FileText, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, Tag, Users } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { API_BASE_URL } from '@/config/constants';
+import { documentService } from '@/services/classes';
 
 /**
  * Componente modal simple para subir documentos
- * No depende de categorías o etiquetas cargadas desde el backend
+ * Ahora incluye selección de grupos y etiquetas
  */
 const SimpleUploadModal = ({
   show,
@@ -19,15 +20,80 @@ const SimpleUploadModal = ({
     title: '',
     description: '',
     category: '',
-    categoryName: ''
+    categoryName: '',
+    group: '',
+    selectedTags: []
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
-  // Hardcoded categories based on database values
-  const staticCategories = [
-    { id: 1, name: 'Proformas' },
-    { id: 2, name: 'cdcd dc d' }
-  ];
+  // Cargar categorías, grupos y etiquetas desde el backend
+  useEffect(() => {
+    if (show) {
+      const loadResources = async () => {
+        setLoadingResources(true);
+        
+        try {
+          // Cargar categorías - usar try/catch independiente para cada recurso
+          console.log("Iniciando carga de categorías...");
+          try {
+            const categoriesResponse = await documentService.getCategories();
+            console.log("Categorías cargadas:", categoriesResponse);
+            setCategories(categoriesResponse.results || []);
+          } catch (catError) {
+            console.error("Error específico al cargar categorías:", catError);
+            // Usar valores por defecto si falla
+            setCategories([
+              { id: 1, name: 'General' },
+              { id: 2, name: 'Documentos' }
+            ]);
+          }
+          
+          // Cargar grupos
+          console.log("Iniciando carga de grupos...");
+          try {
+            const groupsResponse = await documentService.getGroups();
+            console.log("Grupos cargados:", groupsResponse);
+            setGroups(groupsResponse.results || []);
+          } catch (groupError) {
+            console.error("Error específico al cargar grupos:", groupError);
+            // No haremos nada - se mostrará como vacío
+          }
+          
+          // Cargar etiquetas
+          console.log("Iniciando carga de etiquetas...");
+          try {
+            const tagsResponse = await documentService.getTags();
+            console.log("Etiquetas cargadas:", tagsResponse);
+            setTags(tagsResponse.results || []);
+          } catch (tagError) {
+            console.error("Error específico al cargar etiquetas:", tagError);
+            // Usar valores por defecto si falla
+            setTags([
+              { id: 1, name: "Importante", color_code: "#FF0000" },
+              { id: 2, name: "Urgente", color_code: "#FFA500" },
+              { id: 3, name: "Completado", color_code: "#008000" }
+            ]);
+          }
+          
+        } catch (error) {
+          console.error("Error general al cargar recursos:", error);
+          toast({
+            title: "Advertencia",
+            description: "Algunos recursos pueden no estar disponibles",
+            variant: "warning"
+          });
+        } finally {
+          setLoadingResources(false);
+        }
+      };
+      
+      loadResources();
+    }
+  }, [show, toast]);
 
   // Actualizar título cuando se selecciona un archivo
   useEffect(() => {
@@ -46,7 +112,9 @@ const SimpleUploadModal = ({
         title: '',
         description: '',
         category: '',
-        categoryName: ''
+        categoryName: '',
+        group: '',
+        selectedTags: []
       });
       setSelectedFile(null);
       setIsLoading(false);
@@ -61,7 +129,7 @@ const SimpleUploadModal = ({
     
     if (name === 'category') {
       // Cuando cambia el select de categoría, también actualizamos el nombre
-      const selectedCategory = staticCategories.find(cat => cat.id.toString() === value);
+      const selectedCategory = categories.find(cat => cat.id.toString() === value);
       setDocumentData({
         ...documentData,
         category: value,
@@ -73,6 +141,26 @@ const SimpleUploadModal = ({
         [name]: value
       });
     }
+  };
+  
+  // Manejar cambios en etiquetas seleccionadas
+  const handleTagToggle = (tagId) => {
+    setDocumentData(prevData => {
+      // Comprobar si la etiqueta ya está seleccionada
+      if (prevData.selectedTags.includes(tagId)) {
+        // Si ya está, la quitamos
+        return {
+          ...prevData,
+          selectedTags: prevData.selectedTags.filter(id => id !== tagId)
+        };
+      } else {
+        // Si no está, la agregamos
+        return {
+          ...prevData,
+          selectedTags: [...prevData.selectedTags, tagId]
+        };
+      }
+    });
   };
 
   const handleFileSelect = (e) => {
@@ -129,12 +217,27 @@ const SimpleUploadModal = ({
       
       formData.append('category', documentData.category);
       
+      // Añadir grupo si está seleccionado
+      if (documentData.group) {
+        formData.append('group', documentData.group);
+      }
+      
+      // Añadir etiquetas si hay seleccionadas
+      if (documentData.selectedTags.length > 0) {
+        // Para cada etiqueta seleccionada, agregamos un campo 'tags' al FormData
+        documentData.selectedTags.forEach(tagId => {
+          formData.append('tags', tagId);
+        });
+      }
+      
       // Verificar el FormData
       console.log("FormData preparado:", {
         file: selectedFile.name,
         title: documentData.title.trim(),
         description: documentData.description?.trim() || "(sin descripción)",
-        category: documentData.category
+        category: documentData.category,
+        group: documentData.group || "Sin grupo",
+        tags: documentData.selectedTags
       });
       
       toast({ 
@@ -272,17 +375,87 @@ const SimpleUploadModal = ({
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
-                disabled={isLoading}
+                disabled={isLoading || loadingResources}
               >
                 <option value="">Seleccione una categoría</option>
-                {staticCategories.map(category => (
+                {categories.map(category => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>
-              {staticCategories.length === 0 && (
+              {categories.length === 0 && (
                 <div className="mt-1 text-sm flex items-center text-amber-600">
                   <AlertCircle size={14} className="mr-1"/> 
-                  No hay categorías disponibles.
+                  {loadingResources ? "Cargando categorías..." : "No hay categorías disponibles."}
+                </div>
+              )}
+            </div>
+            
+            {/* Selector de grupo */}
+            <div>
+              <label htmlFor="group" className="block text-sm font-medium text-gray-700 mb-1">
+                Grupo <span className="text-gray-400">(opcional)</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Users size={16} className="text-gray-400" />
+                </div>
+                <select
+                  id="group"
+                  name="group"
+                  value={documentData.group}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={isLoading || loadingResources}
+                >
+                  <option value="">Sin grupo</option>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
+              {loadingResources && groups.length === 0 && (
+                <div className="mt-1 text-sm flex items-center text-blue-600">
+                  <span className="animate-pulse">Cargando grupos...</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Selector de etiquetas */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Etiquetas <span className="text-gray-400">(opcional)</span>
+              </label>
+              {loadingResources ? (
+                <div className="flex items-center text-sm text-blue-600">
+                  <span className="animate-pulse">Cargando etiquetas...</span>
+                </div>
+              ) : tags.length === 0 ? (
+                <div className="text-sm text-gray-500 border border-gray-200 rounded-md p-3 bg-gray-50">
+                  No hay etiquetas disponibles
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+                  {tags.map(tag => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => handleTagToggle(tag.id)}
+                      className={`inline-flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium ${
+                        documentData.selectedTags.includes(tag.id)
+                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                          : 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-200'
+                      }`}
+                      style={{
+                        backgroundColor: documentData.selectedTags.includes(tag.id) ? tag.color_code + '33' : '',
+                        borderColor: documentData.selectedTags.includes(tag.id) ? tag.color_code : '',
+                        color: documentData.selectedTags.includes(tag.id) ? tag.color_code : ''
+                      }}
+                      disabled={isLoading}
+                    >
+                      <Tag size={12} className="mr-1" />
+                      {tag.name}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -301,137 +474,7 @@ const SimpleUploadModal = ({
           </button>
           <button
             type="button"
-            onClick={async () => {
-              // Implementación directa y simplificada que evita usar otras funciones
-              if (!selectedFile || !documentData.title || !documentData.category) {
-                toast({ 
-                  title: "Datos incompletos", 
-                  description: "Completa todos los campos requeridos", 
-                  variant: "destructive" 
-                });
-                return;
-              }
-              
-              setIsLoading(true);
-              
-              try {
-                // Crear el FormData nosotros mismos
-                const formData = new FormData();
-                formData.append('file', selectedFile);
-                formData.append('title', documentData.title);
-                
-                if (documentData.description && documentData.description.trim() !== '') {
-                  formData.append('description', documentData.description.trim());
-                }
-                
-                formData.append('category', documentData.category);
-                
-                // Mostrar información en la consola para depuración
-                console.log("Subiendo archivo:", selectedFile.name);
-                console.log("Título:", documentData.title);
-                console.log("Categoría:", documentData.category);
-                
-                toast({ 
-                  title: "Procesando", 
-                  description: "Subiendo documento..." 
-                });
-
-                // Usar XMLHttpRequest en lugar de fetch para una mejor compatibilidad
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', `${API_BASE_URL}/docmanager/documents/`);
-                
-                // Añadir token de autenticación
-                const token = localStorage.getItem('auth-token');
-                if (token) {
-                  xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                }
-                
-                // Escuchar cambios de estado
-                xhr.onreadystatechange = function() {
-                  if (xhr.readyState === 4) {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                      // Éxito
-                      toast({
-                        title: 'Éxito',
-                        description: 'Documento subido correctamente'
-                      });
-                      
-                      // Intentar obtener el resultado para poder llamar a onUpload
-                      try {
-                        const responseData = JSON.parse(xhr.responseText);
-                        console.log("Documento subido con éxito:", responseData);
-                        
-                        // Cerrar modal inmediatamente para mejor experiencia de usuario
-                        setIsLoading(false);
-                        onClose();
-                        
-                        // Esperar un momento y luego llamar a onUpload para actualizar la lista
-                        setTimeout(() => {
-                          // Si tenemos una función onUpload, llamarla con el resultado
-                          if (typeof onUpload === 'function') {
-                            console.log("Llamando a onUpload después de subida exitosa");
-                            // Crear un nuevo FormData que incluya los datos del documento creado
-                            const resultFormData = new FormData();
-                            resultFormData.append('file', formData.get('file'));
-                            resultFormData.append('title', formData.get('title'));
-                            resultFormData.append('category', formData.get('category'));
-                            resultFormData.append('document_id', responseData.id || '');
-                            onUpload(resultFormData);
-                          }
-                        }, 300);
-                      } catch (e) {
-                        console.warn("No se pudo parsear la respuesta:", e);
-                        // Cerrar modal incluso si hay error de parseo
-                        setTimeout(() => {
-                          setIsLoading(false);
-                          onClose();
-                        }, 2000);
-                      }
-                    } else {
-                      // Error
-                      let errorMsg = 'Error al subir el documento';
-                      try {
-                        const response = JSON.parse(xhr.responseText);
-                        if (response.detail) {
-                          errorMsg = response.detail;
-                        }
-                      } catch (e) {
-                        errorMsg = `Error ${xhr.status}: ${xhr.statusText}`;
-                      }
-                      
-                      toast({
-                        title: 'Error',
-                        description: errorMsg,
-                        variant: 'destructive'
-                      });
-                      
-                      setIsLoading(false);
-                    }
-                  }
-                };
-                
-                // Manejar errores de red
-                xhr.onerror = function() {
-                  toast({
-                    title: 'Error de conexión',
-                    description: 'No se pudo conectar con el servidor',
-                    variant: 'destructive'
-                  });
-                  setIsLoading(false);
-                };
-                
-                // Enviar la solicitud
-                xhr.send(formData);
-              } catch (error) {
-                console.error("Error al subir:", error);
-                toast({
-                  title: 'Error',
-                  description: error.message || 'Ocurrió un error al procesar la solicitud',
-                  variant: 'destructive'
-                });
-                setIsLoading(false);
-              }
-            }}
+            onClick={handleSubmit}
             disabled={isLoading}
             className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >

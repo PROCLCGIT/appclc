@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     Category, Tag, Document, DocumentVersion,
-    DocumentTag, DocumentActivity, DocumentPermission, DocumentComment
+    DocumentTag, DocumentActivity, DocumentPermission, DocumentComment,
+    Group, GroupMember, Collection, CollectionDocument, CollectionPermission, CollectionActivity
 )
 
 
@@ -151,3 +152,99 @@ class DocumentCommentAdmin(admin.ModelAdmin):
     def is_reply_display(self, obj):
         return "Respuesta" if obj.is_reply else "Comentario principal"
     is_reply_display.short_description = 'Tipo'
+
+
+class GroupMemberInline(admin.TabularInline):
+    model = GroupMember
+    extra = 1
+
+
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description', 'color_display', 'document_count', 'is_public', 'creator', 'created_at')
+    list_filter = ('is_public', 'created_at')
+    search_fields = ('name', 'description')
+    inlines = [GroupMemberInline]
+    
+    def color_display(self, obj):
+        return format_html(
+            '<span style="background-color: {}; padding: 5px; border-radius: 3px; color: white;">{}</span>',
+            obj.color_code, obj.color_code
+        )
+    color_display.short_description = 'Color'
+
+
+@admin.register(GroupMember)
+class GroupMemberAdmin(admin.ModelAdmin):
+    list_display = ('user', 'group', 'role', 'joined_at')
+    list_filter = ('role', 'joined_at')
+    search_fields = ('user__username', 'group__name')
+
+
+class CollectionDocumentInline(admin.TabularInline):
+    model = CollectionDocument
+    extra = 1
+
+
+class CollectionPermissionInline(admin.TabularInline):
+    model = CollectionPermission
+    extra = 1
+
+
+@admin.register(Collection)
+class CollectionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'color_display', 'document_count', 'is_public', 'creator', 'created_at')
+    list_filter = ('is_public', 'created_at')
+    search_fields = ('name', 'description')
+    readonly_fields = ('id', 'share_token', 'created_at', 'updated_at')
+    inlines = [CollectionDocumentInline, CollectionPermissionInline]
+    
+    fieldsets = (
+        ('Información básica', {
+            'fields': ('id', 'name', 'description', 'color_code', 'icon')
+        }),
+        ('Presentación', {
+            'fields': ('cover_image',)
+        }),
+        ('Compartición', {
+            'fields': ('is_public', 'share_token', 'expiry_date')
+        }),
+        ('Opciones de exportación', {
+            'fields': ('include_annotations', 'include_comments')
+        }),
+        ('Metadatos', {
+            'fields': ('creator', 'created_at', 'updated_at')
+        }),
+    )
+    
+    def color_display(self, obj):
+        return format_html(
+            '<span style="background-color: {}; padding: 5px; border-radius: 3px; color: white;">{}</span>',
+            obj.color_code, obj.color_code
+        )
+    color_display.short_description = 'Color'
+
+
+@admin.register(CollectionDocument)
+class CollectionDocumentAdmin(admin.ModelAdmin):
+    list_display = ('document', 'collection', 'order', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('document__title', 'collection__name', 'notes')
+
+
+@admin.register(CollectionPermission)
+class CollectionPermissionAdmin(admin.ModelAdmin):
+    list_display = ('collection', 'user', 'permission_type', 'created_at')
+    list_filter = ('permission_type', 'created_at')
+    search_fields = ('collection__name', 'user__username')
+
+
+@admin.register(CollectionActivity)
+class CollectionActivityAdmin(admin.ModelAdmin):
+    list_display = ('collection', 'activity_type', 'user', 'created_at')
+    list_filter = ('activity_type', 'created_at')
+    search_fields = ('collection__name', 'user__username', 'details')
+    readonly_fields = ('collection', 'user', 'activity_type', 'details', 'created_at')
+    
+    def has_add_permission(self, request):
+        return False  # No permitir añadir actividades manualmente

@@ -204,35 +204,39 @@ const GestorDocumentalPage = () => {
       hasFile: formData.has('file'),
       fileName: formData.get('file')?.name,
       title: formData.get('title'),
-      category: formData.get('category'),
-      document_id: formData.get('document_id')
+      category: formData.get('category')
     });
     
     try {
-      // Si ya tenemos document_id, significa que el documento ya fue subido por XMLHttpRequest
-      if (formData.get('document_id')) {
-        console.log("Documento ya subido con ID:", formData.get('document_id'));
-        
-        // Mostrar mensaje de éxito
-        toast({
-          title: "Documento subido",
-          description: `El documento "${formData.get('title')}" ha sido subido correctamente.`
-        });
-        
-        // Forzar recarga completa de documentos
-        console.log("Forzando actualización completa de la lista de documentos");
-        refreshData();
-        
-        return { id: formData.get('document_id') };
+      // Usar la instancia de API para enviar el formulario directamente
+      const token = localStorage.getItem('auth-token');
+      console.log("Subiendo con token:", !!token);
+      
+      // Crear cabeceras para la solicitud
+      const headers = new Headers();
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
       }
       
-      // Si no hay document_id, seguimos el flujo normal con handleUpload
-      console.log("Llamando a handleUpload para subir nuevo documento...");
-      const result = await handleUpload(formData);
-      console.log("Resultado de handleUpload:", result);
+      // Mostrar mensaje de carga
+      toast({
+        title: "Procesando",
+        description: "Subiendo documento..."
+      });
       
-      if (result) {
-        console.log("Subida exitosa, cerrando modal");
+      // Enviar solicitud fetch directamente
+      const response = await fetch(`${API_BASE_URL}/docmanager/documents/`, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      
+      // Procesar la respuesta
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Documento subido con éxito:", data);
+        
+        // Cerrar modal
         setShowUploadModal(false);
         
         // Mostrar mensaje de éxito
@@ -241,21 +245,28 @@ const GestorDocumentalPage = () => {
           description: `El documento "${formData.get('title')}" ha sido subido correctamente.`
         });
         
-        // Forzar una recarga de documentos para mostrar el recién subido
-        console.log("Forzando actualización completa después de subida exitosa");
+        // Forzar actualización de documentos
         setTimeout(() => {
           refreshData();
-        }, 500);
+        }, 300);
         
-        return result;
+        return data;
       } else {
-        console.log("handleUpload no retornó un resultado válido");
+        // Manejar error del servidor
+        let errorMsg = 'Error al subir el documento';
+        try {
+          const errorData = await response.json();
+          if (errorData.detail) {
+            errorMsg = errorData.detail;
+          }
+        } catch (e) {
+          errorMsg = `Error ${response.status}: ${response.statusText}`;
+        }
         
-        // Mostrar mensaje de error
         toast({
-          title: "Error",
-          description: "No se pudo completar la subida del documento.",
-          variant: "destructive"
+          title: 'Error',
+          description: errorMsg,
+          variant: 'destructive'
         });
         
         return null;
@@ -1030,6 +1041,19 @@ const GestorDocumentalPage = () => {
         onCreateGroup={handleCreateGroup}
         onSelectGroup={handleSelectGroup}
         onDeleteGroup={handleDeleteGroup}
+      />
+
+      {/* Modal de gestión de colecciones */}
+      <CollectionsModal
+        show={showCollectionsModal}
+        onClose={() => setShowCollectionsModal(false)}
+        collections={collections}
+        onCreateCollection={handleCreateCollection}
+        onViewCollection={handleViewCollection}
+        onDeleteCollection={handleDeleteCollection}
+        onExportCollection={handleExportCollection}
+        selectedDocuments={selectedDocuments}
+        onAddToCollection={handleAddToCollection}
       />
     </div>
   );

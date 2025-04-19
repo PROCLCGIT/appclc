@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import (
     Category, Tag, Document, DocumentVersion,
     DocumentTag, DocumentActivity, DocumentPermission, DocumentComment,
-    Collection, CollectionDocument, CollectionPermission, CollectionActivity
+    Collection, CollectionDocument, CollectionPermission, CollectionActivity,
+    Group, GroupMember
 )
 
 
@@ -137,7 +138,7 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Document
-        fields = ['title', 'description', 'file', 'category', 'tags', 'is_favorite']
+        fields = ['title', 'description', 'file', 'category', 'group', 'tags', 'is_favorite']
     
     def create(self, validated_data):
         tags = validated_data.pop('tags', [])
@@ -284,3 +285,64 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         )
         
         return collection
+
+
+class GroupMemberSerializer(serializers.ModelSerializer):
+    """Serializer para miembros de grupos"""
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    
+    class Meta:
+        model = GroupMember
+        fields = ['id', 'group', 'user', 'user_username', 'role', 'role_display', 'joined_at']
+        read_only_fields = ['joined_at']
+
+
+class GroupListSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para listados de grupos"""
+    creator_username = serializers.CharField(source='creator.username', read_only=True)
+    document_count = serializers.IntegerField(read_only=True)
+    member_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'description', 'slug', 'icon', 'color_code', 'is_public',
+                 'creator', 'creator_username', 'document_count', 'member_count',
+                 'created_at', 'updated_at']
+        read_only_fields = ['slug', 'created_at', 'updated_at']
+    
+    def get_member_count(self, obj):
+        return obj.members.count()
+
+
+class GroupDetailSerializer(serializers.ModelSerializer):
+    """Serializer completo para vista detallada de grupos"""
+    creator_username = serializers.CharField(source='creator.username', read_only=True)
+    document_count = serializers.IntegerField(read_only=True)
+    members = GroupMemberSerializer(source='members', many=True, read_only=True)
+    documents = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'description', 'slug', 'icon', 'color_code', 'is_public',
+                 'creator', 'creator_username', 'document_count', 'members', 'documents',
+                 'created_at', 'updated_at']
+        read_only_fields = ['slug', 'created_at', 'updated_at']
+    
+    def get_documents(self, obj):
+        # Solo obtenemos documentos no eliminados para este grupo
+        documents = Document.objects.filter(group=obj, is_deleted=False)
+        serializer = DocumentListSerializer(documents, many=True, context=self.context)
+        return serializer.data
+
+
+class GroupCreateSerializer(serializers.ModelSerializer):
+    """Serializer para crear grupos"""
+    
+    class Meta:
+        model = Group
+        fields = ['name', 'description', 'icon', 'color_code', 'is_public']
+        
+    def create(self, validated_data):
+        print("GroupCreateSerializer.create - datos validados:", validated_data)
+        return Group.objects.create(**validated_data)
