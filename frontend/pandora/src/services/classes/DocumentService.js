@@ -52,7 +52,8 @@ class DocumentService extends BaseService {
       // Crear clave de caché específica basada en los parámetros
       const cacheKey = `cached_documents_${JSON.stringify(params)}`;
       
-      // Verificar si hay datos en caché para estos parámetros específicos
+      // TEMPORALMENTE DESACTIVAR CACHÉ PARA DEPURACIÓN
+      /*
       const cachedData = localStorage.getItem(cacheKey);
       if (cachedData) {
         try {
@@ -63,6 +64,7 @@ class DocumentService extends BaseService {
           console.warn("Error al leer caché de documentos:", e);
         }
       }
+      */
       
       // Configurar timeout para evitar bloqueos
       const controller = new AbortController();
@@ -165,25 +167,69 @@ class DocumentService extends BaseService {
     } catch (error) {
       console.error("Error final en getDocuments:", error);
       
-      // Si el error es de tipo "aborted" (timeout) o recursos insuficientes, ser más específico
-      if (error.name === 'AbortError' || error.message?.includes('ERR_INSUFFICIENT_RESOURCES')) {
-        console.warn("Error de timeout o recursos insuficientes. Devolviendo datos por defecto.");
+      // Si el error es de tipo "aborted" (timeout) o recursos insuficientes, intentar un enfoque más directo
+      if (error.name === 'AbortError' || error.message?.includes('ERR_INSUFFICIENT_RESOURCES') || error.message?.includes('timeout')) {
+        console.warn("Error de timeout o recursos insuficientes. Intentando con fetch directo sin cache ni throttling.");
+        
+        try {
+          // Intento directo y simple con fetch
+          const backupUrl = `${API_BASE_URL}${this.endpoint}/documents/?${new URLSearchParams(params).toString()}`;
+          console.log("URL de respaldo:", backupUrl);
+          
+          const directResponse = await fetch(backupUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            // Sin timeout para este intento de respaldo
+          });
+          
+          if (!directResponse.ok) {
+            throw new Error(`Error en fetch directo: ${directResponse.status} ${directResponse.statusText}`);
+          }
+          
+          const directData = await directResponse.json();
+          console.log("Datos obtenidos con fetch directo:", directData);
+          return directData;
+        } catch (directError) {
+          console.error("El intento directo también falló:", directError);
+          // Si el respaldo falla, continuamos con el flujo normal
+        }
       }
       
-      // Simulación de datos como último recurso
-      console.warn("Devolviendo datos simulados como último recurso");
+      // Intentar usar la caché antes de devolver datos de prueba
+      try {
+        const cacheKey = `cached_documents_${JSON.stringify(params)}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          console.warn("Usando datos de caché existente como respaldo");
+          return JSON.parse(cachedData);
+        }
+      } catch (e) {
+        console.warn("Error al acceder a caché:", e);
+      }
+      
+      // Última opción: datos de prueba con advertencia clara
+      console.warn("ADVERTENCIA: Devolviendo datos simulados (no reales) como último recurso - esto indica un problema de conectividad con el backend");
+      
+      // IMPORTANTE: Lanzar error en lugar de devolver datos simulados
+      // Esto obligará a la aplicación a mostrar un error explícito
+      throw new Error('[ERROR] No se pudieron cargar los documentos del servidor. Por favor verifique la conexión y permisos.');
+      
+      /* 
+      // Código anterior que devolvía datos simulados - DESACTIVADO
       const defaultDocuments = {
         results: [
           { 
-            id: 1, 
-            title: "Documento de prueba", 
-            description: "Este es un documento simulado para pruebas",
-            file_name: "test.pdf",
+            id: 999, 
+            title: "[DATOS SIMULADOS] - Problemas de conexión con el servidor", 
+            description: "Este es un documento simulado que aparece cuando hay problemas de conexión",
+            file_name: "error_conexion.pdf",
             file_type: "pdf",
             file_size: 1024,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            category: { id: 1, name: "General" },
+            category: { id: 999, name: "Error" },
             tags: []
           }
         ],
@@ -194,15 +240,8 @@ class DocumentService extends BaseService {
         total_pages: 1
       };
       
-      // Intentar guardar los datos por defecto en caché también
-      try {
-        const cacheKey = `cached_documents_${JSON.stringify(params)}`;
-        localStorage.setItem(cacheKey, JSON.stringify(defaultDocuments));
-      } catch (e) {
-        console.warn("No se pudo guardar documentos por defecto en caché:", e);
-      }
-      
       return defaultDocuments;
+      */
     }
   }
 

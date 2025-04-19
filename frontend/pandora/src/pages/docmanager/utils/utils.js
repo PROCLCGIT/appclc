@@ -3,6 +3,8 @@
  * para el módulo DocManager (GestorDocumental)
  */
 
+import { API_BASE_URL } from '@/config/constants';
+
 /**
  * Implementación del patrón debounce para retrasar la ejecución de funciones
  * @param {Function} func - Función a ejecutar
@@ -393,4 +395,374 @@ export const debounce = (func, wait = 300) => {
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
+  };
+
+  /**
+   * FUNCIONES PARA GESTIÓN DIRECTA DE DOCUMENTOS
+   * Estas funciones permiten cargar documentos directamente desde la API
+   * sin depender del servicio o hook problemático
+   */
+
+  /**
+   * Función para obtener el token de autenticación
+   * @returns {string|null} - Token de autenticación o null si no está disponible
+   */
+  export const getAuthToken = () => {
+    return localStorage.getItem('auth-token');
+  };
+
+  /**
+   * Cargar documentos directamente desde la API
+   * @param {Object} params - Parámetros de consulta (página, búsqueda, etc.)
+   * @returns {Promise<Object>} - Resultado de la consulta
+   */
+  export const fetchDocuments = async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value);
+        }
+      });
+      
+      const url = `${API_BASE_URL}/docmanager/documents/?${queryParams.toString()}`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar documentos: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Documentos cargados directamente:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Error en fetchDocuments:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Cargar categorías directamente desde la API
+   * @returns {Promise<Object>} - Resultado de la consulta
+   */
+  export const fetchCategories = async () => {
+    try {
+      const url = `${API_BASE_URL}/docmanager/categories/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar categorías: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Categorías cargadas directamente:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Error en fetchCategories:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Cargar etiquetas directamente desde la API
+   * @returns {Promise<Object>} - Resultado de la consulta
+   */
+  export const fetchTags = async () => {
+    try {
+      const url = `${API_BASE_URL}/docmanager/tags/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar etiquetas: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Etiquetas cargadas directamente:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Error en fetchTags:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Subir un documento directamente a la API
+   * @param {FormData} formData - Datos del documento
+   * @returns {Promise<Object>} - Documento creado
+   */
+  export const uploadDocument = async (formData) => {
+    try {
+      const url = `${API_BASE_URL}/docmanager/documents/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        // No incluir Content-Type para que el navegador establezca el boundary correcto
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error al subir documento: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Documento subido directamente:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Error en uploadDocument:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Eliminar un documento directamente
+   * @param {number|string} documentId - ID del documento
+   * @returns {Promise<Object>} - Resultado de la operación
+   */
+  export const deleteDocument = async (documentId) => {
+    try {
+      // Intentar soft delete primero
+      const url = `${API_BASE_URL}/docmanager/documents/${documentId}/soft_delete/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      
+      // Si falla el soft delete, intentar hard delete
+      const hardDeleteUrl = `${API_BASE_URL}/docmanager/documents/${documentId}/`;
+      const hardDeleteResponse = await fetch(hardDeleteUrl, {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (!hardDeleteResponse.ok) {
+        throw new Error(`Error al eliminar documento: ${hardDeleteResponse.status} ${hardDeleteResponse.statusText}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error en deleteDocument:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Cambiar el estado de favorito de un documento
+   * @param {number|string} documentId - ID del documento
+   * @returns {Promise<Object>} - Resultado de la operación
+   */
+  export const toggleFavoriteDocument = async (documentId) => {
+    try {
+      const url = `${API_BASE_URL}/docmanager/documents/${documentId}/toggle_favorite/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error al cambiar favorito: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en toggleFavoriteDocument:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Obtener URL de descarga de un documento
+   * @param {number|string} documentId - ID del documento
+   * @returns {Promise<Object>} - URL de descarga
+   */
+  export const getDocumentDownloadUrl = async (documentId) => {
+    try {
+      const url = `${API_BASE_URL}/docmanager/documents/${documentId}/download/`;
+      const token = getAuthToken();
+      
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error al obtener URL de descarga: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error en getDocumentDownloadUrl:', error);
+      // Intentar obtener URL pública como fallback
+      try {
+        const publicUrl = `${API_BASE_URL}/docmanager/documents/${documentId}/public-download/`;
+        const publicResponse = await fetch(publicUrl);
+        
+        if (publicResponse.ok) {
+          return await publicResponse.json();
+        }
+        
+        throw error;
+      } catch (publicError) {
+        console.error('Error al obtener URL pública:', publicError);
+        throw error;
+      }
+    }
+  };
+
+  /**
+   * Normalizar documentos para mostrar en la interfaz
+   * @param {Array} documents - Lista de documentos
+   * @param {Array} categories - Lista de categorías disponibles
+   * @returns {Array} - Lista de documentos normalizados
+   */
+  export const normalizeDocumentsData = (documents, categories = []) => {
+    if (!documents) return [];
+    if (!Array.isArray(documents)) return [];
+    
+    return documents.map(doc => {
+      // Verificar que el documento es un objeto válido
+      if (!doc || typeof doc !== 'object') {
+        return null;
+      }
+      
+      // Procesar categoría
+      let categoryName = '';
+      let categoryObj = null;
+      
+      if (doc.category_name) {
+        categoryName = doc.category_name;
+      } else if (doc.category) {
+        if (typeof doc.category === 'object' && doc.category !== null) {
+          categoryName = doc.category.name || doc.category.label || '';
+          categoryObj = doc.category;
+        } else if (typeof doc.category === 'string') {
+          categoryName = doc.category;
+        } else if (typeof doc.category === 'number') {
+          const matchingCategory = categories.find(c => c.id === doc.category);
+          if (matchingCategory) {
+            categoryName = matchingCategory.name;
+            categoryObj = matchingCategory;
+          } else {
+            categoryName = `Categoría ${doc.category}`;
+          }
+        }
+      }
+      
+      // Determinar tipo de archivo
+      let fileType = 'unknown';
+      if (doc.file_type) {
+        fileType = doc.file_type.toLowerCase();
+      } else if (doc.file_name) {
+        const parts = doc.file_name.split('.');
+        if (parts.length > 1) {
+          fileType = parts.pop().toLowerCase();
+        }
+      } else if (doc.file) {
+        try {
+          const url = new URL(doc.file);
+          const pathParts = url.pathname.split('.');
+          if (pathParts.length > 1) {
+            fileType = pathParts.pop().toLowerCase();
+          }
+        } catch (e) {
+          console.warn("No se pudo extraer el tipo de archivo de la URL:", doc.file);
+        }
+      }
+      
+      // Asegurar que las etiquetas sean un array
+      const tags = Array.isArray(doc.tags) ? doc.tags : [];
+      
+      // Construir documento normalizado
+      return {
+        ...doc,
+        id: doc.id || generateUniqueId(),
+        title: doc.title || 'Documento sin título',
+        description: doc.description || '',
+        category_name: categoryName || 'Sin categoría',
+        category: categoryObj || { id: 0, name: 'Sin categoría' },
+        file_type: fileType,
+        file_size: doc.file_size || 0,
+        tags: tags,
+        created_at: doc.created_at || new Date().toISOString(),
+        updated_at: doc.updated_at || new Date().toISOString(),
+        file_url: doc.file_url || doc.file || ''
+      };
+    }).filter(Boolean); // Eliminar null o undefined
   };

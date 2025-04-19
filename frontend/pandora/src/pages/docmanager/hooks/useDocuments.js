@@ -230,40 +230,117 @@ const useDocuments = () => {
         });
       }
       
+      console.log("fetchDocuments: Solicitando documentos con:", params);
       const response = await documentService.getDocuments(params);
+      console.log("fetchDocuments: Respuesta recibida:", response);
       
-      if (!response || !Array.isArray(response.results)) {
-        throw new Error('Formato de respuesta inválido');
+      if (!response) {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+      
+      if (!Array.isArray(response.results)) {
+        console.error("fetchDocuments: Formato de respuesta inesperado:", response);
+        throw new Error('Formato de respuesta inválido - results no es un array');
+      }
+      
+      // Verificar explícitamente los datos recibidos
+      if (response.results.length === 0) {
+        console.warn("fetchDocuments: Se recibió un array vacío de resultados");
+      } else {
+        console.log("fetchDocuments: Primer documento recibido:", response.results[0]);
       }
       
       // Procesar documentos para normalizar propiedades
       const processedDocs = processDocuments(response.results);
+      console.log("fetchDocuments: Documentos procesados:", processedDocs.length);
+      
+      // Actualizar el estado con los documentos procesados
       setDocuments(processedDocs);
       
       // Actualizar información de paginación
-      setPagination({
+      const paginationData = {
         count: response.count || 0,
         next: response.next || null,
         previous: response.previous || null,
         current: response.current_page || params.page || 1,
         total_pages: response.total_pages || 1
-      });
+      };
+      
+      console.log("fetchDocuments: Actualizando paginación:", paginationData);
+      setPagination(paginationData);
       
       // Actualizar timestamp para caché
       setLastFetchTimestamp(Date.now());
       
+      // Mostrar toast de éxito para búsquedas
+      if (showToast && params.search) {
+        toast({
+          title: 'Resultados encontrados',
+          description: `Se encontraron ${processedDocs.length} documentos`,
+          duration: 2000
+        });
+      }
+      
       return {
         documents: processedDocs,
-        pagination: {
-          count: response.count || 0,
-          next: response.next || null,
-          previous: response.previous || null,
-          current: response.current_page || params.page || 1,
-          total_pages: response.total_pages || 1
-        }
+        pagination: paginationData
       };
     } catch (error) {
-      console.error('Error al cargar documentos:', error);
+      console.error('fetchDocuments: Error al cargar documentos:', error);
+      
+      // Intentar directamente con fetch como respaldo
+      try {
+        console.log("fetchDocuments: Intento de respaldo con fetch directo");
+        const backupUrl = `${API_BASE_URL}/docmanager/documents/?${new URLSearchParams(Object.entries(params).filter(([_, v]) => v !== undefined)).toString()}`;
+        console.log("fetchDocuments: URL de respaldo:", backupUrl);
+        
+        const backupResponse = await fetch(backupUrl);
+        
+        if (!backupResponse.ok) {
+          throw new Error(`Error en respaldo: ${backupResponse.status}`);
+        }
+        
+        const backupData = await backupResponse.json();
+        console.log("fetchDocuments: Datos obtenidos con respaldo:", backupData);
+        
+        if (backupData && Array.isArray(backupData.results)) {
+          // Procesar los documentos del respaldo
+          const processedBackupDocs = processDocuments(backupData.results);
+          console.log("fetchDocuments: Documentos de respaldo procesados:", processedBackupDocs.length);
+          
+          // Actualizar estados
+          setDocuments(processedBackupDocs);
+          setPagination({
+            count: backupData.count || 0,
+            next: backupData.next || null,
+            previous: backupData.previous || null,
+            current: backupData.current_page || params.page || 1,
+            total_pages: backupData.total_pages || 1
+          });
+          
+          if (showToast) {
+            toast({
+              title: 'Recuperado con éxito',
+              description: `Se recuperaron ${processedBackupDocs.length} documentos con método alternativo`,
+              variant: 'default'
+            });
+          }
+          
+          return {
+            documents: processedBackupDocs,
+            pagination: {
+              count: backupData.count || 0,
+              next: backupData.next || null,
+              previous: backupData.previous || null,
+              current: backupData.current_page || params.page || 1,
+              total_pages: backupData.total_pages || 1
+            }
+          };
+        }
+      } catch (backupError) {
+        console.error("fetchDocuments: El intento de respaldo también falló:", backupError);
+      }
+      
       // No mostrar toast en errores si es una carga silenciosa
       if (showToast) {
         toast({
@@ -272,7 +349,18 @@ const useDocuments = () => {
           variant: 'destructive'
         });
       }
-      return { documents: [], pagination: { count: 0, total_pages: 1, current: 1 } };
+      
+      // Si todo falla, devolvemos un objeto vacío (pero bien formado)
+      return { 
+        documents: [], 
+        pagination: { 
+          count: 0, 
+          total_pages: 1, 
+          current: 1,
+          next: null,
+          previous: null
+        } 
+      };
     }
   }, [processDocuments, toast]);
   
@@ -322,61 +410,150 @@ const useDocuments = () => {
   
   // Efecto para cargar datos cuando cambian los filtros o la página
   useEffect(() => {
+    // Bandera para evitar carreras de condición
     let isMounted = true;
+    
+    // Control para evitar bucles de actualización
+    // Utilizamos una clave de caché basada en los parámetros actuales
+    const cacheKey = JSON.stringify(queryParams);
+    const lastRunKey = `last_run_${cacheKey}`;
+    
+    // Si ya ejecutamos este efecto con los mismos parámetros recientemente, no lo repetimos
+    if (sessionStorage.getItem(lastRunKey) === 'true') {
+      console.log("useDocuments: Evitando ejecución duplicada para:", queryParams);
+      return;
+    }
+    
+    // Marcar que estamos ejecutando este efecto para estos parámetros
+    sessionStorage.setItem(lastRunKey, 'true');
+    
+    // Función para cargar datos
     const loadData = async () => {
       if (!isMounted) return;
+      
+      // Establecer estado de carga
       setIsLoading(true);
       
       try {
-        // Cargar con timeout para prevenir bloqueos
-        const documentsPromise = Promise.race([
-          fetchDocuments(queryParams),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout al cargar documentos')), 8000)
-          )
-        ]).catch(error => {
-          console.error('Error con timeout en carga de documentos:', error);
-          return { documents: [], pagination: { count: 0, total_pages: 1, current: 1 } };
-        });
+        console.log("useDocuments: Iniciando carga de datos con queryParams:", queryParams);
         
-        // Intentar cargar documentos primero
+        // Variable para verificar si ya cargamos documentos
+        let documentsLoaded = false;
+        
+        // Intentar cargar documentos primero (método principal)
         try {
-          await documentsPromise;
+          console.log("useDocuments: Cargando documentos...");
+          const result = await fetchDocuments(queryParams, false); // Cambiado a false para evitar toast
+          console.log("useDocuments: Documentos cargados exitosamente:", result.documents?.length || 0);
+          
+          // Marcamos que los documentos se cargaron exitosamente
+          documentsLoaded = true;
+          
+          if (result.documents?.length === 0) {
+            console.warn("useDocuments: No se encontraron documentos en la respuesta");
+          }
         } catch (docError) {
-          console.error('Falló carga inicial de documentos:', docError);
+          console.error('useDocuments: Falló carga inicial de documentos:', docError);
+          
+          // Si el método principal falló, intentamos directamente con el servicio
+          if (!documentsLoaded) {
+            try {
+              console.log("useDocuments: Intentando carga directa con DocumentService...");
+              const directResponse = await documentService.getDocuments(queryParams);
+              
+              if (directResponse && directResponse.results) {
+                console.log("useDocuments: Carga directa exitosa, procesando documentos:", directResponse.results.length);
+                const processedDocs = processDocuments(directResponse.results);
+                
+                if (isMounted) {
+                  setDocuments(processedDocs);
+                  
+                  // Actualizar información de paginación
+                  setPagination({
+                    count: directResponse.count || 0,
+                    next: directResponse.next || null,
+                    previous: directResponse.previous || null,
+                    current: directResponse.current_page || queryParams.page || 1,
+                    total_pages: directResponse.total_pages || 1
+                  });
+                  
+                  // Marcar como cargado
+                  documentsLoaded = true;
+                }
+              }
+            } catch (directError) {
+              console.error("useDocuments: El intento directo también falló:", directError);
+            }
+          }
         }
         
-        // Luego cargar categorías y etiquetas solo si no están cargadas
+        // Cargar categorías solo si no están cargadas
         if (!categoriesLoaded && isMounted) {
           try {
             await loadCategories();
           } catch (catError) {
-            console.error('Falló carga inicial de categorías:', catError);
+            console.error('useDocuments: Falló carga inicial de categorías:', catError);
+            // Intento directo como respaldo
+            try {
+              const cats = await documentService.getCategories();
+              if (cats && cats.results && isMounted) {
+                setCategories(cats.results);
+                setCategoriesLoaded(true);
+              }
+            } catch (e) {
+              console.error("useDocuments: Intento directo de categorías también falló:", e);
+            }
           }
         }
         
+        // Cargar etiquetas solo si no están cargadas
         if (!tagsLoaded && isMounted) {
           try {
             await loadTags();
           } catch (tagError) {
-            console.error('Falló carga inicial de etiquetas:', tagError);
+            console.error('useDocuments: Falló carga inicial de etiquetas:', tagError);
+            // Intento directo como respaldo
+            try {
+              const tags = await documentService.getTags();
+              if (tags && tags.results && isMounted) {
+                setTags(tags.results);
+                setTagsLoaded(true);
+              }
+            } catch (e) {
+              console.error("useDocuments: Intento directo de etiquetas también falló:", e);
+            }
           }
         }
       } catch (error) {
-        console.error('Error global en loadData:', error);
+        console.error('useDocuments: Error global en loadData:', error);
       } finally {
+        // Limpiar estado de carga solo si el componente sigue montado
         if (isMounted) {
           setIsLoading(false);
+          
+          // Liberar la marca de ejecución después de un tiempo para permitir futuras ejecuciones
+          setTimeout(() => {
+            sessionStorage.removeItem(lastRunKey);
+          }, 2000); // 2 segundos para evitar ejecuciones rápidas sucesivas
         }
       }
     };
     
+    // Ejecutar carga de datos
     loadData();
     
+    // Limpieza al desmontar
     return () => {
       isMounted = false;
+      // También limpiar la marca de ejecución
+      sessionStorage.removeItem(lastRunKey);
     };
-  }, [fetchDocuments, loadCategories, loadTags, queryParams, categoriesLoaded, tagsLoaded]);
+  }, [/* Solo dependencias que realmente requieren recargar */
+    queryParams.search, 
+    queryParams.ordering, 
+    queryParams.page, 
+    queryParams.category
+  ]);
   
   /**
    * Manejar búsqueda con parámetros adicionales

@@ -148,11 +148,27 @@ const DocumentList = ({
     );
   }, [selectionMode, selectedDocuments.length, onShareSelected, onToggleSelectionMode]);
 
-  // Mensaje cuando no hay documentos
-  if (documents.length === 0) {
+  // Validar y registrar documentos para depuración
+  useEffect(() => {
+    if (!documents || !Array.isArray(documents)) {
+      console.error("DocumentList recibió documentos en formato inválido:", documents);
+    } else if (documents.length === 0) {
+      console.warn("DocumentList: Array de documentos vacío");
+    } else {
+      console.log(`DocumentList: Renderizando ${documents.length} documentos, primer documento:`, documents[0]);
+    }
+  }, [documents]);
+  
+  // Mensaje cuando no hay documentos o son inválidos
+  if (!documents || !Array.isArray(documents) || documents.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow overflow-hidden p-6 text-center">
         <p className="text-gray-500">No hay documentos que mostrar.</p>
+        <p className="text-gray-400 text-sm mt-2">
+          {!documents ? "Error: Datos no disponibles" : 
+           !Array.isArray(documents) ? "Error: Formato de datos incorrecto" : 
+           "No se encontraron documentos que coincidan con los criterios de búsqueda."}
+        </p>
       </div>
     );
   }

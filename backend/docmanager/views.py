@@ -51,12 +51,19 @@ def debug_auth(request):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['name']
+    
+    def get_permissions(self):
+        """
+        Permitir acceso público a la lista y detalle de categorías para depuración
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_throttles(self):
         """Aplicar throttling basado en si el usuario está autenticado o no"""
@@ -69,12 +76,19 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    
+    def get_permissions(self):
+        """
+        Permitir acceso público a la lista y detalle de etiquetas para depuración
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
     
     def get_throttles(self):
         """Aplicar throttling basado en si el usuario está autenticado o no"""
@@ -368,8 +382,8 @@ class GroupViewSet(viewsets.ModelViewSet):
     ordering = ['-updated_at']
     
     def get_permissions(self):
-        # Permitir creación y listado sin autenticación para pruebas
-        if self.action in ['create', 'list']:
+        # Permitir más acciones sin autenticación para pruebas
+        if self.action in ['create', 'list', 'retrieve', 'documents']:
             return [AllowAny()]
         return [IsAuthenticated()]
     
@@ -620,7 +634,7 @@ class CollectionViewSet(viewsets.ModelViewSet):
     ordering = ['-updated_at']
     
     def get_permissions(self):
-        if self.action in ['public_access', 'public_download', 'create', 'list']:
+        if self.action in ['public_access', 'public_download', 'create', 'list', 'retrieve', 'documents']:
             return [AllowAny()]
         return [IsAuthenticated()]
     
