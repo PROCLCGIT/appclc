@@ -733,40 +733,51 @@ export const debounce = (func, wait = 300) => {
    */
   export const deleteDocument = async (documentId) => {
     try {
-      // Intentar soft delete primero
-      const url = `${API_BASE_URL}/docmanager/documents/${documentId}/soft_delete/`;
+      // Validar que el ID es válido
+      if (!documentId) {
+        throw new Error('ID de documento no válido');
+      }
+      
+      // Convertir a número si es posible para asegurar consistencia
+      const id = typeof documentId === 'string' ? parseInt(documentId, 10) || documentId : documentId;
+      
       const token = getAuthToken();
       
       const headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       };
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      console.log(`Intentando eliminar documento con ID: ${id}`);
+      
+      // Intentar hard delete directamente (omitiendo soft delete)
+      const hardDeleteUrl = `${API_BASE_URL}/docmanager/documents/${id}/`;
+      console.log(`URL de eliminación: ${hardDeleteUrl}`);
+      
+      try {
+        const hardDeleteResponse = await fetch(hardDeleteUrl, {
+          method: 'DELETE',
+          headers
+        });
+        
+        if (hardDeleteResponse.ok) {
+          console.log(`Documento ${id} eliminado correctamente`);
+          return { success: true };
+        }
+        
+        // Si el hard delete falla, verificar el tipo de error
+        if (hardDeleteResponse.status === 404) {
+          console.warn(`Documento ${id} no encontrado`);
+          // Consideramos éxito si el documento ya no existe
+          return { success: true, warning: 'El documento ya había sido eliminado o no existía' };
+        }
+        
+        const errorText = await hardDeleteResponse.text();
+        throw new Error(`Error al eliminar documento (${hardDeleteResponse.status}): ${errorText}`);
+      } catch (hardDeleteError) {
+        console.error(`Error en hard delete para documento ${id}:`, hardDeleteError);
+        throw hardDeleteError;
       }
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      }
-      
-      // Si falla el soft delete, intentar hard delete
-      const hardDeleteUrl = `${API_BASE_URL}/docmanager/documents/${documentId}/`;
-      const hardDeleteResponse = await fetch(hardDeleteUrl, {
-        method: 'DELETE',
-        headers
-      });
-      
-      if (!hardDeleteResponse.ok) {
-        throw new Error(`Error al eliminar documento: ${hardDeleteResponse.status} ${hardDeleteResponse.statusText}`);
-      }
-      
-      return { success: true };
     } catch (error) {
       console.error('Error en deleteDocument:', error);
       throw error;
@@ -932,7 +943,10 @@ export const debounce = (func, wait = 300) => {
         tags: tags,
         created_at: doc.created_at || new Date().toISOString(),
         updated_at: doc.updated_at || new Date().toISOString(),
-        file_url: doc.file_url || doc.file || ''
+        file_url: doc.file_url || doc.file || '',
+        // Asegurar valores definidos para las columnas de la tabla
+        user: doc.user || { username: 'N/A' },
+        owner: doc.owner || 'N/A'
       };
     }).filter(Boolean); // Eliminar null o undefined
   };

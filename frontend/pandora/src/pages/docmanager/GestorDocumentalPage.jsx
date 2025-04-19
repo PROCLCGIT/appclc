@@ -390,29 +390,61 @@ const GestorDocumentalPage = () => {
   
   // Función para eliminar un documento
   const handleDelete = useCallback(async (documentId) => {
+    if (!window.confirm('¿Está seguro que desea eliminar este documento?')) {
+      return false;
+    }
+    
     try {
-      await deleteDocument(documentId);
+      // Verificar que el ID es válido
+      if (!documentId) {
+        throw new Error('ID de documento no válido');
+      }
       
-      // Actualizar la lista después de eliminar
+      // Actualizar la lista inmediatamente para mejor UX (optimistic update)
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       
-      toast({
-        title: 'Éxito',
-        description: 'Documento eliminado correctamente',
-        variant: 'default'
-      });
+      // Intentar eliminar documento
+      const result = await deleteDocument(documentId);
+      
+      // Mensaje basado en el resultado
+      if (result.warning) {
+        toast({
+          title: 'Operación completada',
+          description: result.warning,
+          variant: 'warning'
+        });
+      } else {
+        toast({
+          title: 'Éxito',
+          description: 'Documento eliminado correctamente',
+          variant: 'default'
+        });
+      }
+      
+      // Recargar documentos para asegurar consistencia con el backend
+      setTimeout(() => refreshData(), 500);
       
       return true;
     } catch (error) {
       console.error('Error al eliminar documento:', error);
+      
+      // Mensaje de error amigable
+      const errorMessage = error.message && error.message.includes('404') 
+        ? 'El documento no pudo encontrarse. Puede haber sido eliminado anteriormente.'
+        : error.message || 'No se pudo eliminar el documento';
+      
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo eliminar el documento',
+        description: errorMessage,
         variant: 'destructive'
       });
+      
+      // Recargar documentos para recuperar el estado correcto
+      refreshData();
+      
       return false;
     }
-  }, [toast]);
+  }, [toast, refreshData]);
   
   // Función para marcar/desmarcar como favorito
   const handleToggleFavorite = useCallback(async (documentId) => {
@@ -1430,6 +1462,39 @@ const GestorDocumentalPage = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Cabecera */}
       <Header onUploadClick={onUploadClick} />
+      
+      {/* Modales */}
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Suspense fallback={<ComponentFallback />}>
+          {/* Modal de grupos */}
+          {showGroupsModal && (
+            <GroupsModal
+              show={showGroupsModal}
+              onClose={() => setShowGroupsModal(false)}
+              groups={groups}
+              selectedGroup={selectedGroup}
+              onCreateGroup={handleCreateGroup}
+              onSelectGroup={handleSelectGroup}
+              onDeleteGroup={handleDeleteGroup}
+            />
+          )}
+          
+          {/* Modal de colecciones */}
+          {showCollectionsModal && (
+            <CollectionsModal
+              show={showCollectionsModal}
+              onClose={() => setShowCollectionsModal(false)}
+              collections={collections}
+              onCreateCollection={handleCreateCollection}
+              onViewCollection={handleViewCollection}
+              onDeleteCollection={handleDeleteCollection}
+              onExportCollection={handleExportCollection}
+              selectedDocuments={selectedDocuments}
+              onAddToCollection={handleAddToCollection}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Barra de búsqueda y filtros */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -1461,7 +1526,10 @@ const GestorDocumentalPage = () => {
             
             {/* Botón para gestionar grupos */}
             <button
-              onClick={() => setShowGroupsModal(true)}
+              onClick={() => {
+                loadGroups();
+                setShowGroupsModal(true);
+              }}
               className="flex items-center ml-2 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
               aria-label="Gestionar grupos"
             >
@@ -1476,7 +1544,10 @@ const GestorDocumentalPage = () => {
             
             {/* Botón para gestionar colecciones */}
             <button
-              onClick={() => setShowCollectionsModal(true)}
+              onClick={() => {
+                loadCollections();
+                setShowCollectionsModal(true);
+              }}
               className="flex items-center ml-2 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
               aria-label="Gestionar colecciones"
             >
@@ -1600,33 +1671,6 @@ const GestorDocumentalPage = () => {
             />
           )}
 
-          {/* Modal de gestión de grupos */}
-          {showGroupsModal && (
-            <GroupsModal
-              show={showGroupsModal}
-              onClose={() => setShowGroupsModal(false)}
-              groups={groups}
-              selectedGroup={selectedGroup}
-              onCreateGroup={handleCreateGroup}
-              onSelectGroup={handleSelectGroup}
-              onDeleteGroup={handleDeleteGroup}
-            />
-          )}
-
-          {/* Modal de gestión de colecciones */}
-          {showCollectionsModal && (
-            <CollectionsModal
-              show={showCollectionsModal}
-              onClose={() => setShowCollectionsModal(false)}
-              collections={collections}
-              onCreateCollection={handleCreateCollection}
-              onViewCollection={handleViewCollection}
-              onDeleteCollection={handleDeleteCollection}
-              onExportCollection={handleExportCollection}
-              selectedDocuments={selectedDocuments}
-              onAddToCollection={handleAddToCollection}
-            />
-          )}
         </Suspense>
       </ErrorBoundary>
     </div>

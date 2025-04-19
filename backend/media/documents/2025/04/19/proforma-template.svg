@@ -1,0 +1,151 @@
+<svg viewBox="0 0 800 1130" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo y elementos decorativos -->
+  <rect width="800" height="1130" fill="white"/>
+  
+  <!-- Elementos decorativos superiores -->
+  <rect x="0" y="0" width="700" height="20" fill="#F9C22E"/>
+  <polygon points="700,0 800,0 800,100 700,20" fill="#333333"/>
+  
+  <!-- Elementos decorativos inferiores -->
+  <polygon points="0,1030 100,1030 0,1130" fill="#F9C22E"/>
+  <rect x="100" y="1110" width="700" height="20" fill="#F9C22E"/>
+  
+  <!-- Área del encabezado -->
+  <g id="header">
+    <!-- Logo de la empresa -->
+    <circle cx="40" cy="60" r="20" fill="#F9C22E"/>
+    <text x="70" y="65" font-family="Arial, sans-serif" font-weight="bold" font-size="18">COMPAÑÍA</text>
+    
+    <!-- Información de la empresa -->
+    <text x="40" y="100" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Dirección:</text>
+    <text x="40" y="120" font-family="Arial, sans-serif" font-size="12">Calle Principal #123</text>
+    <text x="40" y="140" font-family="Arial, sans-serif" font-size="12">Ciudad, País</text>
+    <text x="40" y="160" font-family="Arial, sans-serif" font-size="12">Tel: +00 123 456 789</text>
+    <text x="40" y="180" font-family="Arial, sans-serif" font-size="12">Email: info@compania.com</text>
+    
+    <!-- Título del documento -->
+    <text x="600" y="65" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#F9C22E" text-anchor="end">PROFORMA</text>
+    
+    <!-- Número y fecha del documento -->
+    <text x="600" y="100" font-family="Arial, sans-serif" font-size="12" text-anchor="end"># PROFORMA: PRO-001</text>
+    <text x="600" y="120" font-family="Arial, sans-serif" font-size="12" text-anchor="end">Fecha: 12/04/2025</text>
+    <text x="600" y="140" font-family="Arial, sans-serif" font-size="12" text-anchor="end">Válido hasta: 12/05/2025</text>
+  </g>
+  
+  <!-- Información del cliente -->
+  <g id="client-info">
+    <rect x="40" y="220" width="720" height="80" fill="#333333"/>
+    <text x="50" y="245" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">CLIENTE:</text>
+    <text x="50" y="270" font-family="Arial, sans-serif" font-size="14" fill="white">Nombre del Cliente</text>
+    <text x="50" y="290" font-family="Arial, sans-serif" font-size="12" fill="white">cliente@email.com</text>
+  </g>
+  
+  <!-- Tabla de elementos -->
+  <g id="items-table">
+    <!-- Encabezados de tabla -->
+    <rect x="40" y="330" width="400" height="40" fill="#f0f0f0"/>
+    <rect x="440" y="330" width="120" height="40" fill="#f0f0f0"/>
+    <rect x="560" y="330" width="100" height="40" fill="#f0f0f0"/>
+    <rect x="660" y="330" width="100" height="40" fill="#f0f0f0"/>
+    
+    <text x="50" y="355" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Descripción</text>
+    <text x="500" y="355" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Precio</text>
+    <text x="610" y="355" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Cantidad</text>
+    <text x="710" y="355" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Total</text>
+    
+    <!-- Filas de elementos -->
+    <!-- Item 1 -->
+    <rect x="40" y="370" width="400" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="440" y="370" width="120" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="560" y="370" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="660" y="370" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    
+    <text x="50" y="395" font-family="Arial, sans-serif" font-size="14">Diseño Web</text>
+    <text x="500" y="395" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$700.00</text>
+    <text x="610" y="395" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">1</text>
+    <text x="710" y="395" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$700.00</text>
+    
+    <!-- Item 2 -->
+    <rect x="40" y="410" width="400" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="440" y="410" width="120" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="560" y="410" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="660" y="410" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    
+    <text x="50" y="435" font-family="Arial, sans-serif" font-size="14">Diseño Gráfico</text>
+    <text x="500" y="435" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$350.00</text>
+    <text x="610" y="435" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">1</text>
+    <text x="710" y="435" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$350.00</text>
+    
+    <!-- Item 3 -->
+    <rect x="40" y="450" width="400" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="440" y="450" width="120" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="560" y="450" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="660" y="450" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    
+    <text x="50" y="475" font-family="Arial, sans-serif" font-size="14">Desarrollo Backend</text>
+    <text x="500" y="475" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$800.00</text>
+    <text x="610" y="475" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">1</text>
+    <text x="710" y="475" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$800.00</text>
+    
+    <!-- Item 4 -->
+    <rect x="40" y="490" width="400" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="440" y="490" width="120" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="560" y="490" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    <rect x="660" y="490" width="100" height="40" fill="white" stroke="#e0e0e0"/>
+    
+    <text x="50" y="515" font-family="Arial, sans-serif" font-size="14">Diseño Final</text>
+    <text x="500" y="515" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$500.00</text>
+    <text x="610" y="515" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">1</text>
+    <text x="710" y="515" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$500.00</text>
+  </g>
+  
+  <!-- Resumen de pagos -->
+  <g id="payment-summary">
+    <text x="40" y="560" font-family="Arial, sans-serif" font-size="16" font-weight="bold">RESUMEN FINANCIERO</text>
+    
+    <rect x="440" y="580" width="220" height="30" fill="#f0f0f0"/>
+    <rect x="660" y="580" width="100" height="30" fill="#f0f0f0"/>
+    <text x="450" y="600" font-family="Arial, sans-serif" font-size="14">Subtotal</text>
+    <text x="710" y="600" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$2,350.00</text>
+    
+    <rect x="440" y="610" width="220" height="30" fill="#f0f0f0"/>
+    <rect x="660" y="610" width="100" height="30" fill="#f0f0f0"/>
+    <text x="450" y="630" font-family="Arial, sans-serif" font-size="14">IVA (21%)</text>
+    <text x="710" y="630" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">$493.50</text>
+    
+    <rect x="440" y="640" width="220" height="40" fill="#333333"/>
+    <rect x="660" y="640" width="100" height="40" fill="#F9C22E"/>
+    <text x="450" y="665" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white">TOTAL</text>
+    <text x="710" y="665" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle">$2,843.50</text>
+  </g>
+  
+  <!-- Términos y condiciones -->
+  <g id="terms">
+    <text x="40" y="720" font-family="Arial, sans-serif" font-size="16" font-weight="bold">TÉRMINOS Y CONDICIONES</text>
+    <rect x="40" y="730" width="720" height="2" fill="#e0e0e0"/>
+    
+    <text x="40" y="760" font-family="Arial, sans-serif" font-size="12">1. Esta proforma es válida por 30 días a partir de la fecha de emisión.</text>
+    <text x="40" y="785" font-family="Arial, sans-serif" font-size="12">2. El pago debe realizarse según los términos acordados.</text>
+    <text x="40" y="810" font-family="Arial, sans-serif" font-size="12">3. Los precios no incluyen costos de envío, a menos que se especifique lo contrario.</text>
+    <text x="40" y="835" font-family="Arial, sans-serif" font-size="12">4. Para confirmar el pedido, se requiere un pago anticipado del 50%.</text>
+  </g>
+  
+  <!-- Firma -->
+  <g id="signature">
+    <text x="40" y="900" font-family="Arial, sans-serif" font-size="14" font-weight="bold">FIRMA AUTORIZADA</text>
+    <rect x="40" y="910" width="300" height="1" fill="#333333"/>
+    <text x="40" y="930" font-family="Arial, sans-serif" font-size="12" font-style="italic">Firma digital</text>
+  </g>
+  
+  <!-- Información de contacto inferior -->
+  <g id="footer">
+    <circle cx="100" cy="1070" r="15" fill="#F9C22E"/>
+    <text x="125" y="1075" font-family="Arial, sans-serif" font-size="12">www.compania.com</text>
+    
+    <circle cx="300" cy="1070" r="15" fill="#F9C22E"/>
+    <text x="325" y="1075" font-family="Arial, sans-serif" font-size="12">info@compania.com</text>
+    
+    <circle cx="500" cy="1070" r="15" fill="#F9C22E"/>
+    <text x="525" y="1075" font-family="Arial, sans-serif" font-size="12">+00 123 456 789</text>
+  </g>
+</svg>
