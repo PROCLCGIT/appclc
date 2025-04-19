@@ -154,7 +154,7 @@ const DocumentRow = ({
   return (
     <>
       {selectionMode && (
-        <td className="w-12 px-4">
+        <td className="w-12 px-4" role="cell">
           <div className="flex items-center justify-center">
             <div className="relative w-5 h-5">
               <input 
@@ -165,14 +165,14 @@ const DocumentRow = ({
                 aria-label={`Seleccionar ${document.title}`}
               />
               {isSelected && (
-                <Check className="absolute top-0 left-0 w-5 h-5 text-white pointer-events-none" size={20} />
+                <Check className="absolute top-0 left-0 w-5 h-5 text-white pointer-events-none" size={20} aria-hidden="true" />
               )}
             </div>
           </div>
         </td>
       )}
       
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="w-[42%] px-6 py-4 whitespace-nowrap" role="cell">
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
             {getFileIcon()}
@@ -212,23 +212,23 @@ const DocumentRow = ({
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-center">
+      <td className="w-[15%] px-6 py-4 whitespace-nowrap text-center" role="cell">
         <div className="text-sm text-gray-900">
           {document.category_name || 'Sin categoría'}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-center">
+      <td className="w-[15%] px-6 py-4 whitespace-nowrap text-center" role="cell">
         <div className="text-sm text-gray-900">
           {formatDate(document.updated_at || document.created_at)}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+      <td className="w-[8%] px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center" role="cell">
         {formatFileSize(document.file_size)}
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+      <td className="w-[20%] px-6 py-4 whitespace-nowrap text-right text-sm font-medium" role="cell">
         <div className="flex items-center justify-end space-x-4">
           <button 
             onClick={handleToggleFavorite} 

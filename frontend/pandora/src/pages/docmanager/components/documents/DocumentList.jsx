@@ -183,7 +183,15 @@ const DocumentList = ({
       {selectionPanel}
       
       <div className="overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200" role="grid" aria-rowcount={validDocuments.length}>
+        <table className="min-w-full divide-y divide-gray-200 table-fixed" role="grid" aria-rowcount={validDocuments.length}>
+          <colgroup>
+            {selectionMode && <col className="w-12" />}
+            <col className="w-[42%]" />
+            <col className="w-[15%]" />
+            <col className="w-[15%]" />
+            <col className="w-[8%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <thead className="bg-gray-50 sticky top-0 z-10">
             {tableHeaders}
           </thead>
