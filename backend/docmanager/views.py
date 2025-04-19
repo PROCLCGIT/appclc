@@ -57,6 +57,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['name']
+    
+    def get_throttles(self):
+        """Aplicar throttling basado en si el usuario está autenticado o no"""
+        from .throttling import CategoryRateThrottle, CategoryAnonRateThrottle
+        if self.request.user.is_authenticated:
+            return [CategoryRateThrottle()]
+        return [CategoryAnonRateThrottle()]
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -68,6 +75,13 @@ class TagViewSet(viewsets.ModelViewSet):
     search_fields = ['name']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    
+    def get_throttles(self):
+        """Aplicar throttling basado en si el usuario está autenticado o no"""
+        from .throttling import TagRateThrottle, TagAnonRateThrottle
+        if self.request.user.is_authenticated:
+            return [TagRateThrottle()]
+        return [TagAnonRateThrottle()]
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -84,6 +98,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'public_download', 'retrieve']:
             return [AllowAny()]
         return [IsAuthenticated()]
+    
+    def get_throttles(self):
+        """Aplicar throttling basado en si el usuario está autenticado o no"""
+        from .throttling import DocumentRateThrottle, DocumentAnonRateThrottle
+        if self.request.user.is_authenticated:
+            return [DocumentRateThrottle()]
+        return [DocumentAnonRateThrottle()]
     
     @action(detail=True, methods=['get'], url_path='public-download')
     def public_download(self, request, pk=None):
@@ -371,9 +392,10 @@ class GroupViewSet(viewsets.ModelViewSet):
             is_public = is_public.lower() == 'true'
             queryset = queryset.filter(is_public=is_public)
         
-        # Añadir anotaciones para document_count
+        # Añadir anotaciones para contar documentos
+        # Usamos nombres diferentes para evitar conflictos con las propiedades del modelo
         queryset = queryset.annotate(
-            document_count=Count('documents', distinct=True)
+            documents_count=Count('documents', distinct=True)
         )
         
         return queryset
@@ -621,10 +643,11 @@ class CollectionViewSet(viewsets.ModelViewSet):
             is_public = is_public.lower() == 'true'
             queryset = queryset.filter(is_public=is_public)
         
-        # Añadir anotaciones para document_count y total_size
+        # Añadir anotaciones para contar documentos y calcular tamaño total
+        # Usamos nombres diferentes para evitar conflictos con las propiedades del modelo
         queryset = queryset.annotate(
-            document_count=Count('documents', distinct=True),
-            total_size=Sum('documents__file_size')
+            documents_count=Count('documents', distinct=True),
+            documents_total_size=Sum('documents__file_size')
         )
         
         return queryset

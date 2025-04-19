@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 
 // Hooks personalizados
 import useDocuments from './hooks/useDocuments';
@@ -10,32 +11,44 @@ import { documentService } from '@/services/classes';
 // Configuración
 import { API_BASE_URL } from '@/config/constants';
 
-// Modales
-import TagsModal from './components/modal/TagsModal';
-import GroupsModal from './components/modal/GroupsModal';
-import CollectionsModal from './components/modal/CollectionsModal';
+// Importación de componentes con lazy loading
+const TagsModal = lazy(() => import('./components/modal/TagsModal'));
+const GroupsModal = lazy(() => import('./components/modal/GroupsModal'));
+const CollectionsModal = lazy(() => import('./components/modal/CollectionsModal'));
+const SimpleUploadModal = lazy(() => import('./components/modal/SimpleUploadModal'));
 
-// Componentes de layout
+// Componentes de layout que se cargan inmediatamente
 import Header from './components/layout/Header';
 import SearchBar from './components/layout/SearchBar';
-
-// Componentes de filtros
 import FilterPanel from './components/filters/FilterPanel';
 import ViewToggle from './components/filters/ViewToggle';
-
-// Componentes de documentos
-import DocumentGrid from './components/documents/DocumentGrid';
-import DocumentList from './components/documents/DocumentList';
-
-// Componentes comunes
 import LoadingSpinner from './components/common/LoadingSpinner';
 import EmptyState from './components/common/EmptyState';
 
-// Componentes de modales
-import SimpleUploadModal from './components/modal/SimpleUploadModal';
+// Componentes de documento (lazy loading)
+const DocumentGrid = lazy(() => import('./components/documents/DocumentGrid'));
+const DocumentList = lazy(() => import('./components/documents/DocumentList'));
+
+// Fallback para componentes cargados con lazy
+const ComponentFallback = () => <div className="p-4 animate-pulse bg-gray-100 rounded-md">Cargando componente...</div>;
+
+// Componente para manejar errores en componentes
+const ErrorFallback = ({ error, resetErrorBoundary }) => (
+  <div className="p-4 border border-red-200 rounded-md bg-red-50 text-red-800">
+    <h3 className="text-lg font-medium mb-2">Ocurrió un error</h3>
+    <p className="mb-3">{error.message}</p>
+    <button
+      onClick={resetErrorBoundary}
+      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+    >
+      Reintentar
+    </button>
+  </div>
+);
 
 /**
  * Componente principal del Gestor Documental
+ * @returns {JSX.Element} Componente GestorDocumentalPage
  */
 const GestorDocumentalPage = () => {
   // Estados locales (inicializa vista como lista en lugar de grid)
@@ -84,122 +97,160 @@ const GestorDocumentalPage = () => {
     setDocuments
   } = useDocuments();
   
-  // Función para obtener documentos directamente del API (bypass autenticación)
-  const fetchDocumentsDirectly = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/docmanager/documents/`);
+  // Función para normalizar documentos
+  const normalizeDocuments = useCallback((docs) => {
+    if (!docs) return [];
+    
+    return docs.map(doc => {
+      // Procesamiento mejorado de categoría
+      let categoryName = '';
       
-      if (!response.ok) {
-        throw new Error(`Error en la solicitud: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Documentos obtenidos directamente:", data);
-      
-      // Verificar si la respuesta tiene el formato esperado
-      if (data && Array.isArray(data.results)) {
-        // Procesar documentos para asegurar campos necesarios
-        const processedDocs = data.results.map(doc => ({
-          ...doc,
-          // Asegurar que category_name está disponible
-          category_name: doc.category_name || (doc.category && typeof doc.category === 'object' ? doc.category.name : ''),
-          // Asegurar que file_type está disponible
-          file_type: doc.file_type || (doc.file_name ? doc.file_name.split('.').pop() : 'unknown'),
-          // Proporcionar tags si no existen
-          tags: doc.tags || []
-        }));
-        
-        // Devolver los documentos procesados
-        return processedDocs;
-      } else {
-        console.error("Formato de respuesta inválido:", data);
-        throw new Error("Formato de respuesta inválido");
-      }
-    } catch (error) {
-      console.error("Error al obtener documentos directamente:", error);
-      toast({
-        title: "Error",
-        description: `No se pudieron obtener los documentos: ${error.message}`,
-        variant: "destructive"
-      });
-      return [];
-    }
-  };
-  
-  // Cargar colecciones
-  const loadCollections = async () => {
-    try {
-      const response = await documentService.getCollections();
-      console.log("Colecciones cargadas:", response);
-      setCollections(response.results || []);
-      return response.results;
-    } catch (error) {
-      console.error('Error al cargar colecciones:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar las colecciones',
-        variant: 'destructive'
-      });
-      return [];
-    }
-  };
-  
-  // Carga inicial de documentos al montar el componente
-  useEffect(() => {
-    // Forzar una carga inicial de documentos cuando montamos el componente
-    const loadInitialDocuments = async () => {
-      console.log("Iniciando carga inicial de documentos...");
-      
-      try {
-        // Primero intentamos usar el mecanismo normal a través del hook
-        await refreshData();
-        console.log("Carga inicial completada a través de refreshData");
-        
-        // Cargar grupos y colecciones
-        loadGroups();
-        loadCollections();
-        
-        // Si después de la carga normal todavía no hay documentos, intentamos la carga directa
-        setTimeout(async () => {
-          if (!documents || documents.length === 0) {
-            console.log("No hay documentos después de refreshData, intentando carga directa...");
-            try {
-              const docs = await fetchDocumentsDirectly();
-              if (docs && docs.length > 0) {
-                console.log("Documentos cargados directamente con éxito:", docs.length);
-                console.log("Primer documento:", docs[0]);
-                setDocuments(docs);
-              } else {
-                console.log("La carga directa no devolvió documentos");
-              }
-            } catch (directError) {
-              console.error("Error en carga directa de documentos:", directError);
+      if (doc.category_name) {
+        categoryName = doc.category_name;
+      } else if (doc.category) {
+        if (typeof doc.category === 'object' && doc.category !== null) {
+          categoryName = doc.category.name || 
+                        doc.category.title || 
+                        doc.category.label || 
+                        doc.category.value || 
+                        '';
+          
+          if (!categoryName && doc.category.id && categories) {
+            const matchingCategory = categories.find(c => c.id === doc.category.id);
+            if (matchingCategory) {
+              categoryName = matchingCategory.name;
             }
           }
-        }, 1000);
+        } else if (typeof doc.category === 'string') {
+          categoryName = doc.category;
+        } else if (typeof doc.category === 'number') {
+          const matchingCategory = categories.find(c => c.id === doc.category);
+          if (matchingCategory) {
+            categoryName = matchingCategory.name;
+          }
+        }
+      }
+      
+      return {
+        ...doc,
+        category_name: categoryName || 'Sin categoría',
+        file_type: doc.file_type || (doc.file_name ? doc.file_name.split('.').pop() : 'unknown'),
+        tags: doc.tags || []
+      };
+    });
+  }, [categories]);
+  
+  // Cargar grupos y colecciones
+  const loadGroups = useCallback(async () => {
+    try {
+      // Añadir un tiempo límite para evitar bloqueos
+      const response = await Promise.race([
+        documentService.getGroups(),
+        new Promise((_, reject) => setTimeout(() => 
+          reject(new Error('Timeout al cargar grupos')), 8000)
+        )
+      ]);
+      
+      console.log("Grupos cargados:", response);
+      const groups = response.results || [];
+      setGroups(groups);
+      return groups;
+    } catch (error) {
+      console.error('Error al cargar grupos:', error);
+      
+      // Si el error es por timeout o recursos insuficientes, mostrar mensaje más claro
+      const errorMessage = error.message.includes('Timeout') || 
+                          error.message.includes('ERR_INSUFFICIENT_RESOURCES') ?
+        'No se pudieron cargar los grupos (problemas de recursos). Se usarán datos locales.' :
+        'No se pudieron cargar los grupos';
+      
+      toast({
+        title: 'Advertencia',
+        description: errorMessage,
+        variant: 'warning'
+      });
+      
+      // Usar grupos vacíos como fallback
+      return [];
+    }
+  }, [toast]);
+
+  const loadCollections = useCallback(async () => {
+    try {
+      // Añadir un tiempo límite para evitar bloqueos
+      const response = await Promise.race([
+        documentService.getCollections(),
+        new Promise((_, reject) => setTimeout(() => 
+          reject(new Error('Timeout al cargar colecciones')), 8000)
+        )
+      ]);
+      
+      console.log("Colecciones cargadas:", response);
+      const collections = response.results || [];
+      setCollections(collections);
+      return collections;
+    } catch (error) {
+      console.error('Error al cargar colecciones:', error);
+      
+      // Si el error es por timeout o recursos insuficientes, mostrar mensaje más claro
+      const errorMessage = error.message.includes('Timeout') || 
+                          error.message.includes('ERR_INSUFFICIENT_RESOURCES') ?
+        'No se pudieron cargar las colecciones (problemas de recursos). Se usarán datos locales.' :
+        'No se pudieron cargar las colecciones';
+      
+      toast({
+        title: 'Advertencia',
+        description: errorMessage,
+        variant: 'warning'
+      });
+      
+      return [];
+    }
+  }, [toast]);
+  
+  // Carga inicial de recursos
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // Mostrar toast de carga inicial
+        toast({
+          title: 'Cargando',
+          description: 'Inicializando gestor documental...',
+          duration: 2000
+        });
+        
+        // Cargar datos en paralelo para mejorar rendimiento
+        await Promise.all([
+          refreshData(),
+          loadGroups(),
+          loadCollections()
+        ]);
+        
       } catch (error) {
-        console.error("Error en carga inicial de documentos:", error);
+        console.error('Error en la inicialización:', error);
+        toast({
+          title: 'Error',
+          description: 'No se pudo inicializar correctamente. Algunos recursos pueden no estar disponibles.',
+          variant: 'destructive'
+        });
       }
     };
     
-    loadInitialDocuments();
-  // Este efecto debe ejecutarse solo una vez al montar el componente
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    initialize();
+  }, [refreshData, loadGroups, loadCollections, toast]);
 
   // Manejar subida de archivos
-  const onUploadClick = async () => {
+  const onUploadClick = useCallback(async () => {
     setSelectedFile(null);
     
     // Forzar carga de categorías antes de mostrar el modal
-    const loadedCategories = await forceLoadCategories();
-    console.log("Categorías cargadas antes de abrir modal:", loadedCategories);
+    await forceLoadCategories();
     
     setShowUploadModal(true);
-  };
+  }, [setSelectedFile, forceLoadCategories]);
 
   // Subir documento y cerrar modal
-  const onUpload = async (formData) => {
+  const onUpload = useCallback(async (formData) => {
     console.log("GestorDocumentalPage.onUpload llamado con formData:", {
       hasFile: formData.has('file'),
       fileName: formData.get('file')?.name,
@@ -208,34 +259,16 @@ const GestorDocumentalPage = () => {
     });
     
     try {
-      // Usar la instancia de API para enviar el formulario directamente
-      const token = localStorage.getItem('auth-token');
-      console.log("Subiendo con token:", !!token);
-      
-      // Crear cabeceras para la solicitud
-      const headers = new Headers();
-      if (token) {
-        headers.append('Authorization', `Bearer ${token}`);
-      }
-      
       // Mostrar mensaje de carga
       toast({
         title: "Procesando",
         description: "Subiendo documento..."
       });
       
-      // Enviar solicitud fetch directamente
-      const response = await fetch(`${API_BASE_URL}/docmanager/documents/`, {
-        method: 'POST',
-        headers: headers,
-        body: formData
-      });
+      // Usar la función handleUpload del hook useDocuments
+      const result = await handleUpload(formData);
       
-      // Procesar la respuesta
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Documento subido con éxito:", data);
-        
+      if (result) {
         // Cerrar modal
         setShowUploadModal(false);
         
@@ -250,26 +283,9 @@ const GestorDocumentalPage = () => {
           refreshData();
         }, 300);
         
-        return data;
+        return result;
       } else {
-        // Manejar error del servidor
-        let errorMsg = 'Error al subir el documento';
-        try {
-          const errorData = await response.json();
-          if (errorData.detail) {
-            errorMsg = errorData.detail;
-          }
-        } catch (e) {
-          errorMsg = `Error ${response.status}: ${response.statusText}`;
-        }
-        
-        toast({
-          title: 'Error',
-          description: errorMsg,
-          variant: 'destructive'
-        });
-        
-        return null;
+        throw new Error('No se pudo subir el documento');
       }
     } catch (error) {
       console.error("Error al subir documento en onUpload:", error);
@@ -283,21 +299,21 @@ const GestorDocumentalPage = () => {
       
       return null;
     }
-  };
+  }, [handleUpload, refreshData, toast]);
 
   // Cerrar modal de subida
-  const onCloseUpload = () => {
+  const onCloseUpload = useCallback(() => {
     setShowUploadModal(false);
-  };
+  }, []);
 
   // Abrir modal para administrar etiquetas
-  const handleManageTags = (document) => {
+  const handleManageTags = useCallback((document) => {
     setSelectedDocumentForTags(document);
     setShowTagsModal(true);
-  };
+  }, []);
 
   // Agregar etiqueta a un documento
-  const handleAddTag = async (documentId, tagId) => {
+  const handleAddTag = useCallback(async (documentId, tagId) => {
     try {
       await documentService.addTags(documentId, [tagId]);
       toast({
@@ -317,10 +333,10 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [refreshData, toast]);
 
   // Eliminar etiqueta de un documento
-  const handleRemoveTag = async (documentId, tagId) => {
+  const handleRemoveTag = useCallback(async (documentId, tagId) => {
     try {
       await documentService.removeTag(documentId, tagId);
       toast({
@@ -340,10 +356,10 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [refreshData, toast]);
 
   // Crear nueva etiqueta
-  const handleCreateTag = async (name) => {
+  const handleCreateTag = useCallback(async (name) => {
     try {
       const newTag = await createTag(name);
       toast({
@@ -361,28 +377,10 @@ const GestorDocumentalPage = () => {
       });
       return null;
     }
-  };
-  
-  // Cargar grupos
-  const loadGroups = async () => {
-    try {
-      const response = await documentService.getGroups();
-      console.log("Grupos cargados:", response);
-      setGroups(response.results || []);
-      return response.results;
-    } catch (error) {
-      console.error('Error al cargar grupos:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los grupos',
-        variant: 'destructive'
-      });
-      return [];
-    }
-  };
+  }, [createTag, toast]);
 
   // Crear un nuevo grupo
-  const handleCreateGroup = async (groupData) => {
+  const handleCreateGroup = useCallback(async (groupData) => {
     try {
       const newGroup = await documentService.createGroup(groupData);
       toast({
@@ -404,10 +402,10 @@ const GestorDocumentalPage = () => {
       });
       throw error;
     }
-  };
+  }, [loadGroups, toast]);
 
   // Eliminar un grupo
-  const handleDeleteGroup = async (groupId) => {
+  const handleDeleteGroup = useCallback(async (groupId) => {
     try {
       await documentService.deleteGroup(groupId);
       toast({
@@ -434,23 +432,25 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [loadGroups, selectedGroup, toast]);
 
   // Seleccionar un grupo
-  const handleSelectGroup = (group) => {
+  const handleSelectGroup = useCallback((group) => {
     setSelectedGroup(group);
     setShowGroupsModal(false);
     
     // Filtrar documentos por grupo
-    // Aquí puedes implementar la lógica para mostrar solo los documentos del grupo seleccionado
     toast({
       title: 'Grupo seleccionado',
       description: `Mostrando documentos del grupo "${group.name}"`,
     });
-  };
+    
+    // Implementar búsqueda filtrada por grupo
+    handleSearch('', { group: group.id });
+  }, [handleSearch, toast]);
   
   // Crear una nueva colección
-  const handleCreateCollection = async (collectionData) => {
+  const handleCreateCollection = useCallback(async (collectionData) => {
     try {
       const newCollection = await documentService.createCollection(collectionData);
       toast({
@@ -472,10 +472,10 @@ const GestorDocumentalPage = () => {
       });
       throw error;
     }
-  };
+  }, [loadCollections, toast]);
 
   // Ver detalles de una colección
-  const handleViewCollection = async (collectionId) => {
+  const handleViewCollection = useCallback(async (collectionId) => {
     try {
       const collection = await documentService.getCollection(collectionId);
       setCollectionToView(collection);
@@ -489,7 +489,10 @@ const GestorDocumentalPage = () => {
         variant: 'default'
       });
       
-      // Aquí podrías implementar la lógica para mostrar los documentos de la colección
+      // Establecer los documentos de la colección
+      setDocuments(collectionDocs.results || []);
+      
+      // Cerrar modal
       setShowCollectionsModal(false);
       
       return collection;
@@ -502,10 +505,10 @@ const GestorDocumentalPage = () => {
       });
       return null;
     }
-  };
+  }, [setDocuments, toast]);
 
   // Eliminar una colección
-  const handleDeleteCollection = async (collectionId) => {
+  const handleDeleteCollection = useCallback(async (collectionId) => {
     if (!window.confirm('¿Está seguro que desea eliminar esta colección?')) {
       return false;
     }
@@ -521,6 +524,12 @@ const GestorDocumentalPage = () => {
       // Actualizar lista de colecciones
       loadCollections();
       
+      // Si estamos viendo esta colección, recargar todos los documentos
+      if (collectionToView && collectionToView.id === collectionId) {
+        setCollectionToView(null);
+        refreshData();
+      }
+      
       return true;
     } catch (error) {
       console.error('Error al eliminar colección:', error);
@@ -531,10 +540,10 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [collectionToView, loadCollections, refreshData, toast]);
 
   // Exportar una colección
-  const handleExportCollection = async (collectionId) => {
+  const handleExportCollection = useCallback(async (collectionId) => {
     try {
       toast({
         title: 'Exportando colección',
@@ -567,17 +576,27 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [toast]);
 
   // Añadir documentos a una colección
-  const handleAddToCollection = async (collectionId, documentIds) => {
+  const handleAddToCollection = useCallback(async (collectionId, documentIds) => {
     try {
-      await documentService.addDocumentsToCollection(collectionId, documentIds);
+      const result = await documentService.addDocumentsToCollection(collectionId, documentIds);
+      
+      toast({
+        title: 'Documentos añadidos',
+        description: `Se han añadido ${documentIds.length} documentos a la colección`,
+        variant: 'default'
+      });
       
       // Actualizar lista de colecciones
       loadCollections();
       
-      return true;
+      // Desactivar modo selección
+      setSelectionMode(false);
+      setSelectedDocuments([]);
+      
+      return result;
     } catch (error) {
       console.error('Error al añadir documentos a colección:', error);
       toast({
@@ -587,22 +606,15 @@ const GestorDocumentalPage = () => {
       });
       return false;
     }
-  };
+  }, [loadCollections, toast]);
 
   // Visualizar documento
-  const onView = (document) => {
-    console.log("Visualizando documento:", document);
-    
+  const onView = useCallback(async (document) => {
     // Verificar si el documento ya tiene URL de archivo
     if (document.file_url) {
-      console.log("Documento ya tiene URL:", document.file_url);
       window.open(document.file_url, '_blank');
       return;
     }
-    
-    // Si no hay URL directa, intentar con el endpoint público
-    const publicUrl = `${API_BASE_URL}/docmanager/documents/${document.id}/public-download/`;
-    console.log("Solicitando URL pública:", publicUrl);
     
     // Mostrar mensaje de carga
     toast({
@@ -610,123 +622,172 @@ const GestorDocumentalPage = () => {
       description: "Preparando el documento para visualización..."
     });
     
-    // Solicitar la URL pública sin autenticación
-    fetch(publicUrl)
-      .then(response => {
-        if (!response.ok) {
-          // Si falla la solicitud pública, intentar con el endpoint autenticado
-          const token = localStorage.getItem('auth-token');
-          const authUrl = `${API_BASE_URL}/docmanager/documents/${document.id}/download/`;
-          
-          console.log("Fallback: Solicitando URL autenticada:", authUrl);
-          
-          return fetch(authUrl, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-        }
-        return response;
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Error al obtener URL: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log("URL de documento obtenida:", data);
+    try {
+      // Intentar primero la descarga autenticada
+      const token = localStorage.getItem('auth-token');
+      const download = await documentService.downloadDocument(document.id);
+      
+      if (download && download.file_url) {
+        // Abrir la URL en nueva pestaña
+        window.open(download.file_url, '_blank');
         
-        if (data.file_url) {
-          // Construir URL absoluta si es necesario
-          const fileUrl = data.file_url.startsWith('http') 
-            ? data.file_url 
-            : `${window.location.origin}${data.file_url}`;
-            
-          console.log("Abriendo URL:", fileUrl);
-          window.open(fileUrl, '_blank');
-          
-          // Actualizar lista de documentos para incluir la URL
-          setDocuments(prevDocs => prevDocs.map(d => 
-            d.id === document.id ? {...d, file_url: fileUrl} : d
-          ));
-        } else {
-          toast({
-            title: 'Error',
-            description: 'No se pudo obtener la URL del documento',
-            variant: 'destructive'
-          });
-        }
-      })
-      .catch(error => {
-        console.error("Error al obtener URL del documento:", error);
-        toast({
-          title: 'Error',
-          description: 'No se pudo visualizar el documento',
-          variant: 'destructive'
-        });
-      });
-  };
-
-  const normalizeDocuments = (docs) => {
-    if (!docs) return [];
-    
-    return docs.map(doc => {
-      // For debugging - log document structure to see how categories are stored
-      console.log("Document structure:", {
-        id: doc.id, 
-        title: doc.title,
-        category: doc.category,
-        category_name: doc.category_name
-      });
-      
-      // Enhanced category normalization with more edge cases handled
-      let categoryName = '';
-      
-      if (doc.category_name) {
-        // Use existing category_name if available
-        categoryName = doc.category_name;
-      } else if (doc.category) {
-        if (typeof doc.category === 'object' && doc.category !== null) {
-          // Handle object with various possible property names
-          categoryName = doc.category.name || 
-                        doc.category.title || 
-                        doc.category.label || 
-                        doc.category.value || 
-                        '';
-          
-          // If no named properties found but has id and we have categories list,
-          // try to find matching category
-          if (!categoryName && doc.category.id && categories) {
-            const matchingCategory = categories.find(c => c.id === doc.category.id);
-            if (matchingCategory) {
-              categoryName = matchingCategory.name;
-            }
-          }
-        } else if (typeof doc.category === 'string') {
-          // Handle string value
-          categoryName = doc.category;
-        } else if (typeof doc.category === 'number') {
-          // Handle numeric ID by looking up in categories list
-          if (categories) {
-            const matchingCategory = categories.find(c => c.id === doc.category);
-            if (matchingCategory) {
-              categoryName = matchingCategory.name;
-            }
-          }
-        }
+        // Actualizar documento en la lista con la URL
+        setDocuments(prevDocs => prevDocs.map(d => 
+          d.id === document.id ? {...d, file_url: download.file_url} : d
+        ));
+        
+        return;
       }
       
-      return {
-        ...doc,
-        category_name: categoryName,
-        file_type: doc.file_type || (doc.file_name ? doc.file_name.split('.').pop() : 'unknown'),
-        tags: doc.tags || []
-      };
+      // Si falla el método autenticado, intentar con el endpoint público
+      const publicUrl = `${API_BASE_URL}/docmanager/documents/${document.id}/public-download/`;
+      const response = await fetch(publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Error al obtener URL pública: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.file_url) {
+        // Construir URL absoluta si es necesario
+        const fileUrl = data.file_url.startsWith('http') 
+          ? data.file_url 
+          : `${window.location.origin}${data.file_url}`;
+          
+        window.open(fileUrl, '_blank');
+        
+        // Actualizar documento en la lista
+        setDocuments(prevDocs => prevDocs.map(d => 
+          d.id === document.id ? {...d, file_url: fileUrl} : d
+        ));
+      } else {
+        throw new Error('URL de documento no disponible');
+      }
+    } catch (error) {
+      console.error("Error al obtener URL del documento:", error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo visualizar el documento',
+        variant: 'destructive'
+      });
+    }
+  }, [documentService, setDocuments, toast]);
+
+  // Manejar compartir documentos seleccionados
+  const handleShareSelected = useCallback(async () => {
+    if (selectedDocuments.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'No hay documentos seleccionados para compartir',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Mostrar mensaje de carga
+    toast({
+      title: 'Preparando enlaces',
+      description: 'Generando enlaces para compartir...',
+      variant: 'default'
     });
-  };
+    
+    try {
+      // Obtener URLs de documentos seleccionados
+      const promises = selectedDocuments.map(docId => {
+        const doc = documents.find(d => d.id === docId);
+        return documentService.getPublicLink(docId)
+          .then(data => ({
+            id: docId,
+            title: doc.title,
+            url: data.file_url || data.public_url
+          }))
+          .catch(error => {
+            console.error(`Error obteniendo URL para documento ${docId}:`, error);
+            return null;
+          });
+      });
+      
+      // Cuando todas las URL estén listas
+      const results = await Promise.all(promises);
+      const validResults = results.filter(r => r !== null);
+      
+      if (validResults.length === 0) {
+        throw new Error('No se pudo obtener ninguna URL para compartir');
+      }
+      
+      // Preparar contenido para compartir
+      const title = validResults.length === 1 
+        ? `Documento: ${validResults[0].title}` 
+        : `${validResults.length} documentos compartidos`;
+      
+      const text = validResults.length === 1 
+        ? `Compartiendo el documento: ${validResults[0].title}`
+        : `Compartiendo documentos:\n${validResults.map(d => `- ${d.title}`).join('\n')}`;
+      
+      // Usar Web Share API si está disponible y es un solo documento
+      if (navigator.share && validResults.length === 1) {
+        navigator.share({
+          title,
+          text,
+          url: validResults[0].url
+        })
+        .catch(error => console.log('Error compartiendo:', error));
+      } else {
+        // Para múltiples documentos, copiamos al portapapeles
+        const urlsList = validResults.map(d => `${d.title}: ${d.url}`).join('\n');
+        
+        // Copiar al portapapeles
+        await navigator.clipboard.writeText(urlsList);
+        
+        // Notificar al usuario
+        toast({
+          title: 'Enlaces copiados',
+          description: `Se han copiado ${validResults.length} enlaces al portapapeles`,
+          variant: 'default'
+        });
+      }
+      
+      // Desactivar modo selección después de compartir
+      setSelectionMode(false);
+      setSelectedDocuments([]);
+    } catch (error) {
+      console.error('Error compartiendo documentos:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron compartir los documentos seleccionados',
+        variant: 'destructive'
+      });
+    }
+  }, [documents, documentService, selectedDocuments, toast]);
+
+  // Manejar toggle de selección (para selección múltiple)
+  const handleToggleSelection = useCallback((docId, isSelected) => {
+    setSelectedDocuments(prev => {
+      // Si recibimos un array, reemplazamos la selección completamente
+      if (Array.isArray(docId)) {
+        return isSelected ? docId : [];
+      }
+      
+      // Si es un documento individual
+      if (isSelected) {
+        // Añadir a la selección si no está ya seleccionado
+        return prev.includes(docId) ? prev : [...prev, docId];
+      } else {
+        // Eliminar de la selección
+        return prev.filter(id => id !== docId);
+      }
+    });
+  }, []);
+
+  // Manejar toggle de modo selección
+  const handleToggleSelectionMode = useCallback((mode) => {
+    setSelectionMode(mode);
+    if (!mode) {
+      // Limpiar selecciones al salir del modo
+      setSelectedDocuments([]);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -744,47 +805,7 @@ const GestorDocumentalPage = () => {
             categories={categories}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
-            onSearch={(query, searchParams = {}) => {
-              // Usamos un objeto vacío como default para evitar nulos
-              console.log("Búsqueda con parámetros:", typeof searchParams, searchParams);
-              
-              // Crear una copia para no modificar el objeto original
-              const params = {...searchParams};
-              
-              // Procesar la fecha si existe un filtro de fecha
-              if (params.date_filter) {
-                const now = new Date();
-                let fromDate = null;
-                
-                switch(params.date_filter) {
-                  case 'today':
-                    fromDate = new Date(now.setHours(0, 0, 0, 0));
-                    break;
-                  case 'week':
-                    fromDate = new Date(now);
-                    fromDate.setDate(fromDate.getDate() - 7);
-                    break;
-                  case 'month':
-                    fromDate = new Date(now);
-                    fromDate.setMonth(fromDate.getMonth() - 1);
-                    break;
-                  case 'year':
-                    fromDate = new Date(now);
-                    fromDate.setFullYear(fromDate.getFullYear() - 1);
-                    break;
-                }
-                
-                if (fromDate) {
-                  params.from_date = fromDate.toISOString().split('T')[0];
-                }
-              }
-              
-              // Registrar los parámetros finales de búsqueda
-              console.log("Parámetros finales de búsqueda:", params);
-              
-              // Usar la función handleSearch del hook con los parámetros
-              handleSearch(query, params);
-            }}
+            onSearch={handleSearch}
           />
 
           <div className="flex items-center gap-4">
@@ -806,6 +827,7 @@ const GestorDocumentalPage = () => {
             <button
               onClick={() => setShowGroupsModal(true)}
               className="flex items-center ml-2 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
+              aria-label="Gestionar grupos"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -820,6 +842,7 @@ const GestorDocumentalPage = () => {
             <button
               onClick={() => setShowCollectionsModal(true)}
               className="flex items-center ml-2 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
+              aria-label="Gestionar colecciones"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
@@ -841,145 +864,44 @@ const GestorDocumentalPage = () => {
             onUploadClick={onUploadClick} 
             refreshData={refreshData} 
           />
-        ) : viewMode === 'grid' ? (
-          <DocumentGrid 
-            documents={normalizeDocuments(documents)} 
-            onToggleFavorite={handleToggleFavorite}
-            onDownload={handleDownload}
-            onView={onView}
-            onDelete={handleDelete}
-            onManageTags={handleManageTags}
-          />
         ) : (
-          <DocumentList 
-            documents={normalizeDocuments(documents)} 
-            onToggleFavorite={handleToggleFavorite}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            onView={onView}
-            onManageTags={handleManageTags}
-            selectionMode={selectionMode}
-            selectedDocuments={selectedDocuments}
-            onToggleSelection={(docId, isSelected) => {
-              setSelectedDocuments(prev => {
-                // Si recibimos un array, reemplazamos la selección completamente
-                if (Array.isArray(docId)) {
-                  return isSelected ? docId : [];
-                }
-                
-                // Si es un documento individual
-                if (isSelected) {
-                  // Añadir a la selección si no está ya seleccionado
-                  return prev.includes(docId) ? prev : [...prev, docId];
-                } else {
-                  // Eliminar de la selección
-                  return prev.filter(id => id !== docId);
-                }
-              });
-            }}
-            onToggleSelectionMode={(mode) => {
-              setSelectionMode(mode);
-              if (!mode) {
-                // Limpiar selecciones al salir del modo
-                setSelectedDocuments([]);
-              }
-            }}
-            onShareSelected={() => {
-              // Obtener URLs de documentos seleccionados
-              if (selectedDocuments.length === 0) {
-                toast({
-                  title: 'Error',
-                  description: 'No hay documentos seleccionados para compartir',
-                  variant: 'destructive'
-                });
-                return;
-              }
-              
-              // Preparar los URLs para compartir
-              const promises = selectedDocuments.map(docId => {
-                const doc = documents.find(d => d.id === docId);
-                const publicUrl = `${API_BASE_URL}/docmanager/documents/${docId}/public-download/`;
-                
-                return fetch(publicUrl)
-                  .then(response => response.json())
-                  .then(data => ({
-                    id: docId,
-                    title: doc.title,
-                    url: data.file_url
-                  }))
-                  .catch(error => {
-                    console.error(`Error obteniendo URL para documento ${docId}:`, error);
-                    return null;
-                  });
-              });
-              
-              // Cuando todas las URL estén listas
-              Promise.all(promises)
-                .then(results => {
-                  // Filtrar posibles errores
-                  const validResults = results.filter(r => r !== null);
-                  
-                  if (validResults.length === 0) {
-                    throw new Error('No se pudo obtener ninguna URL para compartir');
-                  }
-                  
-                  // Preparar contenido para compartir
-                  const title = validResults.length === 1 
-                    ? `Documento: ${validResults[0].title}` 
-                    : `${validResults.length} documentos compartidos`;
-                  
-                  const text = validResults.length === 1 
-                    ? `Compartiendo el documento: ${validResults[0].title}`
-                    : `Compartiendo documentos:\n${validResults.map(d => `- ${d.title}`).join('\n')}`;
-                  
-                  // Usar Web Share API si está disponible y es un solo documento
-                  if (navigator.share && validResults.length === 1) {
-                    navigator.share({
-                      title,
-                      text,
-                      url: validResults[0].url
-                    })
-                    .catch(error => console.log('Error compartiendo:', error));
-                  } else {
-                    // Para múltiples documentos, mostramos un modal o copiamos al portapapeles
-                    const urlsList = validResults.map(d => `${d.title}: ${d.url}`).join('\n');
-                    
-                    // Copiar al portapapeles
-                    const tempInput = document.createElement('textarea');
-                    tempInput.value = urlsList;
-                    document.body.appendChild(tempInput);
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
-                    
-                    // Notificar al usuario
-                    toast({
-                      title: 'Enlaces copiados',
-                      description: `Se han copiado ${validResults.length} enlaces al portapapeles`,
-                      variant: 'default'
-                    });
-                    
-                    // Desactivar modo selección después de compartir
-                    setSelectionMode(false);
-                    setSelectedDocuments([]);
-                  }
-                })
-                .catch(error => {
-                  console.error('Error compartiendo documentos:', error);
-                  toast({
-                    title: 'Error',
-                    description: 'No se pudieron compartir los documentos seleccionados',
-                    variant: 'destructive'
-                  });
-                });
-            }}
-          />
+          <ErrorBoundary
+            FallbackComponent={ErrorFallback}
+            onReset={() => refreshData()}
+          >
+            <Suspense fallback={<LoadingSpinner />}>
+              {viewMode === 'grid' ? (
+                <DocumentGrid 
+                  documents={normalizeDocuments(documents)} 
+                  onToggleFavorite={handleToggleFavorite}
+                  onDownload={handleDownload}
+                  onView={onView}
+                  onDelete={handleDelete}
+                  onManageTags={handleManageTags}
+                />
+              ) : (
+                <DocumentList 
+                  documents={normalizeDocuments(documents)} 
+                  onToggleFavorite={handleToggleFavorite}
+                  onDownload={handleDownload}
+                  onDelete={handleDelete}
+                  onView={onView}
+                  onManageTags={handleManageTags}
+                  selectionMode={selectionMode}
+                  selectedDocuments={selectedDocuments}
+                  onToggleSelection={handleToggleSelection}
+                  onToggleSelectionMode={handleToggleSelectionMode}
+                  onShareSelected={handleShareSelected}
+                />
+              )}
+            </Suspense>
+          </ErrorBoundary>
         )}
         
         {/* Paginación */}
         {documents && documents.length > 0 && pagination && pagination.total_pages > 1 && (
           <div className="mt-8 flex justify-center">
-            <nav className="flex items-center gap-2">
+            <nav className="flex items-center gap-2" aria-label="Paginación">
               <button 
                 onClick={() => goToPage(pagination.current - 1)}
                 disabled={!pagination.previous}
@@ -988,6 +910,7 @@ const GestorDocumentalPage = () => {
                     ? 'border-gray-300 hover:bg-gray-100' 
                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
+                aria-label="Página anterior"
               >
                 Anterior
               </button>
@@ -1004,6 +927,7 @@ const GestorDocumentalPage = () => {
                     ? 'border-gray-300 hover:bg-gray-100' 
                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
+                aria-label="Página siguiente"
               >
                 Siguiente
               </button>
@@ -1012,49 +936,63 @@ const GestorDocumentalPage = () => {
         )}
       </main>
 
-      {/* Modal simplificado de carga de archivos */}
-      <SimpleUploadModal 
-        show={showUploadModal}
-        selectedFile={selectedFile}
-        setSelectedFile={setSelectedFile}
-        onClose={onCloseUpload}
-        onUpload={onUpload}
-      />
+      {/* Modales */}
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Suspense fallback={<ComponentFallback />}>
+          {/* Modal de carga de archivos */}
+          {showUploadModal && (
+            <SimpleUploadModal 
+              show={showUploadModal}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              onClose={onCloseUpload}
+              onUpload={onUpload}
+              getAvailableGroups={loadGroups}
+            />
+          )}
 
-      {/* Modal de gestión de etiquetas */}
-      <TagsModal
-        show={showTagsModal}
-        onClose={() => setShowTagsModal(false)}
-        document={selectedDocumentForTags}
-        availableTags={tags}
-        onAddTag={handleAddTag}
-        onRemoveTag={handleRemoveTag}
-        onCreateTag={handleCreateTag}
-      />
+          {/* Modal de gestión de etiquetas */}
+          {showTagsModal && (
+            <TagsModal
+              show={showTagsModal}
+              onClose={() => setShowTagsModal(false)}
+              document={selectedDocumentForTags}
+              availableTags={tags}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
+              onCreateTag={handleCreateTag}
+            />
+          )}
 
-      {/* Modal de gestión de grupos */}
-      <GroupsModal
-        show={showGroupsModal}
-        onClose={() => setShowGroupsModal(false)}
-        groups={groups}
-        selectedGroup={selectedGroup}
-        onCreateGroup={handleCreateGroup}
-        onSelectGroup={handleSelectGroup}
-        onDeleteGroup={handleDeleteGroup}
-      />
+          {/* Modal de gestión de grupos */}
+          {showGroupsModal && (
+            <GroupsModal
+              show={showGroupsModal}
+              onClose={() => setShowGroupsModal(false)}
+              groups={groups}
+              selectedGroup={selectedGroup}
+              onCreateGroup={handleCreateGroup}
+              onSelectGroup={handleSelectGroup}
+              onDeleteGroup={handleDeleteGroup}
+            />
+          )}
 
-      {/* Modal de gestión de colecciones */}
-      <CollectionsModal
-        show={showCollectionsModal}
-        onClose={() => setShowCollectionsModal(false)}
-        collections={collections}
-        onCreateCollection={handleCreateCollection}
-        onViewCollection={handleViewCollection}
-        onDeleteCollection={handleDeleteCollection}
-        onExportCollection={handleExportCollection}
-        selectedDocuments={selectedDocuments}
-        onAddToCollection={handleAddToCollection}
-      />
+          {/* Modal de gestión de colecciones */}
+          {showCollectionsModal && (
+            <CollectionsModal
+              show={showCollectionsModal}
+              onClose={() => setShowCollectionsModal(false)}
+              collections={collections}
+              onCreateCollection={handleCreateCollection}
+              onViewCollection={handleViewCollection}
+              onDeleteCollection={handleDeleteCollection}
+              onExportCollection={handleExportCollection}
+              selectedDocuments={selectedDocuments}
+              onAddToCollection={handleAddToCollection}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 };

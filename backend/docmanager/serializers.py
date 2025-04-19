@@ -215,8 +215,9 @@ class CollectionActivitySerializer(serializers.ModelSerializer):
 class CollectionListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listados de colecciones"""
     creator_username = serializers.CharField(source='creator.username', read_only=True)
-    document_count = serializers.IntegerField(read_only=True)
-    total_size = serializers.IntegerField(read_only=True)
+    # Usamos los nuevos nombres de los campos anotados
+    document_count = serializers.IntegerField(source='documents_count', read_only=True)
+    total_size = serializers.IntegerField(source='documents_total_size', read_only=True)
     
     class Meta:
         model = Collection
@@ -232,8 +233,9 @@ class CollectionDetailSerializer(serializers.ModelSerializer):
     documents = serializers.SerializerMethodField()
     permissions = CollectionPermissionSerializer(many=True, read_only=True)
     activities = CollectionActivitySerializer(many=True, read_only=True)
-    total_size = serializers.IntegerField(read_only=True)
-    document_count = serializers.IntegerField(read_only=True)
+    # Usamos los nuevos nombres de los campos anotados
+    total_size = serializers.IntegerField(source='documents_total_size', read_only=True)
+    document_count = serializers.IntegerField(source='documents_count', read_only=True)
     
     class Meta:
         model = Collection
@@ -301,7 +303,7 @@ class GroupMemberSerializer(serializers.ModelSerializer):
 class GroupListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listados de grupos"""
     creator_username = serializers.CharField(source='creator.username', read_only=True)
-    document_count = serializers.IntegerField(read_only=True)
+    document_count = serializers.IntegerField(source='documents_count', read_only=True)
     member_count = serializers.SerializerMethodField()
     
     class Meta:
@@ -318,7 +320,7 @@ class GroupListSerializer(serializers.ModelSerializer):
 class GroupDetailSerializer(serializers.ModelSerializer):
     """Serializer completo para vista detallada de grupos"""
     creator_username = serializers.CharField(source='creator.username', read_only=True)
-    document_count = serializers.IntegerField(read_only=True)
+    document_count = serializers.IntegerField(source='documents_count', read_only=True)
     members = GroupMemberSerializer(source='members', many=True, read_only=True)
     documents = serializers.SerializerMethodField()
     

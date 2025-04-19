@@ -1,24 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { documentService } from '@/services/classes';
 import { useToast } from '@/components/ui/use-toast';
+import { API_BASE_URL } from '@/config/constants';
 
 /**
  * Hook personalizado para manejar la lógica de documentos
+ * @returns {Object} Estado y funciones relacionadas con documentos
  */
 const useDocuments = () => {
   // Obtener la función toast del contexto
   const { toast } = useToast();
   
-  // Estados
+  // Estados para documentos y metadatos
   const [documents, setDocuments] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Estados para filtros y ordenamiento
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('updated_at');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedFile, setSelectedFile] = useState(null);
+  
+  // Estados para datos relacionados
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [tagsLoaded, setTagsLoaded] = useState(false);
+  
+  // Estado para paginación
   const [pagination, setPagination] = useState({
     count: 0,
     next: null,
@@ -27,15 +38,362 @@ const useDocuments = () => {
     total_pages: 1
   });
   
-  // Cargar datos iniciales (documentos, categorías, etiquetas)
-  const fetchData = useCallback(async (page = 1) => {
-    setIsLoading(true);
+  // Cache para evitar recargas innecesarias
+  const [lastFetchTimestamp, setLastFetchTimestamp] = useState(0);
+  // Tiempo de caché en ms (5 minutos)
+  const CACHE_TIME = 5 * 60 * 1000;
+  
+  // Construir parámetros de consulta - memoizado para evitar recálculos
+  const queryParams = useMemo(() => {
+    const params = {
+      search: searchQuery,
+      ordering: `${sortOrder === 'desc' ? '-' : ''}${sortBy}`,
+      page: pagination.current
+    };
+    
+    if (selectedCategory !== 'all') {
+      params.category = selectedCategory;
+    }
+    
+    return params;
+  }, [searchQuery, selectedCategory, sortBy, sortOrder, pagination.current]);
+  
+  /**
+   * Procesa documentos para normalizar sus propiedades
+   * @param {Array} docs - Documentos a procesar
+   * @returns {Array} Documentos procesados
+   */
+  const processDocuments = useCallback((docs) => {
+    if (!Array.isArray(docs)) return [];
+    
+    return docs.map(doc => {
+      if (!doc || typeof doc !== 'object') return null;
+      
+      // Procesamiento de categoría
+      let categoryName = '';
+      let categoryObj = null;
+      
+      if (doc.category_name) {
+        categoryName = doc.category_name;
+      } else if (doc.category) {
+        if (typeof doc.category === 'object' && doc.category !== null) {
+          categoryName = doc.category.name || 'Categoría sin nombre';
+          categoryObj = doc.category;
+        } else if (typeof doc.category === 'string') {
+          categoryName = doc.category;
+        } else if (typeof doc.category === 'number') {
+          // Buscar en la lista de categorías
+          const foundCategory = categories.find(c => c.id === doc.category);
+          categoryName = foundCategory ? foundCategory.name : `Categoría ${doc.category}`;
+          categoryObj = foundCategory || { id: doc.category, name: categoryName };
+        }
+      }
+      
+      // Calcular el tipo de archivo
+      const fileType = doc.file_type || 
+        (doc.file_name ? doc.file_name.split('.').pop().toLowerCase() : 'unknown');
+      
+      return {
+        ...doc,
+        category_name: categoryName || 'Sin categoría',
+        category: categoryObj || { 
+          id: typeof doc.category === 'number' ? doc.category : 0, 
+          name: categoryName 
+        },
+        file_type: fileType,
+        tags: Array.isArray(doc.tags) ? doc.tags : []
+      };
+    }).filter(Boolean); // Eliminar cualquier documento nulo
+  }, [categories]);
+  
+  /**
+   * Cargar categorías
+   * @param {boolean} force - Forzar recarga incluso si ya están cargadas
+   * @returns {Promise<Array>} Lista de categorías
+   */
+  const loadCategories = useCallback(async (force = false) => {
+    if (categoriesLoaded && !force) {
+      return categories;
+    }
+    
     try {
-      // Construir los parámetros de consulta
+      console.log("Cargando categorías...");
+      
+      // Usar timeout para evitar bloqueos
+      const result = await Promise.race([
+        documentService.getCategories(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout al cargar categorías')), 5000)
+        )
+      ]);
+      
+      const categoriesList = result.results || [];
+      
+      setCategories(categoriesList);
+      setCategoriesLoaded(true);
+      return categoriesList;
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+      
+      // Si el error es timeout o recursos insuficientes, mostrar mensaje amigable
+      const errorMessage = error.message.includes('Timeout') || 
+                           error.message.includes('ERR_INSUFFICIENT_RESOURCES') ?
+        'Problemas al cargar categorías. Se usarán valores predeterminados.' :
+        'No se pudieron cargar las categorías';
+      
+      toast({
+        title: 'Advertencia',
+        description: errorMessage,
+        variant: 'warning'
+      });
+      
+      // Datos por defecto
+      const defaultCategories = [
+        { id: 1, name: "General" },
+        { id: 2, name: "Documentos" }
+      ];
+      
+      setCategories(defaultCategories);
+      setCategoriesLoaded(true);
+      return defaultCategories;
+    }
+  }, [categoriesLoaded, categories, toast]);
+  
+  /**
+   * Cargar etiquetas
+   * @param {boolean} force - Forzar recarga incluso si ya están cargadas
+   * @returns {Promise<Array>} Lista de etiquetas
+   */
+  const loadTags = useCallback(async (force = false) => {
+    if (tagsLoaded && !force) {
+      return tags;
+    }
+    
+    try {
+      console.log("Cargando etiquetas...");
+      
+      // Usar timeout para evitar bloqueos
+      const result = await Promise.race([
+        documentService.getTags(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout al cargar etiquetas')), 5000)
+        )
+      ]);
+      
+      const tagsList = result.results || [];
+      
+      setTags(tagsList);
+      setTagsLoaded(true);
+      return tagsList;
+    } catch (error) {
+      console.error('Error al cargar etiquetas:', error);
+      
+      // Si el error es timeout o recursos insuficientes, mostrar mensaje amigable
+      const errorMessage = error.message.includes('Timeout') || 
+                           error.message.includes('ERR_INSUFFICIENT_RESOURCES') ?
+        'Problemas al cargar etiquetas. Se usarán valores predeterminados.' :
+        'No se pudieron cargar las etiquetas';
+      
+      toast({
+        title: 'Advertencia',
+        description: errorMessage,
+        variant: 'warning'
+      });
+      
+      // Datos por defecto
+      const defaultTags = [
+        { id: 1, name: "Importante", color_code: "#FF0000" },
+        { id: 2, name: "Urgente", color_code: "#FFA500" }
+      ];
+      
+      setTags(defaultTags);
+      setTagsLoaded(true);
+      return defaultTags;
+    }
+  }, [tagsLoaded, tags, toast]);
+  
+  /**
+   * Cargar documentos con parámetros de consulta
+   * @param {Object} params - Parámetros para la consulta
+   * @param {boolean} showToast - Mostrar notificación durante la carga
+   * @returns {Promise<Object>} Respuesta con documentos y metadatos
+   */
+  const fetchDocuments = useCallback(async (params, showToast = false) => {
+    try {
+      if (showToast) {
+        toast({
+          title: 'Cargando...',
+          description: params.search 
+            ? `Buscando: "${params.search}"` 
+            : 'Cargando documentos',
+          duration: 1500
+        });
+      }
+      
+      const response = await documentService.getDocuments(params);
+      
+      if (!response || !Array.isArray(response.results)) {
+        throw new Error('Formato de respuesta inválido');
+      }
+      
+      // Procesar documentos para normalizar propiedades
+      const processedDocs = processDocuments(response.results);
+      setDocuments(processedDocs);
+      
+      // Actualizar información de paginación
+      setPagination({
+        count: response.count || 0,
+        next: response.next || null,
+        previous: response.previous || null,
+        current: response.current_page || params.page || 1,
+        total_pages: response.total_pages || 1
+      });
+      
+      // Actualizar timestamp para caché
+      setLastFetchTimestamp(Date.now());
+      
+      return {
+        documents: processedDocs,
+        pagination: {
+          count: response.count || 0,
+          next: response.next || null,
+          previous: response.previous || null,
+          current: response.current_page || params.page || 1,
+          total_pages: response.total_pages || 1
+        }
+      };
+    } catch (error) {
+      console.error('Error al cargar documentos:', error);
+      // No mostrar toast en errores si es una carga silenciosa
+      if (showToast) {
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los documentos. Por favor, inténtelo de nuevo.',
+          variant: 'destructive'
+        });
+      }
+      return { documents: [], pagination: { count: 0, total_pages: 1, current: 1 } };
+    }
+  }, [processDocuments, toast]);
+  
+  /**
+   * Cargar datos iniciales (documentos, categorías, etiquetas)
+   * @param {boolean} force - Forzar recarga incluso si la caché está válida
+   */
+  const fetchData = useCallback(async (force = false) => {
+    setIsLoading(true);
+    
+    try {
+      // Comprobar si necesitamos recargar (caché expirada o forzar)
+      const now = Date.now();
+      const needsRefresh = force || (now - lastFetchTimestamp > CACHE_TIME);
+      
+      if (needsRefresh) {
+        // Cargar datos independientemente para mayor tolerancia a fallos
+        try {
+          await fetchDocuments(queryParams);
+        } catch (docsError) {
+          console.error('Error al cargar documentos:', docsError);
+        }
+        
+        try {
+          await loadCategories();
+        } catch (catError) {
+          console.error('Error al cargar categorías:', catError);
+        }
+        
+        try {
+          await loadTags();
+        } catch (tagsError) {
+          console.error('Error al cargar etiquetas:', tagsError);
+        }
+      }
+    } catch (error) {
+      console.error('Error general al cargar datos:', error);
+      toast({
+        title: 'Advertencia',
+        description: 'Algunos recursos no pudieron cargarse correctamente. Se usarán datos locales.',
+        variant: 'warning'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchDocuments, loadCategories, loadTags, lastFetchTimestamp, queryParams, toast]);
+  
+  // Efecto para cargar datos cuando cambian los filtros o la página
+  useEffect(() => {
+    let isMounted = true;
+    const loadData = async () => {
+      if (!isMounted) return;
+      setIsLoading(true);
+      
+      try {
+        // Cargar con timeout para prevenir bloqueos
+        const documentsPromise = Promise.race([
+          fetchDocuments(queryParams),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout al cargar documentos')), 8000)
+          )
+        ]).catch(error => {
+          console.error('Error con timeout en carga de documentos:', error);
+          return { documents: [], pagination: { count: 0, total_pages: 1, current: 1 } };
+        });
+        
+        // Intentar cargar documentos primero
+        try {
+          await documentsPromise;
+        } catch (docError) {
+          console.error('Falló carga inicial de documentos:', docError);
+        }
+        
+        // Luego cargar categorías y etiquetas solo si no están cargadas
+        if (!categoriesLoaded && isMounted) {
+          try {
+            await loadCategories();
+          } catch (catError) {
+            console.error('Falló carga inicial de categorías:', catError);
+          }
+        }
+        
+        if (!tagsLoaded && isMounted) {
+          try {
+            await loadTags();
+          } catch (tagError) {
+            console.error('Falló carga inicial de etiquetas:', tagError);
+          }
+        }
+      } catch (error) {
+        console.error('Error global en loadData:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchDocuments, loadCategories, loadTags, queryParams, categoriesLoaded, tagsLoaded]);
+  
+  /**
+   * Manejar búsqueda con parámetros adicionales
+   * @param {string} query - Término de búsqueda
+   * @param {Object} additionalParams - Parámetros adicionales
+   * @returns {Promise<Object>} Resultado de la búsqueda
+   */
+  const handleSearch = async (query, additionalParams = {}) => {
+    console.log("handleSearch iniciado con query:", query, "y params:", additionalParams);
+    setIsSearching(true);
+    
+    try {
+      // Construir parámetros completos para la búsqueda
       const params = {
-        search: searchQuery,
+        search: query || additionalParams.q || '',
         ordering: `${sortOrder === 'desc' ? '-' : ''}${sortBy}`,
-        page: page
+        page: 1 // Siempre volvemos a la primera página al buscar
       };
       
       // Añadir filtro de categoría si no es 'all'
@@ -43,295 +401,91 @@ const useDocuments = () => {
         params.category = selectedCategory;
       }
       
-      let documentsResponse;
-      try {
-        // Obtener documentos filtrados del backend
-        documentsResponse = await documentService.getDocuments(params);
-        console.log("Respuesta de documentos:", documentsResponse);
-        
-        // Verificar que tenemos resultados válidos
-        if (documentsResponse && Array.isArray(documentsResponse.results)) {
-          // Filtrar cualquier documento inválido
-          const validDocuments = documentsResponse.results.filter(doc => 
-            doc && typeof doc === 'object' && doc.id && doc.title
-          );
-          
-          // Añadir campos faltantes si es necesario (por compatibilidad)
-          const processedDocs = validDocuments.map(doc => {
-            // Procesamiento especial para la categoría
-            let categoryName = '';
-            if (doc.category_name) {
-              categoryName = doc.category_name;
-            } else if (doc.category) {
-              if (typeof doc.category === 'object' && doc.category !== null) {
-                categoryName = doc.category.name || 'Categoría sin nombre';
-              } else if (typeof doc.category === 'string') {
-                categoryName = doc.category;
-              } else if (typeof doc.category === 'number') {
-                // Si solo tenemos el ID, intentar encontrar el nombre en la lista de categorías
-                const categoryObj = categories.find(c => c.id === doc.category);
-                categoryName = categoryObj ? categoryObj.name : `Categoría ${doc.category}`;
-              }
-            }
-            
-            return {
-              ...doc,
-              // Asegurar que category_name está disponible
-              category_name: categoryName || 'Sin categoría',
-              // Normalizar el objeto categoría si existe
-              category: typeof doc.category === 'object' ? 
-                { ...doc.category, name: doc.category?.name || categoryName } : 
-                { id: typeof doc.category === 'number' ? doc.category : 0, name: categoryName },
-              // Asegurar que file_type está disponible
-              file_type: doc.file_type || (doc.file_name ? doc.file_name.split('.').pop() : 'unknown'),
-              // Proporcionar tags si no existen
-              tags: doc.tags || []
-            };
-          });
-          
-          setDocuments(processedDocs);
-          console.log("Documentos procesados y actualizados:", processedDocs);
-        } else {
-          console.error("Error: La respuesta no tiene el formato esperado", documentsResponse);
-          toast({
-            title: 'Error en formato',
-            description: 'La respuesta del servidor no tiene el formato esperado',
-            variant: 'destructive'
-          });
-          
-          // Establecer un array vacío para evitar errores
-          setDocuments([]);
-          
-          // Asegurar que tenemos una estructura válida para paginación
-          documentsResponse = { count: 0, next: null, previous: null };
-        }
-      } catch (innerError) {
-        console.error("Error al procesar respuesta de documentos:", innerError);
-        toast({
-          title: 'Error',
-          description: 'Error al procesar documentos',
-          variant: 'destructive'
-        });
-        setDocuments([]);
-        
-        // Asegurar que tenemos una estructura válida para paginación
-        documentsResponse = { count: 0, next: null, previous: null };
-      }
-      
-      // Actualizar la información de paginación
-      setPagination({
-        count: documentsResponse?.count || 0,
-        next: documentsResponse?.next || null,
-        previous: documentsResponse?.previous || null,
-        current: documentsResponse?.current_page || page,
-        total_pages: documentsResponse?.total_pages || 1
-      });
-      
-      // Cargar categorías y etiquetas solo si no están cargadas
-      if (categories.length === 0) {
-        console.log("Cargando categorías...");
-        const categoriesResponse = await documentService.getCategories();
-        console.log("Respuesta del servidor para categorías:", categoriesResponse);
-        setCategories(categoriesResponse.results || []);
-        console.log("Categorías después de establecerlas:", categoriesResponse.results || []);
-      }
-      if (tags.length === 0) {
-        console.log("Cargando etiquetas...");
-        const tagsResponse = await documentService.getTags();
-        console.log("Respuesta del servidor para etiquetas:", tagsResponse);
-        setTags(tagsResponse.results || []);
-        console.log("Etiquetas después de establecerlas:", tagsResponse.results || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar los datos. Por favor, inténtelo de nuevo.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCategory, sortBy, sortOrder]);
-
-  // Estado para controlar cuándo se está realizando una búsqueda
-  const [isSearching, setIsSearching] = useState(false);
-  
-  // Efecto para cargar datos cuando cambian los filtros o la página
-  useEffect(() => {
-    fetchData(pagination.current);
-  }, [fetchData, pagination.current]);
-  
-  // Manejador de búsqueda directa (para button click o Enter)
-  const handleSearch = async (query, additionalParams = {}) => {
-    console.log("handleSearch iniciado con query:", query, "y params:", typeof additionalParams, additionalParams);
-    setIsSearching(true);
-    
-    try {
-      // Construir parámetros básicos para la búsqueda
-      const params = {
-        search: query || '', // Garantizar que search nunca sea undefined
-        ordering: `${sortOrder === 'desc' ? '-' : ''}${sortBy}`,
-        page: 1 // Siempre volvemos a la primera página al buscar
-      };
-      
-      // Aplicar filtro de categoría si no es 'all'
-      if (selectedCategory !== 'all') {
-        params.category = selectedCategory;
-      }
-      
-      // Garantizar que additionalParams sea un objeto
-      const safeParams = (additionalParams && typeof additionalParams === 'object') 
-        ? additionalParams 
-        : {};
-      
-      console.log("Parámetros adicionales seguros:", safeParams);
-      
-      // Manejar el parámetro q (query) de forma especial si existe
-      if (safeParams.q && !query) {
-        params.search = safeParams.q;
-        console.log("Usando 'q' como término de búsqueda:", params.search);
-      }
-      
-      // Para cada parámetro adicional, verificamos si tiene un valor válido
-      Object.entries(safeParams).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
-          // Evitamos sobrescribir search, ordering y page que ya están configurados
-          if (!['search', 'q', 'ordering', 'page'].includes(key)) {
-            params[key] = value;
-          }
+      // Añadir parámetros adicionales, excluyendo los que ya están configurados
+      Object.entries(additionalParams).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '' && 
+            !['search', 'q', 'ordering', 'page'].includes(key)) {
+          params[key] = value;
         }
       });
       
-      // Log detallado de los parámetros finales para depuración
       console.log("Ejecutando búsqueda con parámetros finales:", JSON.stringify(params, null, 2));
       
-      // Mostrar indicador de búsqueda activa para el usuario
-      toast({
-        title: 'Buscando...',
-        description: params.search ? `Buscando: "${params.search}"` : 'Cargando documentos',
-        variant: 'default',
-        duration: 1500
-      });
+      // Ejecutar la búsqueda con notificación
+      const result = await fetchDocuments(params, true);
       
-      // Ejecutar la búsqueda
-      const response = await documentService.getDocuments(params);
-      
-      // Procesar los resultados
-      if (response && response.results) {
-        // Actualizar la lista de documentos
-        setDocuments(response.results);
-        
-        // Actualizar información de paginación
-        setPagination({
-          count: response.count || 0,
-          next: response.next || null,
-          previous: response.previous || null,
-          current: response.current_page || 1,
-          total_pages: response.total_pages || 1
+      // Mostrar notificación de resultados si es una búsqueda por término
+      if (params.search) {
+        toast({
+          title: 'Búsqueda completada',
+          description: `Se encontraron ${result.documents.length} resultados para "${params.search}"`,
+          variant: result.documents.length > 0 ? 'default' : 'destructive',
+          duration: 3000
         });
-        
-        // Log para seguimiento de resultados
-        console.log(`Búsqueda completada: ${response.results.length} resultados de ${response.count} total`);
-        
-        // Mostrar notificación de resultados
-        if (params.search) {
-          toast({
-            title: 'Búsqueda completada',
-            description: `Se encontraron ${response.results.length} resultados para "${params.search}"`,
-            variant: response.results.length > 0 ? 'default' : 'destructive',
-            duration: 3000
-          });
-        }
       }
-    } catch (error) {
-      console.error("Error en búsqueda:", error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo completar la búsqueda',
-        variant: 'destructive'
-      });
+      
+      return result;
     } finally {
       setIsSearching(false);
     }
   };
-
-  // Cambiar a una página específica
-  const goToPage = (page) => {
-    if (page !== pagination.current && page > 0 && page <= pagination.total_pages) {
-        setPagination(prev => ({
-          ...prev,
-          current: page
-        }));
-    }
-  };
-
-  // Recargar datos (útil después de crear/eliminar)
-  const refreshData = useCallback(() => {
-    console.log("Forzando recarga de todos los datos");
-    // Reiniciar todos los estados para forzar recarga completa
-    setCategories([]);
-    setTags([]);
-    setDocuments([]);
-    setPagination({
-      count: 0,
-      next: null,
-      previous: null,
-      current: 1,
-      total_pages: 1
-    });
-    // Forzar timeout para asegurar que la UI se actualice
-    setTimeout(() => {
-      try {
-        fetchData(1);
-        console.log("Datos recargados exitosamente");
-      } catch (error) {
-        console.error("Error al recargar datos:", error);
-        toast({
-          title: 'Error al recargar',
-          description: 'No se pudieron recargar los datos. Por favor, refresque la página.',
-          variant: 'destructive'
-        });
-      }
-    }, 500);
-  }, [fetchData, toast]);
   
-  // Forzar carga de categorías (aunque ya estén cargadas)
-  const forceLoadCategories = async () => {
-    try {
-      console.log("Forzando carga de categorías...");
-      const categoriesResponse = await documentService.getCategories();
-      console.log("Respuesta forzada de categorías:", categoriesResponse);
-      if (categoriesResponse && categoriesResponse.results) {
-        setCategories(categoriesResponse.results);
-        return categoriesResponse.results;
-      } else {
-        console.warn("La respuesta de categorías no tiene el formato esperado", categoriesResponse);
-        return [];
-      }
-    } catch (error) {
-      console.error("Error al forzar carga de categorías:", error);
-      toast({
-        title: 'Error',
-        description: 'No se pudieron cargar las categorías.',
-        variant: 'destructive'
-      });
-      return [];
+  /**
+   * Cambiar a una página específica de resultados
+   * @param {number} page - Número de página
+   */
+  const goToPage = useCallback((page) => {
+    if (page !== pagination.current && page > 0 && page <= pagination.total_pages) {
+      setPagination(prev => ({
+        ...prev,
+        current: page
+      }));
     }
-  }
-
-  // Manejar subida de archivos
-  const handleUpload = async (customFormData = null) => {
-    console.log("useDocuments.handleUpload llamado con:", { 
-      tieneCustomFormData: !!customFormData, 
-      tieneSelectedFile: !!selectedFile 
-    });
+  }, [pagination]);
+  
+  /**
+   * Forzar recarga completa de datos
+   */
+  const refreshData = useCallback(async () => {
+    console.log("Forzando recarga de todos los datos");
     
+    // Reiniciar estados para forzar recarga completa
+    setCategoriesLoaded(false);
+    setTagsLoaded(false);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await fetchDocuments(queryParams, true);
+      await loadCategories(true);
+      await loadTags(true);
+      return result;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchDocuments, loadCategories, loadTags, queryParams]);
+  
+  /**
+   * Forzar carga de categorías
+   * @returns {Promise<Array>} Lista de categorías
+   */
+  const forceLoadCategories = useCallback(async () => {
+    return loadCategories(true);
+  }, [loadCategories]);
+  
+  /**
+   * Manejar subida de documentos
+   * @param {FormData} customFormData - Datos del formulario para subir
+   * @returns {Promise<Object|null>} Documento creado o null si hay error
+   */
+  const handleUpload = useCallback(async (customFormData = null) => {
     if (!selectedFile && !customFormData) {
-        console.log("Error: No hay archivo seleccionado ni formData personalizado");
-        toast({ title: 'Error', description: 'No se ha seleccionado ningún archivo.', variant: 'destructive' });
-        return null;
+      toast({ 
+        title: 'Error', 
+        description: 'No se ha seleccionado ningún archivo.', 
+        variant: 'destructive' 
+      });
+      return null;
     }
 
     setIsLoading(true);
@@ -341,44 +495,27 @@ const useDocuments = () => {
       
       if (customFormData) {
         formData = customFormData;
-        console.log("Usando formData personalizado con:", {
-          file: formData.get('file')?.name,
-          title: formData.get('title'),
-          category: formData.get('category')
-        });
       } else {
         formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('title', selectedFile.name.split('.')[0]);
-        console.log("Creando nuevo formData con:", {
-          file: selectedFile.name,
-          title: selectedFile.name.split('.')[0]
-        });
       }
       
-      console.log("Llamando a documentService.createDocument...");
+      const newDocument = await documentService.createDocument(formData);
       
-      try {
-        const newDocument = await documentService.createDocument(formData);
-        console.log("Documento creado exitosamente:", newDocument);
-        
-        refreshData();
-        setSelectedFile(null);
-        
-        toast({
-          title: 'Éxito',
-          description: 'Documento subido correctamente',
-        });
-        
-        return newDocument;
-      } catch (createError) {
-        console.error("Error en documentService.createDocument:", createError);
-        throw createError;
-      }
+      await refreshData();
+      setSelectedFile(null);
+      
+      toast({
+        title: 'Éxito',
+        description: 'Documento subido correctamente',
+      });
+      
+      return newDocument;
     } catch (error) {
       console.error('Error al subir documento:', error);
       
-      // Intentar extraer un mensaje de error más específico
+      // Intentar extraer mensaje de error más específico
       let errorMsg = 'No se pudo subir el documento. Verifique los datos e inténtelo de nuevo.';
       
       if (error.message) {
@@ -391,11 +528,11 @@ const useDocuments = () => {
           const serverErrors = error.response.data;
           const errorMessages = [];
           
-          Object.keys(serverErrors).forEach(field => {
-            if (Array.isArray(serverErrors[field])) {
-              errorMessages.push(`${field}: ${serverErrors[field].join(', ')}`);
-            } else if (typeof serverErrors[field] === 'string') {
-              errorMessages.push(`${field}: ${serverErrors[field]}`);
+          Object.entries(serverErrors).forEach(([field, message]) => {
+            if (Array.isArray(message)) {
+              errorMessages.push(`${field}: ${message.join(', ')}`);
+            } else if (typeof message === 'string') {
+              errorMessages.push(`${field}: ${message}`);
             }
           });
           
@@ -416,10 +553,13 @@ const useDocuments = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Manejar descarga de archivos
-  const handleDownload = async (document) => {
+  }, [selectedFile, refreshData, toast]);
+  
+  /**
+   * Manejar descarga de documentos
+   * @param {Object} document - Documento a descargar
+   */
+  const handleDownload = useCallback(async (document) => {
     try {
       const downloadInfo = await documentService.downloadDocument(document.id);
       
@@ -446,43 +586,72 @@ const useDocuments = () => {
         variant: 'destructive'
       });
     }
-  };
-
-  // Manejar eliminación de documentos
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este documento?')) {
-      setIsLoading(true);
-      
-      try {
-        await documentService.deleteDocument(id);
-        fetchData(pagination.current);
-        
-        toast({
-          title: 'Éxito',
-          description: 'Documento eliminado correctamente',
-        });
-        
-        return true;
-      } catch (error) {
-        console.error('Error al eliminar documento:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudo eliminar el documento. Por favor, inténtelo de nuevo.',
-          variant: 'destructive'
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
+  }, [toast]);
+  
+  /**
+   * Manejar eliminación de documentos
+   * @param {number} id - ID del documento a eliminar
+   * @returns {Promise<boolean>} Resultado de la operación
+   */
+  const handleDelete = useCallback(async (id) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+      return false;
     }
-    return false;
-  };
-
-  // Manejar favoritos
-  const handleToggleFavorite = async (id) => {
+    
+    setIsLoading(true);
+    
+    try {
+      // Eliminar documento de la UI inmediatamente para una respuesta más rápida
+      const documentToRemove = documents.find(doc => doc.id === id);
+      const documentTitle = documentToRemove ? documentToRemove.title : 'Documento';
+      
+      // Actualizar la UI eliminando el documento de la lista local
+      setDocuments(prev => prev.filter(doc => doc.id !== id));
+      
+      // Realizar la eliminación en el servidor
+      const deleted = await documentService.deleteDocument(id);
+      
+      if (!deleted) {
+        // Si hay error, revertir la eliminación de la UI
+        if (documentToRemove) {
+          setDocuments(prev => [...prev, documentToRemove]);
+        }
+        throw new Error('Error al eliminar documento');
+      }
+      
+      // Mostrar notificación de éxito
+      toast({
+        title: 'Éxito',
+        description: `"${documentTitle}" eliminado correctamente`,
+      });
+      
+      // Actualizar la lista de documentos
+      await refreshData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar documento:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo eliminar el documento. Por favor, inténtelo de nuevo.',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [documents, refreshData, toast]);
+  
+  /**
+   * Manejar cambio de estado favorito
+   * @param {number} id - ID del documento a marcar/desmarcar
+   * @returns {Promise<boolean>} Resultado de la operación
+   */
+  const handleToggleFavorite = useCallback(async (id) => {
     try {
       const result = await documentService.toggleFavorite(id);
       
+      // Actualizar documento en el estado local
       setDocuments(prevDocs => prevDocs.map(doc => 
         doc.id === id ? { ...doc, is_favorite: result.is_favorite } : doc
       ));
@@ -491,6 +660,8 @@ const useDocuments = () => {
         title: 'Éxito',
         description: result.is_favorite ? 'Añadido a favoritos' : 'Eliminado de favoritos',
       });
+      
+      return true;
     } catch (error) {
       console.error('Error al cambiar estado de favorito:', error);
       toast({
@@ -498,18 +669,27 @@ const useDocuments = () => {
         description: 'No se pudo actualizar el estado de favorito.',
         variant: 'destructive'
       });
+      return false;
     }
-  };
-
-  // Función para crear una nueva categoría
-  const createCategory = async (name) => {
+  }, [toast]);
+  
+  /**
+   * Crear una nueva categoría
+   * @param {string} name - Nombre de la categoría
+   * @returns {Promise<Object|null>} Categoría creada o null si hay error
+   */
+  const createCategory = useCallback(async (name) => {
     try {
       const newCategory = await documentService.createCategory({ name });
+      
+      // Actualizar lista de categorías
       setCategories(prev => [...prev, newCategory]);
+      
       toast({
         title: 'Éxito',
         description: `Categoría "${name}" creada correctamente.`,
       });
+      
       return newCategory;
     } catch (error) {
       console.error('Error al crear categoría:', error);
@@ -520,17 +700,26 @@ const useDocuments = () => {
       });
       return null;
     }
-  };
-
-  // Función para crear una nueva etiqueta
-  const createTag = async (name) => {
+  }, [toast]);
+  
+  /**
+   * Crear una nueva etiqueta
+   * @param {string} name - Nombre de la etiqueta
+   * @param {string} color_code - Código de color (hex)
+   * @returns {Promise<Object|null>} Etiqueta creada o null si hay error
+   */
+  const createTag = useCallback(async (name, color_code = '#4F46E5') => {
     try {
-      const newTag = await documentService.createTag({ name });
+      const newTag = await documentService.createTag({ name, color_code });
+      
+      // Actualizar lista de etiquetas
       setTags(prev => [...prev, newTag]);
+      
       toast({
         title: 'Éxito',
         description: `Etiqueta "${name}" creada correctamente.`,
       });
+      
       return newTag;
     } catch (error) {
       console.error('Error al crear etiqueta:', error);
@@ -541,25 +730,32 @@ const useDocuments = () => {
       });
       return null;
     }
-  };
+  }, [toast]);
 
+  // Retornar todas las variables y funciones que necesita el componente
   return {
+    // Estados
     documents,
     categories,
     tags,
     isLoading,
     isSearching,
     searchQuery,
-    setSearchQuery,
     selectedCategory,
-    setSelectedCategory,
     sortBy,
-    setSortBy,
     sortOrder,
-    setSortOrder,
     selectedFile,
-    setSelectedFile,
     pagination,
+    
+    // Setters
+    setDocuments,
+    setSearchQuery,
+    setSelectedCategory,
+    setSortBy,
+    setSortOrder,
+    setSelectedFile,
+    
+    // Funciones
     goToPage,
     handleUpload,
     handleDownload,
@@ -569,8 +765,9 @@ const useDocuments = () => {
     createTag,
     refreshData,
     forceLoadCategories,
-    handleSearch,    // Exponemos la función de búsqueda
-    setDocuments     // Exponemos la función setDocuments para permitir actualizaciones directas
+    handleSearch,
+    loadCategories,
+    loadTags
   };
 };
 
