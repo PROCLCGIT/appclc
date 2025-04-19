@@ -74,7 +74,7 @@ class DocumentService extends BaseService {
       try {
         // Verificar el token para debug
         const token = localStorage.getItem('auth-token');
-        console.log("Token disponible para getDocuments:", !!token);
+        console.log("Token disponible para getDocuments:", token ? 'Sí' : 'No');
         
         // Crear una URL completa para API
         const apiUrl = `${API_BASE_URL}${this.endpoint}/documents/`;
@@ -251,7 +251,8 @@ class DocumentService extends BaseService {
       
       // Verificar token de autenticación
       const token = localStorage.getItem('auth-token');
-      console.log("Token de autenticación disponible:", !!token);
+      // No mostramos el token en consola por seguridad
+      console.log("Token de autenticación disponible:", token ? 'Sí' : 'No');
       
       // Enviar la solicitud con timeout extendido debido al tamaño potencial del archivo
       const response = await api.post(`${this.endpoint}/documents/`, formData, {
@@ -491,7 +492,7 @@ class DocumentService extends BaseService {
    */
   async getCategories(params = {}) {
     try {
-      console.log("Solicitando categorías con token:", localStorage.getItem('auth-token'));
+      console.log("Solicitando categorías, autenticación disponible:", localStorage.getItem('auth-token') ? 'Sí' : 'No');
       
       // Comprobar si ya tenemos categorías en localStorage como caché 
       const cachedCategories = localStorage.getItem('cached_categories');
@@ -600,7 +601,7 @@ class DocumentService extends BaseService {
    */
   async getTags(params = {}) {
     try {
-      console.log("Solicitando etiquetas con token:", localStorage.getItem('auth-token'));
+      console.log("Solicitando etiquetas, autenticación disponible:", localStorage.getItem('auth-token') ? 'Sí' : 'No');
       
       // Comprobar si ya tenemos etiquetas en localStorage como caché 
       const cachedTags = localStorage.getItem('cached_tags');
@@ -829,7 +830,7 @@ class DocumentService extends BaseService {
    */
   async getGroups(params = {}) {
     try {
-      console.log("Solicitando grupos con token:", localStorage.getItem('auth-token'));
+      console.log("Solicitando grupos, autenticación disponible:", localStorage.getItem('auth-token') ? 'Sí' : 'No');
       
       // Comprobar si ya tenemos grupos en localStorage como caché 
       const cachedGroups = localStorage.getItem('cached_groups');
@@ -1007,7 +1008,7 @@ class DocumentService extends BaseService {
       
       // Agregar token manualmente para pruebas
       const token = localStorage.getItem('auth-token');
-      console.log('Token disponible:', !!token);
+      console.log('Token disponible para creación de grupo:', token ? 'Sí' : 'No');
       
       // Mostrar todos los datos que se enviarán
       const dataToSend = {
@@ -1235,7 +1236,7 @@ class DocumentService extends BaseService {
       
       // Agregar token manualmente para pruebas
       const token = localStorage.getItem('auth-token');
-      console.log('Token de colección disponible:', !!token);
+      console.log('Token disponible para creación de colección:', token ? 'Sí' : 'No');
       
       // Mostrar todos los datos que se enviarán
       const dataToSend = {

@@ -68,34 +68,34 @@ const GestorDocumentalPage = () => {
   
   // Obtener datos y funciones del hook de documentos
   const {
-    documents,
-    categories,
-    tags,
-    isLoading,
-    isSearching,
-    searchQuery,
-    setSearchQuery,
-    selectedCategory,
-    setSelectedCategory,
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder,
-    selectedFile,
-    setSelectedFile,
-    pagination,
-    goToPage,
-    handleUpload,
-    handleDownload,
-    handleDelete,
-    handleToggleFavorite,
-    createCategory,
-    createTag,
-    forceLoadCategories,
-    refreshData,
-    handleSearch,
-    setDocuments
-  } = useDocuments();
+    documents = [],
+    categories = [],
+    tags = [],
+    isLoading = false,
+    isSearching = false,
+    searchQuery = '',
+    setSearchQuery = () => console.warn('setSearchQuery no disponible'),
+    selectedCategory = 'all',
+    setSelectedCategory = () => console.warn('setSelectedCategory no disponible'),
+    sortBy = 'updated_at',
+    setSortBy = () => console.warn('setSortBy no disponible'),
+    sortOrder = 'desc',
+    setSortOrder = () => console.warn('setSortOrder no disponible'),
+    selectedFile = null,
+    setSelectedFile = () => console.warn('setSelectedFile no disponible'),
+    pagination = { current: 1, total_pages: 1 },
+    goToPage = () => console.warn('goToPage no disponible'),
+    handleUpload = () => console.warn('handleUpload no disponible'),
+    handleDownload = () => console.warn('handleDownload no disponible'),
+    handleDelete = () => console.warn('handleDelete no disponible'),
+    handleToggleFavorite = () => console.warn('handleToggleFavorite no disponible'),
+    createCategory = () => console.warn('createCategory no disponible'),
+    createTag = () => console.warn('createTag no disponible'),
+    forceLoadCategories = () => console.warn('forceLoadCategories no disponible'),
+    refreshData = () => console.warn('refreshData no disponible'),
+    handleSearch = () => console.warn('handleSearch no disponible'),
+    setDocuments = () => console.warn('setDocuments no disponible')
+  } = useDocuments() || {};
   
   // Función para normalizar documentos
   const normalizeDocuments = useCallback((docs) => {
@@ -219,11 +219,39 @@ const GestorDocumentalPage = () => {
           duration: 2000
         });
         
+        // Definimos primero las funciones asíncronas por si acaso refreshData no está definido
+        const fetchData = async () => {
+          if (typeof refreshData === 'function') {
+            return refreshData();
+          } else {
+            console.error('refreshData no está definido');
+            return Promise.resolve();
+          }
+        };
+        
+        const fetchGroups = async () => {
+          if (typeof loadGroups === 'function') {
+            return loadGroups();
+          } else {
+            console.error('loadGroups no está definido');
+            return Promise.resolve([]);
+          }
+        };
+        
+        const fetchCollections = async () => {
+          if (typeof loadCollections === 'function') {
+            return loadCollections();
+          } else {
+            console.error('loadCollections no está definido');
+            return Promise.resolve([]);
+          }
+        };
+        
         // Cargar datos en paralelo para mejorar rendimiento
         await Promise.all([
-          refreshData(),
-          loadGroups(),
-          loadCollections()
+          fetchData(),
+          fetchGroups(),
+          fetchCollections()
         ]);
         
       } catch (error) {
@@ -446,7 +474,16 @@ const GestorDocumentalPage = () => {
     });
     
     // Implementar búsqueda filtrada por grupo
-    handleSearch('', { group: group.id });
+    if (typeof handleSearch === 'function') {
+      handleSearch('', { group: group.id });
+    } else {
+      console.error('handleSearch no está definido');
+      toast({
+        title: 'Error',
+        description: 'No se pudo realizar la búsqueda por grupo',
+        variant: 'destructive' 
+      });
+    }
   }, [handleSearch, toast]);
   
   // Crear una nueva colección
@@ -490,7 +527,16 @@ const GestorDocumentalPage = () => {
       });
       
       // Establecer los documentos de la colección
-      setDocuments(collectionDocs.results || []);
+      if (typeof setDocuments === 'function') {
+        setDocuments(collectionDocs.results || []);
+      } else {
+        console.error('setDocuments no está definido');
+        toast({
+          title: 'Advertencia',
+          description: 'No se pudieron mostrar los documentos de la colección',
+          variant: 'warning'
+        });
+      }
       
       // Cerrar modal
       setShowCollectionsModal(false);
@@ -903,10 +949,10 @@ const GestorDocumentalPage = () => {
           <div className="mt-8 flex justify-center">
             <nav className="flex items-center gap-2" aria-label="Paginación">
               <button 
-                onClick={() => goToPage(pagination.current - 1)}
-                disabled={!pagination.previous}
+                onClick={() => typeof goToPage === 'function' ? goToPage(pagination.current - 1) : null}
+                disabled={!pagination.previous || typeof goToPage !== 'function'}
                 className={`px-3 py-1 border rounded ${
-                  pagination.previous 
+                  pagination.previous && typeof goToPage === 'function'
                     ? 'border-gray-300 hover:bg-gray-100' 
                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
@@ -920,10 +966,10 @@ const GestorDocumentalPage = () => {
               </span>
               
               <button 
-                onClick={() => goToPage(pagination.current + 1)}
-                disabled={!pagination.next}
+                onClick={() => typeof goToPage === 'function' ? goToPage(pagination.current + 1) : null}
+                disabled={!pagination.next || typeof goToPage !== 'function'}
                 className={`px-3 py-1 border rounded ${
-                  pagination.next 
+                  pagination.next && typeof goToPage === 'function'
                     ? 'border-gray-300 hover:bg-gray-100' 
                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                 }`}

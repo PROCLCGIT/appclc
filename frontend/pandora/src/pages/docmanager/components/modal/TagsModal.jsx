@@ -43,7 +43,7 @@ const TagsModal = ({
 
   // Manejar creación de nueva etiqueta
   const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+    if (!newTagName.trim() || typeof onCreateTag !== 'function') return;
     
     try {
       const createdTag = await onCreateTag(newTagName.trim());
@@ -59,6 +59,11 @@ const TagsModal = ({
   
   // Manejar adición de etiqueta existente
   const handleAddTag = async (tag) => {
+    if (typeof onAddTag !== 'function') {
+      console.error('onAddTag no está definido o no es una función');
+      return;
+    }
+    
     try {
       await onAddTag(document.id, tag.id);
       // Actualizar localmente
@@ -70,6 +75,11 @@ const TagsModal = ({
   
   // Manejar eliminación de etiqueta
   const handleRemoveTag = async (tagId) => {
+    if (typeof onRemoveTag !== 'function') {
+      console.error('onRemoveTag no está definido o no es una función');
+      return;
+    }
+    
     try {
       await onRemoveTag(document.id, tagId);
       // Actualizar localmente
