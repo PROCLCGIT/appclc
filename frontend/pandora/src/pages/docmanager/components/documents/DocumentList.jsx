@@ -1,6 +1,7 @@
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useVirtual } from 'react-virtual';
 import DocumentRow from './DocumentRow';
+import PropTypes from 'prop-types';
 
 /**
  * Componente para mostrar documentos en vista de lista con virtualización
@@ -83,10 +84,10 @@ const DocumentList = ({
           </div>
         </th>
       )}
-      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[42%]">Documento</th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[40%]">Documento</th>
       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Categoría</th>
       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Actualizado</th>
-      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Tamaño</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Tamaño</th>
       <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
         <div className="flex items-center justify-between">
           <span>Acciones</span>
@@ -183,13 +184,13 @@ const DocumentList = ({
       {selectionPanel}
       
       <div className="overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 table-fixed" role="grid" aria-rowcount={validDocuments.length}>
+        <table className="min-w-full divide-y divide-gray-200 table-fixed border-collapse" role="grid" aria-rowcount={validDocuments.length} style={{ tableLayout: 'fixed' }}>
           <colgroup>
             {selectionMode && <col className="w-12" />}
-            <col className="w-[42%]" />
+            <col className="w-[40%]" />
             <col className="w-[15%]" />
             <col className="w-[15%]" />
-            <col className="w-[8%]" />
+            <col className="w-[10%]" />
             <col className="w-[20%]" />
           </colgroup>
           <thead className="bg-gray-50 sticky top-0 z-10">
@@ -218,7 +219,7 @@ const DocumentList = ({
               return (
                 <tr 
                   key={document.id} 
-                  className="absolute w-full"
+                  className="absolute w-full table table-fixed"
                   style={{
                     top: 0,
                     left: 0,
@@ -251,3 +252,35 @@ const DocumentList = ({
 
 // Optimizar con React.memo para evitar re-renders innecesarios
 export default React.memo(DocumentList);
+
+// Añadir validación de PropTypes
+DocumentList.propTypes = {
+  documents: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    // Añade aquí otras propiedades esperadas de cada documento si es necesario
+  })).isRequired,
+  onToggleFavorite: PropTypes.func,
+  onDownload: PropTypes.func,
+  onDelete: PropTypes.func,
+  onView: PropTypes.func,
+  onManageTags: PropTypes.func,
+  selectionMode: PropTypes.bool,
+  selectedDocuments: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
+  onToggleSelection: PropTypes.func,
+  onToggleSelectionMode: PropTypes.func,
+  onShareSelected: PropTypes.func,
+};
+
+// Valores por defecto para props opcionales (ya se hace en la desestructuración, pero es bueno tenerlo aquí también)
+DocumentList.defaultProps = {
+  selectionMode: false,
+  selectedDocuments: [],
+  onToggleFavorite: () => {},
+  onDownload: () => {},
+  onDelete: () => {},
+  onView: () => {},
+  onManageTags: () => {},
+  onToggleSelection: () => {},
+  onToggleSelectionMode: () => {},
+  onShareSelected: () => {},
+};

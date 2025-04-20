@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -154,7 +155,7 @@ const DocumentRow = ({
   return (
     <>
       {selectionMode && (
-        <td className="w-12 px-4" role="cell">
+        <td className="px-4 py-4 w-12" role="cell">
           <div className="flex items-center justify-center">
             <div className="relative w-5 h-5">
               <input 
@@ -172,7 +173,7 @@ const DocumentRow = ({
         </td>
       )}
       
-      <td className="w-[42%] px-6 py-4 whitespace-nowrap" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap w-[40%]" role="cell">
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
             {getFileIcon()}
@@ -212,23 +213,23 @@ const DocumentRow = ({
         </div>
       </td>
       
-      <td className="w-[15%] px-6 py-4 whitespace-nowrap text-center" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%]" role="cell">
         <div className="text-sm text-gray-900">
           {document.category_name || 'Sin categoría'}
         </div>
       </td>
       
-      <td className="w-[15%] px-6 py-4 whitespace-nowrap text-center" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%]" role="cell">
         <div className="text-sm text-gray-900">
           {formatDate(document.updated_at || document.created_at)}
         </div>
       </td>
       
-      <td className="w-[8%] px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center w-[10%]" role="cell">
         {formatFileSize(document.file_size)}
       </td>
       
-      <td className="w-[20%] px-6 py-4 whitespace-nowrap text-right text-sm font-medium" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[20%]" role="cell">
         <div className="flex items-center justify-end space-x-4">
           <button 
             onClick={handleToggleFavorite} 
@@ -300,3 +301,48 @@ const areEqual = (prevProps, nextProps) => {
 
 // Exportar como componente memoizado
 export default React.memo(DocumentRow, areEqual);
+
+// Añadir validación de PropTypes
+DocumentRow.propTypes = {
+  document: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    title: PropTypes.string,
+    description: PropTypes.string,
+    file_type: PropTypes.string,
+    tags: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      name: PropTypes.string.isRequired,
+      color_code: PropTypes.string
+    })),
+    category_name: PropTypes.string,
+    updated_at: PropTypes.string,
+    created_at: PropTypes.string,
+    file_size: PropTypes.number,
+    is_favorite: PropTypes.bool
+  }).isRequired,
+  onToggleFavorite: PropTypes.func.isRequired,
+  onDownload: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onView: PropTypes.func.isRequired,
+  onManageTags: PropTypes.func.isRequired,
+  selectionMode: PropTypes.bool,
+  isSelected: PropTypes.bool,
+  onToggleSelection: PropTypes.func.isRequired
+};
+
+// Valores por defecto para props opcionales (si es necesario, aunque ya los tienes en la desestructuración)
+DocumentRow.defaultProps = {
+  selectionMode: false,
+  isSelected: false,
+  document: {
+    title: 'Sin título',
+    description: '',
+    tags: [],
+    category_name: 'Sin categoría',
+    updated_at: '',
+    created_at: '',
+    file_size: 0,
+    is_favorite: false,
+    file_type: 'unknown',
+  }
+};
