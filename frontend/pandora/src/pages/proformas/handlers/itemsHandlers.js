@@ -42,7 +42,7 @@ export const useItemsHandlers = ({
     updateProforma(activeProformaId, { items: updatedItems });
     
     // Recalcular totales después de la actualización
-    recalculateTotals();
+    recalculateTotals(null);
   };
 
   // Actualizar un ítem
@@ -119,7 +119,8 @@ export const useItemsHandlers = ({
     // Actualizar los items locales
     setItems(updatedItems);
     
-    // Recalcular totales INMEDIATAMENTE usando los items actualizados (no esperar a que se actualice la proforma)
+    // Recalcular totales INMEDIATAMENTE usando los items actualizados
+    // ya que actualizaremos el estado manualmente más adelante
     const updatedQuote = recalculateTotals(updatedItems);
     
     if (updatedQuote) {
@@ -153,7 +154,8 @@ export const useItemsHandlers = ({
     // Actualizar los items locales primero
     setItems(updatedItems);
     
-    // Recalcular totales INMEDIATAMENTE usando los items actualizados (no esperar a que se actualice la proforma)
+    // Recalcular totales INMEDIATAMENTE usando los items actualizados
+    // ya que actualizaremos el estado manualmente más adelante
     const updatedQuote = recalculateTotals(updatedItems);
     
     if (updatedQuote) {
@@ -286,7 +288,7 @@ export const useItemsHandlers = ({
     updateProforma(activeProformaId, { items: updatedItems });
     
     // Recalcular totales después de la actualización
-    recalculateTotals();
+    recalculateTotals(null);
     
     // Notificar al usuario
     toast.success(`${product.description} agregado a la proforma #${activeProforma.quote.number}`);

@@ -3,7 +3,11 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/lib/utils";
 
-const Popover = PopoverPrimitive.Root;
+// Versión mejorada del Popover que evita ciclos de actualización
+const Popover = React.forwardRef((props, ref) => {
+  return <PopoverPrimitive.Root {...props} ref={ref} />;
+});
+Popover.displayName = "Popover";
 
 const PopoverTrigger = PopoverPrimitive.Trigger;
 

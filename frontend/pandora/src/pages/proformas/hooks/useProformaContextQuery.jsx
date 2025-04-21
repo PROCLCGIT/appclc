@@ -1,7 +1,8 @@
 // src/pages/proformas/hooks/useProformaContextQuery.jsx
 
 import React, { createContext, useContext, useReducer, useMemo } from "react";
-import { createEmptyProforma } from "../utils/proformaUtils";
+import PropTypes from 'prop-types';
+// import { createEmptyProforma } from "../utils/proformaUtils"; // No usado
 import { useProformaConfigQuery } from "@/hooks/queries/useProformasQuery";
 import useEnhancedProformaQuery from "./useEnhancedProformaQuery";
 
@@ -385,10 +386,7 @@ export const ProformaProvider = ({ children }) => {
 
     updateProforma: (proformaId, updates) => {
       updateProformaLocal(proformaId, updates);
-      dispatch({
-        type: ActionTypes.UPDATE_PROFORMA,
-        payload: { proformaId, updates },
-      });
+      dispatch({ type: ActionTypes.UPDATE_PROFORMA, payload: { proformaId, updates } });
     },
 
     addNewProforma: (proforma) => {
@@ -407,70 +405,75 @@ export const ProformaProvider = ({ children }) => {
       dispatch({ type: ActionTypes.SET_LOADING, payload: loadingState });
     },
 
-    setClient: (client) => {
-      dispatch({ type: ActionTypes.SET_CLIENT, payload: client });
+    setClient: (clientData) => {
+      dispatch({ type: ActionTypes.SET_CLIENT, payload: clientData });
+      if (state.activeProformaId) {
+        updateProformaLocal(state.activeProformaId, { client: clientData });
+      }
     },
 
-    setItems: (items) => {
-      dispatch({ type: ActionTypes.SET_ITEMS, payload: items });
+    setItems: (itemsData) => {
+      dispatch({ type: ActionTypes.SET_ITEMS, payload: itemsData });
+      if (state.activeProformaId) {
+        updateProformaLocal(state.activeProformaId, { items: itemsData });
+      }
     },
 
     addItem: (item) => {
       dispatch({ type: ActionTypes.ADD_ITEM, payload: item });
+      if (state.activeProformaId) {
+        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+        updateProformaLocal(state.activeProformaId, { items: [...currentItems, item] });
+      }
     },
 
     updateItem: (itemId, updates) => {
       dispatch({ type: ActionTypes.UPDATE_ITEM, payload: { itemId, updates } });
+      if (state.activeProformaId) {
+        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+        const updatedItems = currentItems.map(i => i.id === itemId ? { ...i, ...updates } : i);
+        updateProformaLocal(state.activeProformaId, { items: updatedItems });
+      }
     },
 
     removeItem: (itemId) => {
       dispatch({ type: ActionTypes.REMOVE_ITEM, payload: itemId });
+      if (state.activeProformaId) {
+        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+        const updatedItems = currentItems.filter(i => i.id !== itemId);
+        updateProformaLocal(state.activeProformaId, { items: updatedItems });
+      }
     },
 
-    setConfig: (config) => {
-      dispatch({ type: ActionTypes.SET_CONFIG, payload: config });
+    setConfig: (configData) => {
+      dispatch({ type: ActionTypes.SET_CONFIG, payload: configData });
+      updateConfig(configData);
     },
 
     setPreviewMode: (mode) => {
       setPreviewMode(mode);
     },
 
-    setSearchState: (searchState) => {
-      dispatch({ type: ActionTypes.SET_SEARCH_STATE, payload: searchState });
+    setSearchState: (searchStateData) => {
+      dispatch({ type: ActionTypes.SET_SEARCH_STATE, payload: searchStateData });
     },
 
     updateSearchState: (updates) => {
       dispatch({ type: ActionTypes.UPDATE_SEARCH_STATE, payload: updates });
     },
 
-    // Funciones que interactúan con el backend
-    saveProforma: async (proforma, options) => {
-      return saveProforma(proforma, options);
-    },
-
-    changeProformaState: async (id, estado, notas) => {
-      return changeProformaState({ id, estado, notas });
-    },
-
-    duplicateProforma: async (id) => {
-      return duplicateProforma(id);
-    },
-
-    loadProforma: async (id, options) => {
-      return loadProforma(id, options);
-    },
-
-    loadSavedProformas: async (options) => {
-      return loadSavedProformas(options);
-    },
-
-    updateConfig: async (newConfig) => {
-      return updateConfig(newConfig);
-    },
+    // Funciones que interactúan directamente con React Query (ya son estables)
+    saveProforma,
+    changeProformaState,
+    duplicateProforma,
+    loadProforma,
+    loadSavedProformas,
+    updateConfig,
   }), [
-    setActiveProformaId, 
-    updateProformaLocal, 
-    addNewProformaQuery, 
+    dispatch,
+    setActiveProformaId,
+    updateProformaLocal,
+    addNewProformaQuery,
     closeProformaQuery,
     setPreviewMode,
     saveProforma,
@@ -478,14 +481,16 @@ export const ProformaProvider = ({ children }) => {
     duplicateProforma,
     loadProforma,
     loadSavedProformas,
-    updateConfig
+    updateConfig,
+    state.activeProformaId,
+    state.proformas,
   ]);
 
-  // Crear valor del contexto con state y actions
+  // Crear valor del contexto con state y actions estables
   const contextValue = useMemo(() => ({
     state,
     actions
-  }), [state, actions]);
+  }), [state]);
 
   return (
     <ProformaContext.Provider value={contextValue}>
@@ -494,12 +499,17 @@ export const ProformaProvider = ({ children }) => {
   );
 };
 
+// Añadir validación de PropTypes
+ProformaProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 // Hook personalizado para usar el contexto
 export function useProformaContextQuery() {
   const context = useContext(ProformaContext);
   if (!context) {
     throw new Error(
-      "useProformaContextQuery debe usarse dentro de ProformaProvider",
+      "useProformaContextQuery debe ser usado dentro de un ProformaProvider",
     );
   }
   return context;

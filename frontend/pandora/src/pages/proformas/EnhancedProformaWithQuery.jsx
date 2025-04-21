@@ -1,6 +1,6 @@
 // src/pages/proformas/EnhancedProformaWithQuery.jsx
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // Componentes UI
@@ -29,7 +29,7 @@ import { useClientHandlers } from "./handlers/clientHandlers";
 import useProformaTemplate from "./hooks/useProformaTemplate";
 import useProformaInitialization from "./hooks/useProformaInitialization";
 import useErrorHandler from "./hooks/useErrorHandler.jsx";
-import useNotifications from "./hooks/useNotifications.jsx";
+// import useNotifications from "./hooks/useNotifications.jsx"; // No usado
 import useProformaSelection from "./hooks/useProformaSelection.jsx";
 import useDelayedFlag from "@/hooks/useDelayedFlag";
 import { SkeletonProforma } from "@/components/SkeletonList";
@@ -38,45 +38,17 @@ import { SkeletonProforma } from "@/components/SkeletonList";
  * Componente principal que implementa el contexto y la lógica de proformas con React Query
  */
 const EnhancedProformaContent = () => {
-  // Estado para capturar errores específicos
-  const [contentError, setContentError] = useState(null);
-
-  // Manejador de errores global para este componente
-  useEffect(() => {
-    const handleError = (event) => {
-      console.error("Error capturado en EnhancedProformaContent:", event.error);
-      setContentError(event.error);
-      event.preventDefault();
-    };
-    
-    window.addEventListener("error", handleError);
-    return () => window.removeEventListener("error", handleError);
-  }, []);
-
-  if (contentError) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto bg-yellow-50 border border-yellow-200 rounded-lg">
-        <h2 className="text-xl font-bold text-yellow-700 mb-4">Error en el contenido</h2>
-        <p className="text-yellow-600 mb-2">{contentError.message}</p>
-        <pre className="bg-yellow-100 p-4 rounded overflow-auto text-xs">
-          {contentError.stack}
-        </pre>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors mt-4"
-        >
-          Reintentar
-        </button>
-      </div>
-    );
-  }
+  // --- INICIO: Llamadas a Hooks movidas al principio ---
 
   // Obtener parámetros de la URL
   const [searchParams] = useSearchParams();
   const isNewProforma = searchParams.get("new") === "true";
 
+  // Estado para capturar errores específicos
+  const [contentError, setContentError] = useState(null);
+
   // Hooks para notificaciones y errores
-  const notify = useNotifications();
+  // const notify = useNotifications(); // No usado
   const errorHandler = useErrorHandler();
 
   // Acceder al contexto de proformas con React Query
@@ -85,13 +57,13 @@ const EnhancedProformaContent = () => {
     proformas = [],
     activeProformaId = null,
     loading = false,
-    client = null,
-    items = [],
+    // client = null, // No usado directamente aquí
+    // items = [], // Obtenido de proforma activa
     previewMode = false,
     config = {},
-    searchState = {},
+    searchState = {}, // Recuperar searchState del contexto
   } = state || {};
-  
+
   // Usar delayed flag para evitar flash de loading
   const showSkeletons = useDelayedFlag(loading, 300);
 
@@ -103,7 +75,7 @@ const EnhancedProformaContent = () => {
     clientes, 
     loadingClientes, 
     loadClientes,
-    searchCliente
+    // searchCliente // No usado
   } = useClientSearchQuery();
 
   const { 
@@ -122,11 +94,12 @@ const EnhancedProformaContent = () => {
   // Inicializar hook para inicialización de proformas
   const { loadSpecificProforma } = useProformaInitialization({
     isNewProforma,
-    setLoadExisting: actions.setLoadExisting,
+    setLoadExisting: actions.setLoading,
     addNewProforma: actions.addNewProforma,
     loadProforma: actions.loadProforma,
     loadClientes,
     loadInitialProducts,
+    errorHandler, // Pasar errorHandler si es necesario
   });
 
   // Inicializar hooks para diálogos
@@ -150,14 +123,18 @@ const EnhancedProformaContent = () => {
   } = useDialogControl({ 
     loadSavedProformas: actions.loadSavedProformas 
   });
-
+  
+  // Obtener items de la proforma activa (si existe)
+  const activeProforma = useMemo(() => proformas.find(p => p.id === activeProformaId), [proformas, activeProformaId]);
+  const items = activeProforma?.items || [];
+  
   // Inicializar hooks para cálculos y acciones
   const { formatCurrency, recalculateTotals } = useTotalsCalculation({
     activeProformaId,
     proformas,
     updateProforma: actions.updateProforma,
     config,
-    items,
+    items, // Pasar los items actuales
   });
 
   const { handleAction } = useProformaActions({
@@ -174,6 +151,7 @@ const EnhancedProformaContent = () => {
     showSuccessDialog,
     showErrorDialog,
     showWarningDialog,
+    errorHandler, // Pasar errorHandler
   });
 
   // Hook para la selección de proformas
@@ -193,14 +171,16 @@ const EnhancedProformaContent = () => {
       activeProformaId,
       proformas,
       updateProforma: actions.updateProforma,
-      setItems: actions.setItems,
+      setItems: actions.setItems, // Asegúrate que actions.setItems exista y sea correcto
       recalculateTotals,
+      errorHandler, // Pasar errorHandler
     });
 
   const { handleSelectClient } = useClientHandlers({
     activeProformaId,
     updateProforma: actions.updateProforma,
-    setClient: actions.setClient,
+    setClient: actions.setClient, // Asegúrate que actions.setClient exista
+    errorHandler, // Pasar errorHandler
   });
 
   // Función para manejar la selección de un cliente
@@ -241,35 +221,45 @@ const EnhancedProformaContent = () => {
     }
   }, [showProformasDialog, handleLoadProformas, errorHandler]);
 
-  // Efecto para recalcular totales cuando cambia la proforma activa
-  useEffect(() => {
-    if (activeProformaId && !loading) {
-      const recalcTimer = setTimeout(() => {
-        const currentProforma = proformas.find(
-          (p) => p.id === activeProformaId,
-        );
-        if (currentProforma?.items?.length > 0) {
-          recalculateTotals();
-        }
-      }, 300);
-
-      return () => clearTimeout(recalcTimer);
-    }
-  }, [activeProformaId, loading, proformas, recalculateTotals]);
-
   // Actualizar estado de búsqueda en el contexto global
   useEffect(() => {
+    // Solo actualizar searchState en contexto cuando cambien criterios principales
     actions.updateSearchState({
       searchTerm,
       searchSource,
-      searchResults,
-      loadingProducts,
       viewType,
       showSearchResults: searchTerm.length >= 2,
     });
-  }, [searchTerm, searchSource, searchResults, loadingProducts, viewType, actions]);
+  }, [searchTerm, searchSource, viewType, actions]);
+
+  // Manejador de errores para capturar errores asíncronos o de eventos
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error("Error capturado en EnhancedProformaContent (evento):", event.error);
+      if (!contentError) { // Evitar sobreescribir un error ya existente
+          setContentError(event.error);
+      }
+      event.preventDefault();
+    };
+    window.addEventListener("error", handleError);
+    // Listener para promesas rechazadas no controladas
+    const handleRejection = (event) => {
+        console.error("Promesa rechazada no controlada:", event.reason);
+        if (!contentError) { 
+            setContentError(event.reason instanceof Error ? event.reason : new Error(JSON.stringify(event.reason)));
+        }
+        event.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+
+    return () => {
+        window.removeEventListener("error", handleError);
+        window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, [contentError]); // Volver a adjuntar si contentError cambia (aunque podría no ser necesario)
 
   // Memoizar las pestañas para evitar re-renders innecesarios
+  // Asegurarse que useMemo esté fuera de cualquier lógica condicional
   const proformaTabs = useMemo(
     () => (
       <ProformaTabs
@@ -277,7 +267,7 @@ const EnhancedProformaContent = () => {
         activeProformaId={activeProformaId}
         setActiveProformaId={actions.setActiveProformaId}
         closeProforma={actions.closeProforma}
-        addNewProforma={actions.addNewProforma}
+        addNewProforma={() => handleAction("new")} // Usar handleAction para consistencia si aplica
       >
         {proformas.map((proforma) => (
           <TabsContent key={proforma.id} value={proforma.id.toString()}>
@@ -288,34 +278,37 @@ const EnhancedProformaContent = () => {
                 >
                   <ProformaTemplate
                     previewMode={previewMode}
-                    quote={proforma.quote}
+                    // Pasar datos específicos de la proforma actual
+                    quote={proforma.quote} 
                     setQuote={(newQuote) =>
                       actions.updateProforma(proforma.id, { quote: newQuote })
                     }
-                    client={proforma.client}
-                    setClient={(newClient) =>
+                    client={proforma.client} // Pasar cliente de la proforma actual
+                    setClient={(newClient) => // Esto parece asignar el cliente a la proforma, no globalmente
                       actions.updateProforma(proforma.id, { client: newClient })
-                    }
-                    items={proforma.items || []}
-                    setItems={(newItems) =>
+                    } 
+                    items={proforma.items || []} // Pasar items de la proforma actual
+                    setItems={(newItems) => // Esto actualiza items de la proforma específica
                       actions.updateProforma(proforma.id, { items: newItems })
                     }
                     company={company}
                     config={config || {}}
-                    handleClientSearch={openClientSearch}
-                    addItem={addItem}
+                    handleClientSearch={openClientSearch} // Abre el diálogo de búsqueda global
+                    // Funciones de manejo de items (actúan sobre la proforma activa via hooks)
+                    addItem={addItem} 
                     updateItem={updateItem}
                     removeItem={removeItem}
+                    // Props de búsqueda de productos
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     searchSource={searchSource}
                     setSearchSource={setSearchSource}
-                    showSearchResults={searchTerm.length >= 2}
+                    showSearchResults={searchState.showSearchResults} // Usar estado del contexto
                     setShowSearchResults={(show) =>
                       actions.updateSearchState({ showSearchResults: show })
                     }
                     searchResults={searchResults}
-                    addProductFromSearch={addProductFromSearch}
+                    addProductFromSearch={addProductFromSearch} // Añade a la proforma activa
                     searchProducts={searchProducts}
                     viewType={viewType}
                     setViewType={setViewType}
@@ -332,15 +325,19 @@ const EnhancedProformaContent = () => {
     [
       proformas,
       activeProformaId,
-      actions,
+      actions, // Asegúrate que 'actions' sea estable o esté memoizado en el contexto
       previewMode,
       company,
       config,
       searchTerm,
+      setSearchTerm, // Añadir setters si cambian
       searchSource,
+      setSearchSource, // Añadir setters si cambian
+      searchState.showSearchResults, // Usar estado del contexto
       searchResults,
       loadingProducts,
       viewType,
+      setViewType, // Añadir setters si cambian
       openClientSearch,
       addItem,
       updateItem,
@@ -348,110 +345,108 @@ const EnhancedProformaContent = () => {
       addProductFromSearch,
       searchProducts,
       formatCurrency,
-      setSearchTerm,
-      setSearchSource,
-      setViewType,
+      handleAction, // Añadir handleAction si se usa dentro
     ]
   );
 
-  try {
-    return (
-      <div className="p-6 max-w-6xl mx-auto">
-        {/* Encabezado de la página */}
-        <ProformaHeader
-          previewMode={previewMode}
-          setPreviewMode={actions.setPreviewMode}
-          openProformasDialog={openProformasDialog}
-          handleNew={() => handleAction("new")}
-        />
+  // --- FIN: Llamadas a Hooks movidas al principio ---
 
-        {/* Mostrar skeleton si está cargando, o las pestañas con proformas si no */}
-        {showSkeletons ? (
-          <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
-            <CardContent className="p-6">
-              <SkeletonProforma />
-            </CardContent>
-          </Card>
-        ) : (
-          proformaTabs
+  // Renderizado condicional basado en errores (después de llamar a los hooks)
+  if (contentError) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h2 className="text-xl font-bold text-yellow-700 mb-4">Error en el contenido</h2>
+        <p className="text-yellow-600 mb-2">
+          {contentError instanceof Error ? contentError.message : "Se produjo un error desconocido."}
+        </p>
+        {contentError instanceof Error && contentError.stack && (
+           <details className="mb-4">
+             <summary className="cursor-pointer text-yellow-500 mb-2">Ver detalles técnicos</summary>
+             <pre className="bg-yellow-100 p-4 rounded overflow-auto text-xs">
+               {contentError.stack}
+             </pre>
+           </details>
         )}
-
-        {/* Botones de acción */}
-        <ProformaActions handleAction={handleAction} />
-
-        {/* Diálogos */}
-        <ProformaDialogs
-          // Diálogo de búsqueda de clientes
-          showClientSearch={showClientSearch}
-          closeClientSearch={closeClientSearch}
-          handleClientSelection={handleClientSelection}
-          clientes={clientes}
-          loadingClientes={loadingClientes}
-          // Diálogo de proformas guardadas
-          showProformasDialog={showProformasDialog}
-          closeProformasDialog={closeProformasDialog}
-          handleSelectProforma={handleSelectProforma}
-          onLoadProformas={handleLoadProformas}
-          proformas={proformas}
-          loading={loading}
-          errorHandler={errorHandler}
-          // Diálogo de confirmación/guardado
-          showSaveDialog={showSaveDialog}
-          saveDialogType={saveDialogType}
-          saveDialogTitle={saveDialogTitle}
-          saveDialogMessage={saveDialogMessage}
-          saveDialogDetails={saveDialogDetails}
-          savedProformaId={savedProformaId}
-          closeSaveDialog={closeSaveDialog}
-          activeProformaId={activeProformaId}
-          handleAction={handleAction}
-        />
-      </div>
-    );
-  } catch (err) {
-    console.error("Error en EnhancedProformaContent:", err);
-    setContentError(err);
-    return null;
-  }
-};
-
-/**
- * Componente wrapper que proporciona el contexto de proformas
- */
-export default function EnhancedProformaWithQuery() {
-  // Añadir un manejador de errores para capturar cualquier problema
-  const [error, setError] = useState(null);
-
-  if (error) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto bg-red-50 border border-red-200 rounded-lg">
-        <h2 className="text-xl font-bold text-red-700 mb-4">Error al cargar el componente</h2>
-        <p className="text-red-600 mb-2">{error.message}</p>
-        <details className="mb-4">
-          <summary className="cursor-pointer text-red-500 mb-2">Ver detalles técnicos</summary>
-          <pre className="bg-red-100 p-4 rounded overflow-auto text-xs">
-            {error.stack}
-          </pre>
-        </details>
         <button 
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          onClick={() => window.location.reload()} // O una función de reseteo más específica
+          className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors mt-4"
         >
-          Reintentar
+          Reintentar Carga
         </button>
       </div>
     );
   }
 
-  try {
-    return (
-      <ProformaProvider>
-        <EnhancedProformaContent />
-      </ProformaProvider>
-    );
-  } catch (err) {
-    console.error("Error al renderizar EnhancedProformaWithQuery:", err);
-    setError(err);
-    return null;
-  }
+  // Renderizado principal del componente
+  return (
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Encabezado de la página */}
+      <ProformaHeader
+        previewMode={previewMode}
+        setPreviewMode={actions.setPreviewMode}
+        openProformasDialog={openProformasDialog}
+        handleNew={() => handleAction("new")}
+      />
+
+      {/* Mostrar skeleton si está cargando, o las pestañas con proformas si no */}
+      {showSkeletons ? (
+        <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
+          <CardContent className="p-6">
+            <SkeletonProforma />
+          </CardContent>
+        </Card>
+      ) : proformas.length > 0 ? ( // Solo renderizar tabs si hay proformas
+        proformaTabs
+      ) : (
+        <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
+           <CardContent className="p-6 text-center text-gray-500">
+             No hay proformas activas. Crea una nueva o carga una existente.
+           </CardContent>
+         </Card>
+      )}
+
+      {/* Botones de acción (solo si hay una proforma activa?) */}
+      {activeProformaId && <ProformaActions handleAction={handleAction} />}
+
+      {/* Diálogos */}
+      <ProformaDialogs
+        // Diálogo de búsqueda de clientes
+        showClientSearch={showClientSearch}
+        closeClientSearch={closeClientSearch}
+        handleClientSelection={handleClientSelection}
+        clientes={clientes}
+        loadingClientes={loadingClientes}
+        searchClientes={loadClientes} // Renombrar prop si es necesario
+        // Diálogo de proformas guardadas
+        showProformasDialog={showProformasDialog}
+        closeProformasDialog={closeProformasDialog}
+        handleSelectProforma={handleSelectProforma}
+        onLoadProformas={handleLoadProformas} // La función que carga proformas
+        proformas={state.savedProformas || []} // Usar proformas guardadas del estado global si existen
+        loading={loading} // Loading general o específico de proformas guardadas?
+        errorHandler={errorHandler}
+        // Diálogo de confirmación/guardado
+        showSaveDialog={showSaveDialog}
+        saveDialogType={saveDialogType}
+        saveDialogTitle={saveDialogTitle}
+        saveDialogMessage={saveDialogMessage}
+        saveDialogDetails={saveDialogDetails}
+        savedProformaId={savedProformaId}
+        closeSaveDialog={closeSaveDialog}
+        activeProformaId={activeProformaId}
+        handleAction={handleAction}
+      />
+    </div>
+  );
+};
+
+/**
+ * Componente wrapper que proporciona el contexto de proformas y maneja errores globales
+ */
+export default function EnhancedProformaWithQuery() {
+  return (
+    <ProformaProvider>
+      <EnhancedProformaContent />
+    </ProformaProvider>
+  );
 }

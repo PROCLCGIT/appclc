@@ -108,38 +108,32 @@ export default function ProformaTemplate({
   }, [quote]);
   
   // Efecto para enfocar los inputs cuando se abren los popovers
+  // Versión corregida que no causa bucles infinitos
   useEffect(() => {
-    if (attentionPopoverOpen && attentionInputRef.current) {
-      // Pequeño retraso para asegurar que el popover está completamente renderizado
-      setTimeout(() => {
-        attentionInputRef.current.focus();
-      }, 50);
+    // Función para enfocar el input después de un pequeño retraso
+    const focusInputWithDelay = (ref) => {
+      if (ref.current) {
+        const timeoutId = setTimeout(() => {
+          ref.current.focus();
+        }, 50);
+        return () => clearTimeout(timeoutId);
+      }
+    };
+    
+    // Solo aplicamos el enfoque cuando el popover se abre, no cuando se cierra
+    if (attentionPopoverOpen) {
+      focusInputWithDelay(attentionInputRef);
     }
-  }, [attentionPopoverOpen]);
-  
-  useEffect(() => {
-    if (proformaNamePopoverOpen && proformaNameInputRef.current) {
-      setTimeout(() => {
-        proformaNameInputRef.current.focus();
-      }, 50);
+    if (proformaNamePopoverOpen) {
+      focusInputWithDelay(proformaNameInputRef);
     }
-  }, [proformaNamePopoverOpen]);
-  
-  useEffect(() => {
-    if (paymentTermsPopoverOpen && paymentTermsInputRef.current) {
-      setTimeout(() => {
-        paymentTermsInputRef.current.focus();
-      }, 50);
+    if (paymentTermsPopoverOpen) {
+      focusInputWithDelay(paymentTermsInputRef);
     }
-  }, [paymentTermsPopoverOpen]);
-  
-  useEffect(() => {
-    if (deliveryTimePopoverOpen && deliveryTimeInputRef.current) {
-      setTimeout(() => {
-        deliveryTimeInputRef.current.focus();
-      }, 50);
+    if (deliveryTimePopoverOpen) {
+      focusInputWithDelay(deliveryTimeInputRef);
     }
-  }, [deliveryTimePopoverOpen]);
+  }, [attentionPopoverOpen, proformaNamePopoverOpen, paymentTermsPopoverOpen, deliveryTimePopoverOpen]);
   
   return (
     <div className="space-y-8">
@@ -321,7 +315,6 @@ export default function ProformaTemplate({
                         ref={attentionButtonRef}
                         className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                         title="Editar atención"
-                        onClick={() => setAttentionPopoverOpen(true)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -358,7 +351,6 @@ export default function ProformaTemplate({
                               // El siguiente botón sería el de nombre de proforma
                               if (proformaNameButtonRef.current) {
                                 proformaNameButtonRef.current.focus();
-                                // Removed automatic opening of the next popover
                               }
                             }, 100);
                           } else if (e.key === 'Escape') {
@@ -420,7 +412,6 @@ export default function ProformaTemplate({
                         ref={proformaNameButtonRef}
                         className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                         title="Editar nombre de proforma"
-                        onClick={() => setProformaNamePopoverOpen(true)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -457,7 +448,6 @@ export default function ProformaTemplate({
                               // El siguiente botón sería el de forma de pago
                               if (paymentTermsButtonRef.current) {
                                 paymentTermsButtonRef.current.focus();
-                                // Removed automatic opening of the next popover
                               }
                             }, 100);
                           } else if (e.key === 'Escape') {
@@ -661,7 +651,6 @@ export default function ProformaTemplate({
                         ref={paymentTermsButtonRef}
                         className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                         title="Editar forma de pago"
-                        onClick={() => setPaymentTermsPopoverOpen(true)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -719,7 +708,6 @@ export default function ProformaTemplate({
                                 // El siguiente botón sería el de tiempo de entrega
                                 if (deliveryTimeButtonRef.current) {
                                   deliveryTimeButtonRef.current.focus();
-                                  // Removed automatic opening of the next popover
                                 }
                               }, 100);
                             } else if (e.key === 'Escape') {
@@ -751,7 +739,6 @@ export default function ProformaTemplate({
                         ref={deliveryTimeButtonRef}
                         className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                         title="Editar tiempo de entrega"
-                        onClick={() => setDeliveryTimePopoverOpen(true)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -810,9 +797,6 @@ export default function ProformaTemplate({
                                 // Volver al primer botón (atención)
                                 if (attentionButtonRef.current) {
                                   attentionButtonRef.current.focus();
-                                  // Removed automatic opening of the next popover
-                                  // The commented line below was already correctly not activating the popover
-                                  // setAttentionPopoverOpen(true);
                                 }
                               }, 100);
                             } else if (e.key === 'Escape') {

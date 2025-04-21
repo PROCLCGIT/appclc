@@ -1,6 +1,7 @@
 // src/pages/proformas/hooks/useTotalsCalculation.js
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { debounce } from '@/lib/utils/debounce';
 
 /**
  * Hook personalizado para cálculo de totales de proforma
@@ -21,11 +22,34 @@ export const useTotalsCalculation = ({
     totalFormatted: '0.00',
     taxRate: 15,
   });
-
+  
+  // Usar refs para evitar ciclos de actualización y hacer seguimiento de timestamps
+  const lastUpdateTimestamp = useRef(0);
+  const isUpdatingRef = useRef(false);
+  
+  // Crear una versión debounced de updateProforma para prevenir actualizaciones excesivas
+  const debouncedUpdateProforma = useRef(
+    debounce((proformaId, data) => {
+      // Solo actualizar si no estamos ya en un ciclo de actualización
+      if (!isUpdatingRef.current) {
+        isUpdatingRef.current = true;
+        try {
+          updateProforma(proformaId, data);
+        } finally {
+          // Siempre asegurarnos de resetear la bandera
+          setTimeout(() => {
+            isUpdatingRef.current = false;
+          }, 100);
+        }
+      }
+    }, 500)
+  ).current;
+  
   // Recalcula los totales cuando cambian los items o el activeProformaId
   useEffect(() => {
     if (activeProformaId && items && items.length > 0) {
-      recalculateTotals();
+      // Usamos nuestra versión con refs para evitar ciclos
+      calculateTotalsWithoutCycles();
     }
   }, [activeProformaId, items]);
 
@@ -55,11 +79,26 @@ export const useTotalsCalculation = ({
   };
 
   /**
-   * Recalcula subtotal, impuesto y total basado en los items
-   * @param {Array} forceItems - Opcionalmente usar estos items en lugar de los de la proforma
-   * @returns {Object} El quote actualizado
+   * Versión segura de recalculateTotals que evita ciclos de actualización
+   * usando refs para controlar cuándo se actualiza el estado global
    */
-  const recalculateTotals = (forceItems = null) => {
+  const calculateTotalsWithoutCycles = (forceItems = null) => {
+    // Si estamos en medio de una actualización, no hacer nada
+    if (isUpdatingRef.current) {
+      console.log("calculateTotalsWithoutCycles: Ya hay una actualización en progreso, evitando bucle");
+      return null;
+    }
+    
+    // Evitar actualizaciones demasiado frecuentes (menos de 300ms entre ellas)
+    const now = Date.now();
+    if (now - lastUpdateTimestamp.current < 300) {
+      console.log("calculateTotalsWithoutCycles: Actualización demasiado frecuente, evitando cálculo");
+      return null;
+    }
+    
+    // Actualizar timestamp
+    lastUpdateTimestamp.current = now;
+    
     // Buscar la proforma activa
     const activeProforma = proformas.find(p => p.id === activeProformaId);
     if (!activeProforma) return null;
@@ -70,12 +109,11 @@ export const useTotalsCalculation = ({
     
     // Salir temprano si no hay items para evitar cálculos innecesarios
     if (currentItems.length === 0) {
-      console.log("recalculateTotals: No hay items, evitando cálculo innecesario");
+      console.log("calculateTotalsWithoutCycles: No hay items, evitando cálculo innecesario");
       return null;
     }
     
-    console.log("recalculateTotals: usando", currentItems.length, "items", 
-                forceItems ? "(proporcionados directamente)" : "(de la proforma)");
+    console.log("calculateTotalsWithoutCycles: usando", currentItems.length, "items");
                 
     const currentQuote = activeProforma.quote || {};
     
@@ -91,18 +129,6 @@ export const useTotalsCalculation = ({
     const tax = (subtotal * taxRate) / 100;
     const total = subtotal + tax;
     
-    console.log("Recalculando totales:");
-    console.log("- Items:", currentItems.length);
-    console.log("- Items desglosados:", currentItems.map(item => ({
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      total: item.total
-    })));
-    console.log("- Subtotal calculado:", subtotal);
-    console.log("- IVA calculado:", tax);
-    console.log("- Total calculado:", total);
-  
     // Almacenamos los valores como números para facilitar cálculos futuros
     // pero los convertimos a string formateado para mantener la precisión en la interfaz
     const decimalPlaces = config.decimalPlaces || 2;
@@ -115,40 +141,31 @@ export const useTotalsCalculation = ({
       taxFormatted: tax.toFixed(decimalPlaces),
       total: total,
       totalFormatted: total.toFixed(decimalPlaces),
-      taxRate: taxRate
+      taxRate: taxRate,
+      lastCalculation: now // Incluir timestamp
     };
     
-    // Comparar con el quote actual para evitar actualizaciones innecesarias
-    // Reutilizamos la misma referencia a la proforma activa que ya obtuvimos arriba
-    const currentQuoteInProforma = activeProforma?.quote || {};
+    // Siempre actualizamos el estado local del hook (no dispara rerender del componente padre)
+    setQuote(updatedQuote);
     
-    // Solo actualizar si algún valor numérico ha cambiado realmente
-    const needsUpdate = (
-      Math.abs(parseFloat(currentQuoteInProforma.subtotal || 0) - subtotal) > 0.001 ||
-      Math.abs(parseFloat(currentQuoteInProforma.tax || 0) - tax) > 0.001 ||
-      Math.abs(parseFloat(currentQuoteInProforma.total || 0) - total) > 0.001 ||
-      parseFloat(currentQuoteInProforma.taxRate || 0) !== taxRate
-    );
+    // Utilizar la versión debounced para actualizar el estado global
+    // Esto evita múltiples actualizaciones en cascada
+    debouncedUpdateProforma(activeProformaId, { 
+      quote: updatedQuote,
+      lastCalculation: now
+    });
     
-    if (needsUpdate) {
-      console.log("Actualizando quote por cambios en valores calculados");
-      
-      // Actualizar el quote local primero
-      setQuote(updatedQuote);
-      
-      // Marcar la hora de la última actualización para reducir actualizaciones frecuentes
-      updatedQuote.lastCalculation = Date.now();
-      
-      // También actualizar el quote en la proforma
-      updateProforma(activeProformaId, { 
-        quote: updatedQuote,
-        lastCalculation: Date.now() 
-      });
-    } else {
-      console.log("Quote ya está actualizado, evitando actualización innecesaria");
-    }
-    
-    return updatedQuote; // Devolver el quote actualizado para posibles usos futuros
+    return updatedQuote;
+  };
+  
+  /**
+   * Versión compatible con la API anterior para no romper el código existente
+   * @param {Array} forceItems - Opcionalmente usar estos items en lugar de los de la proforma
+   * @param {Boolean} updateGlobalState - Parámetro ignorado, mantenido por compatibilidad
+   * @returns {Object} El quote actualizado
+   */
+  const recalculateTotals = (forceItems = null, updateGlobalState = false) => {
+    return calculateTotalsWithoutCycles(forceItems);
   };
 
   return {
