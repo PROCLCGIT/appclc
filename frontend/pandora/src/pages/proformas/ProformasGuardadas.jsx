@@ -130,7 +130,7 @@ const ProformasGuardadas = () => {
 
   useEffect(() => {
     loadProformas();
-  }, [pagination.currentPage, selectedStatus, dateFrom, dateTo]);
+  }, [pagination.currentPage, selectedStatus, dateFrom, dateTo, searchTerm]);
 
   const loadProformas = async () => {
     setLoading(true);

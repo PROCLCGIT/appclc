@@ -94,7 +94,7 @@ const DashboardProformas = () => {
   // Cargar datos al montar el componente o cambiar filtros
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [periodo, fechaInicio, fechaFin]);
 
   // Manejar cambio de filtros
   const handleFilterChange = () => {
