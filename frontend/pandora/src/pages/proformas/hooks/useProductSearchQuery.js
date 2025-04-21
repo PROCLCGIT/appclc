@@ -20,12 +20,16 @@ export function useProductSearchQuery() {
 
   // Aplicar debounce al término de búsqueda para evitar muchas peticiones
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedTerm(searchTerm);
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    // Solo actualizar el término debounced si realmente cambió
+    if (searchTerm !== debouncedTerm) {
+      const timer = setTimeout(() => {
+        console.log(`Aplicando debounce a searchTerm: "${searchTerm}"`);
+        setDebouncedTerm(searchTerm);
+      }, 300); // 300ms debounce
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm, debouncedTerm]);
 
   // Utilizar el hook de búsqueda de productos de React Query
   const {

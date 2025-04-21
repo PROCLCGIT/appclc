@@ -290,32 +290,40 @@ const EnhancedProformaContent = () => {
     }
   }, [showProformasDialog, handleLoadProformas, errorHandler]);
 
-  // Actualizar estado de búsqueda en el contexto global
-  useEffect(() => {
-    console.log('Efecto updateSearchState', searchTerm, searchSource, viewType);
-    
-    // Crear el nuevo estado
-    const newSearchState = {
-      searchTerm,
-      searchSource,
-      viewType,
-      showSearchResults: searchTerm.length >= 2,
-    };
-    
-    // Comparar con el estado anterior para evitar actualizaciones innecesarias
-    const prevSearchState = searchState || {};
-    const hasChanged = 
-      prevSearchState.searchTerm !== newSearchState.searchTerm ||
-      prevSearchState.searchSource !== newSearchState.searchSource ||
-      prevSearchState.viewType !== newSearchState.viewType ||
-      prevSearchState.showSearchResults !== newSearchState.showSearchResults;
-    
-    // Solo actualizar el estado si realmente cambió algo
-    if (hasChanged) {
-      console.log('SearchState ha cambiado, actualizando contexto');
-      updateSearchState(newSearchState);
+  // Eliminamos el useEffect para evitar el ciclo de renderizados
+  // En su lugar, movemos la lógica a los handlers individuales
+  
+  // Creamos funciones memoizadas para actualizar los campos individuales
+  const handleSearchTermChange = useCallback((newSearchTerm) => {
+    setSearchTerm(newSearchTerm);
+    // Actualizar el contexto solo cuando cambia el término de búsqueda
+    if (searchState.searchTerm !== newSearchTerm) {
+      updateSearchState({
+        searchTerm: newSearchTerm,
+        showSearchResults: newSearchTerm.length >= 2
+      });
     }
-  }, [searchTerm, searchSource, viewType, updateSearchState, searchState]);
+  }, [setSearchTerm, updateSearchState, searchState.searchTerm]);
+  
+  const handleSearchSourceChange = useCallback((newSearchSource) => {
+    setSearchSource(newSearchSource);
+    // Actualizar el contexto solo cuando cambia la fuente
+    if (searchState.searchSource !== newSearchSource) {
+      updateSearchState({
+        searchSource: newSearchSource
+      });
+    }
+  }, [setSearchSource, updateSearchState, searchState.searchSource]);
+  
+  const handleViewTypeChange = useCallback((newViewType) => {
+    setViewType(newViewType);
+    // Actualizar el contexto solo cuando cambia el tipo de vista
+    if (searchState.viewType !== newViewType) {
+      updateSearchState({
+        viewType: newViewType
+      });
+    }
+  }, [setViewType, updateSearchState, searchState.viewType]);
 
   // Manejador de errores para capturar errores asíncronos o de eventos
   useEffect(() => {
@@ -352,8 +360,11 @@ const EnhancedProformaContent = () => {
 
   // Memoizar la función para actualizar el estado de búsqueda
   const handleSearchStateUpdate = useCallback((show) => {
-    updateSearchState({ showSearchResults: show });
-  }, [updateSearchState]);
+    // Solo actualizar si el valor actual es diferente para evitar renders innecesarios
+    if (searchState.showSearchResults !== show) {
+      updateSearchState({ showSearchResults: show });
+    }
+  }, [updateSearchState, searchState.showSearchResults]);
 
   // Memoizar la función para crear nueva proforma
   const handleAddNewProforma = useCallback(() => {
@@ -372,16 +383,17 @@ const EnhancedProformaContent = () => {
     removeItem,
     reorderItems,
     searchTerm,
-    setSearchTerm,
+    // Usamos nuestros nuevos handlers en lugar de los originales
+    setSearchTerm: handleSearchTermChange,
     searchSource,
-    setSearchSource,
+    setSearchSource: handleSearchSourceChange,
     searchState,
     updateSearchState: handleSearchStateUpdate,
     searchResults,
     addProductFromSearch,
     searchProducts,
     viewType,
-    setViewType,
+    setViewType: handleViewTypeChange,
     loadingProducts,
     formatCurrency
   };

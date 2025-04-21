@@ -254,11 +254,13 @@ const DashboardProformasWithQuery = () => {
     });
   };
   
-  // Preparar datos para gráficos
-  const prepararDatosPorEstado = (data) => {
-    if (!data || !data.por_estado) return [];
+  // Memoizar datos para evitar recálculos innecesarios en cada render
+  const datosPorEstado = useMemo(() => {
+    if (!dashboardData || !dashboardData.por_estado) return [];
+
+    console.log('Calculando datosPorEstado memoizado');
     
-    return Object.entries(data.por_estado)
+    return Object.entries(dashboardData.por_estado)
       .filter(([estado]) => estadosFiltrados.includes(estado))
       .map(([estado, info]) => ({
         estado: info.label,
@@ -267,22 +269,22 @@ const DashboardProformasWithQuery = () => {
         monto: parseFloat(info.total) || 0,
         color: CHART_COLORS[estado] || '#6b7280'
       }));
-  };
+  }, [dashboardData, estadosFiltrados]);
   
-  // Preparar datos para gráfico por mes
-  const prepararDatosPorMes = (data) => {
-    if (!data || !data.por_mes) return [];
+  // Memoizar datos de mes para evitar recálculos innecesarios
+  const datosPorMes = useMemo(() => {
+    if (!dashboardData || !dashboardData.por_mes) return [];
     
-    return data.por_mes.map(item => ({
+    console.log('Calculando datosPorMes memoizado');
+    
+    return dashboardData.por_mes.map(item => ({
       mes: item.mes,
       cantidad: item.count,
       monto: parseFloat(item.total) || 0
     }));
-  };
+  }, [dashboardData]);
   
-  // Datos procesados para gráficos
-  const datosPorEstado = dashboardData ? prepararDatosPorEstado(dashboardData) : [];
-  const datosPorMes = dashboardData ? prepararDatosPorMes(dashboardData) : [];
+  // Las funciones prepararDatos* han sido reemplazadas por valores memoizados
   
   // Formatear montos como moneda
   const formatMonto = (valor) => {

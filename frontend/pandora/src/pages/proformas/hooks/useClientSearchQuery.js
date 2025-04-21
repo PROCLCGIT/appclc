@@ -147,12 +147,15 @@ export default function useClientSearchQuery() {
         const api = apiModule.default;
         
         // Crear un array con todas las rutas posibles a intentar
+        // Sin incluir /api/ ya que la instancia de axios ya tiene ese prefijo
         const endpoints = [
           'core/clientes/',
           'clientes/',
           'madvance/clientes/',
           'pandora/clientes/'
         ];
+        
+        console.log('🔍 Probando diferentes endpoints para clientes con baseURL:', api.defaults.baseURL);
         
         // Configuración de solicitud unificada
         const requestConfig = {
@@ -247,9 +250,9 @@ export default function useClientSearchQuery() {
       const token = localStorage.getItem('auth-token');
       console.log('Token en localStorage:', token ? `${token.substring(0, 10)}... (${token.length} chars)` : 'No hay token');
       
-      // 2. Verificar conexión general con un endpoint sencillo
+      // 2. Verificar conexión general con un endpoint sencillo que sabemos que existe
       try {
-        const testResponse = await api.get('/', {
+        const testResponse = await api.get('auth/users/', {
           _bypassCache: true,
           _highPriority: true,
           timeout: 5000
@@ -257,6 +260,17 @@ export default function useClientSearchQuery() {
         console.log('✅ Conexión básica exitosa:', testResponse.status, testResponse.data);
       } catch (connError) {
         console.error('❌ Error en conexión básica:', connError.message);
+        // Intentar con otro endpoint como fallback
+        try {
+          const altResponse = await api.get('admin/', {
+            _bypassCache: true,
+            _highPriority: true,
+            timeout: 5000
+          });
+          console.log('✅ Conexión alternativa exitosa:', altResponse.status);
+        } catch (altError) {
+          console.error('❌ Error en conexión alternativa:', altError.message);
+        }
       }
       
       // 3. Probar endpoints específicos para clientes con diferentes rutas

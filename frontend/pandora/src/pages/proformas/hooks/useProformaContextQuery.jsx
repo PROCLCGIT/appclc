@@ -303,21 +303,31 @@ function proformaReducer(state, action) {
       const updates = action.payload;
       
       // Verificar si realmente hay cambios en el estado de búsqueda
-      const isChanged = Object.keys(updates).some(key => {
-        return state.searchState[key] !== updates[key];
+      // y crear un objeto con solo los valores que cambiaron 
+      const changedFields = {};
+      let hasChanges = false;
+      
+      Object.keys(updates).forEach(key => {
+        if (state.searchState[key] !== updates[key]) {
+          changedFields[key] = updates[key];
+          hasChanges = true;
+        }
       });
       
       // Si no hay cambios, retornar el estado actual sin modificar
-      if (!isChanged) {
+      if (!hasChanges) {
+        console.log('No hay cambios reales en searchState, ignorando actualización');
         return state;
       }
       
-      // Si hay cambios, actualizar el estado
+      console.log('Actualizando searchState con cambios confirmados:', changedFields);
+      
+      // Si hay cambios, actualizar el estado solo con los campos que cambiaron
       return {
         ...state,
         searchState: {
           ...state.searchState,
-          ...updates,
+          ...changedFields, // Solo aplicar los campos que realmente cambiaron
         },
       };
     }
@@ -488,9 +498,21 @@ export const ProformaProvider = ({ children }) => {
 
   const updateSearchStateAction = useCallback((updates) => {
     console.log('updateSearchStateAction llamada con:', updates);
-    // Verificar si el estado realmente está cambiando para evitar renders innecesarios
-    dispatch({ type: ActionTypes.UPDATE_SEARCH_STATE, payload: updates });
-  }, [dispatch]);
+    
+    // Verificar si hay cambios comparando con el estado actual
+    const currentSearchState = state.searchState || {};
+    const hasChanges = Object.keys(updates).some(key => 
+      currentSearchState[key] !== updates[key]
+    );
+    
+    // Solo disparar la acción si realmente hay cambios
+    if (hasChanges) {
+      console.log('Actualizando searchState, se detectaron cambios');
+      dispatch({ type: ActionTypes.UPDATE_SEARCH_STATE, payload: updates });
+    } else {
+      console.log('No hay cambios en searchState, ignorando actualización');
+    }
+  }, [dispatch, state.searchState]);
 
   // Funciones que interactúan directamente con React Query (ya son estables)
   const saveProformaAction = useCallback(saveProforma, [saveProforma]);

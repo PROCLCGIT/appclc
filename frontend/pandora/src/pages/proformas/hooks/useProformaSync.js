@@ -220,33 +220,71 @@ export const useProformaSync = ({
     const currentActiveProforma = proformas.find(p => p.id === activeProformaId);
     if (!currentActiveProforma) return;
     
-    console.log("Actualizando estados locales basados en proforma activa:", currentActiveProforma.id);
+    console.log("Verificando si necesitamos actualizar estados locales basados en proforma activa:", currentActiveProforma.id);
     
     try {
-      // Actualizar la cotización
-      if (currentActiveProforma.quote) {
-        setQuote(currentActiveProforma.quote);
-      } else {
-        setQuote(defaultQuote);
+      // Verificar si necesitamos actualizar la cotización
+      let quoteNeedsUpdate = false;
+      if (!currentActiveProforma.quote) {
+        quoteNeedsUpdate = true; // Actualizar si no hay quote en la proforma
+      } else if (JSON.stringify(currentActiveProforma.quote) !== JSON.stringify(quote)) {
+        quoteNeedsUpdate = true; // Actualizar si el quote actual es diferente
       }
       
-      // Actualizar el cliente, verificando si existe
-      if (currentActiveProforma.client && Object.keys(currentActiveProforma.client).length > 0) {
-        console.log("Estableciendo cliente desde proforma activa:", currentActiveProforma.client);
-        setClient(currentActiveProforma.client);
-      } else {
-        console.log("No hay cliente en la proforma activa, usando cliente vacío");
-        setClient(defaultClient);
+      // Verificar si necesitamos actualizar el cliente
+      let clientNeedsUpdate = false;
+      const hasProformaClient = currentActiveProforma.client && Object.keys(currentActiveProforma.client).length > 0;
+      
+      if (!hasProformaClient && Object.keys(client).some(k => client[k] !== defaultClient[k])) {
+        clientNeedsUpdate = true; // Actualizar a cliente vacío si no hay cliente en la proforma
+      } else if (hasProformaClient && JSON.stringify(currentActiveProforma.client) !== JSON.stringify(client)) {
+        clientNeedsUpdate = true; // Actualizar si el cliente actual es diferente
       }
       
-      // Siempre garantizamos que items sea un array, evitando que sea undefined o null
-      const safeItems = Array.isArray(currentActiveProforma.items) ? [...currentActiveProforma.items] : [];
-      setItems(safeItems);
+      // Verificar si necesitamos actualizar los items
+      let itemsNeedsUpdate = false;
+      const safeProformaItems = Array.isArray(currentActiveProforma.items) ? currentActiveProforma.items : [];
+      if (safeProformaItems.length !== items.length) {
+        itemsNeedsUpdate = true; // Actualizar si el número de items es diferente
+      } else if (JSON.stringify(safeProformaItems) !== JSON.stringify(items)) {
+        itemsNeedsUpdate = true; // Actualizar si los items son diferentes
+      }
+      
+      // Solo actualizar lo que ha cambiado
+      if (quoteNeedsUpdate) {
+        console.log("Actualizando quote desde proforma activa");
+        setQuote(currentActiveProforma.quote || defaultQuote);
+      }
+      
+      if (clientNeedsUpdate) {
+        if (hasProformaClient) {
+          console.log("Estableciendo cliente desde proforma activa:", currentActiveProforma.client);
+          setClient(currentActiveProforma.client);
+        } else {
+          console.log("No hay cliente en la proforma activa, usando cliente vacío");
+          setClient(defaultClient);
+        }
+      }
+      
+      if (itemsNeedsUpdate) {
+        console.log("Actualizando items desde proforma activa");
+        const safeItems = Array.isArray(currentActiveProforma.items) ? [...currentActiveProforma.items] : [];
+        setItems(safeItems);
+      }
+      
+      // Actualizar los valores de referencia para futuras comparaciones
+      lastValues.current = {
+        client: hasProformaClient ? {...currentActiveProforma.client} : {...defaultClient},
+        quote: currentActiveProforma.quote ? {...currentActiveProforma.quote} : {...defaultQuote},
+        items: Array.isArray(currentActiveProforma.items) ? [...currentActiveProforma.items] : [],
+        lastUpdateTime: Date.now()
+      };
+      
     } catch (error) {
       console.error("Error al actualizar estados locales:", error);
     }
     
-  // Solo se debe ejecutar cuando cambia el ID de la proforma activa
+  // Solo se debe ejecutar cuando cambia el ID de la proforma activa o el estado de carga
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProformaId, loading]);
 

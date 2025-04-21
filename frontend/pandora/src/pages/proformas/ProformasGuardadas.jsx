@@ -531,7 +531,8 @@ const ProformasGuardadas = () => {
                               Enviar por correo
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
-                              window.open(`${import.meta.env.VITE_API_URL || '/api/v1'}/proformas/proformas/${proforma.id}/exportar_pdf/`, '_blank');
+                              // Usar la instancia API de proformas para mantener headers correctos
+                              proformasService.exportarPdf(proforma.id);
                             }}>
                               <Download className="h-4 w-4 mr-2" />
                               Descargar PDF

@@ -48,10 +48,26 @@ export const useTotalsCalculation = ({
   // Recalcula los totales cuando cambian los items o el activeProformaId
   useEffect(() => {
     if (activeProformaId && items && items.length > 0) {
-      // Usamos nuestra versión con refs para evitar ciclos
-      calculateTotalsWithoutCycles();
+      // Verificar si hay cambios reales en los items antes de recalcular
+      const activeProforma = proformas.find(p => p.id === activeProformaId);
+      const currentQuote = activeProforma?.quote || {};
+      
+      // Solo recalcular si no hay total previo calculado o si han pasado más de 2 segundos desde el último cálculo
+      const lastCalculation = currentQuote.lastCalculation || 0;
+      const needsRecalculation = 
+        typeof currentQuote.total !== 'number' || 
+        currentQuote.total === 0 ||
+        (Date.now() - lastCalculation > 2000);
+      
+      if (needsRecalculation) {
+        console.log("Recalculando totales por cambio en items o proformaId");
+        // Usamos nuestra versión con refs para evitar ciclos
+        calculateTotalsWithoutCycles();
+      } else {
+        console.log("Omitiendo recálculo innecesario de totales");
+      }
     }
-  }, [activeProformaId, items]);
+  }, [activeProformaId, items, proformas]);
 
   /**
    * Formatea valores monetarios con el símbolo de moneda configurado

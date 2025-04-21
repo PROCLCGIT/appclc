@@ -1,11 +1,18 @@
 // src/config/axios.js
 import axios from 'axios';
 
-// Usamos VITE_API_URL desde las variables de entorno si está disponible
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+// Usamos VITE_API_URL desde las variables de entorno si está disponible, pero siempre utilizando /api como prefijo
+// para hacer uso del proxy de Vite correctamente
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/';
 console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
 
 console.log('BASE_URL configurada:', BASE_URL);
+
+// Mensaje importante para desarrollo
+console.log('⚠️ IMPORTANTE: Todas las peticiones deben usar esta instancia de axios y rutas relativas sin /api/ adicional');
+console.log('✅ CORRECTO:   api.get("core/clientes/")');
+console.log('❌ INCORRECTO: api.get("/api/core/clientes/")');
+console.log('❌ INCORRECTO: axios.get("http://localhost:8000/api/core/clientes/")');
 
 // Para debug
 window._baseApiUrl = BASE_URL; // Exponer para depuración en consola
