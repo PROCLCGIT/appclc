@@ -8,7 +8,7 @@ import { proformasService } from '@/services/api';
  * Hook personalizado para gestionar el estado de la plantilla de proforma
  * y sus elementos de configuración
  */
-export const useProformaTemplate = () => {
+export default function useProformaTemplate() {
   // Estados para configuración de proformas y opciones
   const [proformaConfig, setProformaConfig] = useState(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
@@ -67,23 +67,41 @@ export const useProformaTemplate = () => {
   const loadProformaConfig = async () => {
     setLoadingConfig(true);
     try {
-      const config = await proformasService.obtenerConfiguracion();
-      setProformaConfig(config);
-      console.log("Configuración de proformas cargada:", config);
+      // Check if the function exists before calling it
+      if (typeof proformasService.obtenerConfiguracion !== 'function') {
+        console.warn('proformasService.obtenerConfiguracion is not implemented yet, using default values');
+        
+        // Use default configuration
+        const defaultConfig = {
+          formas_pago: formasPago,
+          tiempos_entrega: tiemposEntrega,
+          configuracion_visual: config
+        };
+        
+        setProformaConfig(defaultConfig);
+        return;
+      }
+      
+      const configData = await proformasService.obtenerConfiguracion();
+      setProformaConfig(configData);
+      console.log("Configuración de proformas cargada:", configData);
       
       // Si hay formas de pago en la configuración
-      if (config.formas_pago && Array.isArray(config.formas_pago) && config.formas_pago.length > 0) {
-        setFormasPago(config.formas_pago);
+      if (configData.formas_pago && Array.isArray(configData.formas_pago) && configData.formas_pago.length > 0) {
+        setFormasPago(configData.formas_pago);
       }
       
       // Si hay tiempos de entrega en la configuración
-      if (config.tiempos_entrega && Array.isArray(config.tiempos_entrega) && config.tiempos_entrega.length > 0) {
-        setTiemposEntrega(config.tiempos_entrega);
+      if (configData.tiempos_entrega && Array.isArray(configData.tiempos_entrega) && configData.tiempos_entrega.length > 0) {
+        setTiemposEntrega(configData.tiempos_entrega);
       }
       
     } catch (error) {
       console.error("Error al cargar configuración de proformas:", error);
-      toast.error("No se pudo cargar la configuración de proformas");
+      // Don't show a toast error for a missing API method
+      if (error.message !== "proformasService.obtenerConfiguracion is not a function") {
+        toast.error("No se pudo cargar la configuración de proformas");
+      }
     } finally {
       setLoadingConfig(false);
     }
@@ -114,12 +132,24 @@ export const useProformaTemplate = () => {
         configuracion_visual: config
       };
       
+      // Check if the function exists before calling it
+      if (typeof proformasService.guardarConfiguracion !== 'function') {
+        console.warn('proformasService.guardarConfiguracion is not implemented yet');
+        // Just save locally and show a simulated success message
+        setProformaConfig(configToSave);
+        toast.success("Configuración guardada en memoria (API no implementada)");
+        return;
+      }
+      
       await proformasService.guardarConfiguracion(configToSave);
       toast.success("Configuración guardada correctamente");
       
     } catch (error) {
       console.error("Error al guardar configuración:", error);
-      toast.error("Error al guardar la configuración");
+      // Don't show a toast error for a missing API method
+      if (error.message !== "proformasService.guardarConfiguracion is not a function") {
+        toast.error("Error al guardar la configuración");
+      }
     } finally {
       setLoadingConfig(false);
     }
@@ -142,5 +172,3 @@ export const useProformaTemplate = () => {
     saveConfig
   };
 };
-
-export default useProformaTemplate;

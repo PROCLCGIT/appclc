@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 /**
  * Hook personalizado para gestionar búsqueda y carga de clientes
  */
-export const useClientSearch = () => {
+export default function useClientSearch() {
   const [clientes, setClientes] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,5 +121,3 @@ export const useClientSearch = () => {
     getClienteById,
   };
 };
-
-export default useClientSearch;

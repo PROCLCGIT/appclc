@@ -110,6 +110,35 @@ const proformasService = {
       console.error(`Error al cambiar estado de proforma #${id}:`, error);
       throw error;
     }
+  },
+
+  /**
+   * Obtiene la configuración general para proformas
+   * @returns {Promise<Object>} Configuración de proformas
+   */
+  async obtenerConfiguracion() {
+    try {
+      const response = await this.api.get(`${this.basePath}configuracion/`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener configuración de proformas:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Guarda la configuración general para proformas
+   * @param {Object} config Objeto con la configuración a guardar
+   * @returns {Promise<Object>} Configuración guardada
+   */
+  async guardarConfiguracion(config) {
+    try {
+      const response = await this.api.post(`${this.basePath}configuracion/`, config);
+      return response.data;
+    } catch (error) {
+      console.error("Error al guardar configuración de proformas:", error);
+      throw error;
+    }
   }
 };
 

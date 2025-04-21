@@ -10,14 +10,14 @@ import { toast } from 'sonner';
 // Importamos el servicio de proformas para usarlo directamente si es necesario 
 import { proformasService } from "@/services/api";
 
-export const useProformaInitialization = ({
+export default function useProformaInitialization({
   isNewProforma,
   setLoadExisting,
   addNewProforma,
   loadProforma,
   loadClientes,
   loadInitialProducts
-}) => {
+}) {
   const isInitialLoadDone = useRef(false);
   const [initializing, setInitializing] = useState(true);
 
@@ -79,7 +79,43 @@ export const useProformaInitialization = ({
           
           // Creamos una nueva proforma solo una vez
           console.log("Creando nueva proforma porque new=true");
-          addNewProforma();
+          try {
+            // Llamar addNewProforma sin parámetros para crear una nueva
+            addNewProforma();
+            console.log("Nueva proforma creada exitosamente");
+          } catch (newProformaError) {
+            console.error("Error al crear nueva proforma:", newProformaError);
+            // Como fallback, podemos usar createEmptyProforma directamente
+            const emptyProforma = {
+              id: Date.now(),
+              previewMode: false,
+              quote: {
+                number: `PRO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+                date: new Date(),
+                expiryDate: new Date(new Date().setDate(new Date().getDate() + 15)),
+                paymentTerms: "50% anticipo, 50% contra entrega",
+                deliveryTime: "5 días hábiles",
+                subtotal: "0.00",
+                tax: "0.00",
+                total: "0.00",
+                taxRate: 12,
+                notes: "Precios incluyen IVA. Entrega en sus oficinas sin costo adicional dentro del perímetro urbano."
+              },
+              client: {
+                id: null,
+                name: "",
+                attention: "",
+                email: "",
+                phone: "",
+                address: "",
+                ruc: ""
+              },
+              items: []
+            };
+            
+            // Intentar añadir la proforma manualmente
+            addNewProforma(emptyProforma);
+          }
         } else {
           // Si no es nueva, cargamos proformas existentes
           await loadExistingProformas();
@@ -282,5 +318,3 @@ export const useProformaInitialization = ({
     loadSpecificProforma
   };
 };
-
-export default useProformaInitialization;

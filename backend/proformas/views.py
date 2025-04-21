@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.db import transaction
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
@@ -48,12 +49,14 @@ class ProformaViewSet(viewsets.ModelViewSet):
     ordering_fields = ['numero', 'fecha_emision', 'fecha_vencimiento', 'cliente__nombre', 'total', 'estado', 'created_at']
     ordering = ['-fecha_emision']
     
+    @transaction.atomic
     def perform_create(self, serializer):
-        """Asignar el usuario actual como creador"""
+        """Asignar el usuario actual como creador dentro de una transacción atómica"""
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
     
+    @transaction.atomic
     def perform_update(self, serializer):
-        """Asignar el usuario actual como actualizador"""
+        """Asignar el usuario actual como actualizador dentro de una transacción atómica"""
         serializer.save(updated_by=self.request.user)
     
     @action(detail=True, methods=['get'])
@@ -201,6 +204,7 @@ class ProformaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(proforma)
         return Response(serializer.data)
     
+    @transaction.atomic
     @action(detail=True, methods=['post'])
     def duplicar(self, request, pk=None):
         """Crear una copia de una proforma existente"""

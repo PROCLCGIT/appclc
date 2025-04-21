@@ -155,7 +155,7 @@ const DocumentRow = ({
   return (
     <>
       {selectionMode && (
-        <td className="px-4 py-4 w-12" role="cell">
+        <td className="px-4 py-4 w-12 col-select" role="cell" style={{ width: "48px" }}>
           <div className="flex items-center justify-center">
             <div className="relative w-5 h-5">
               <input 
@@ -173,7 +173,7 @@ const DocumentRow = ({
         </td>
       )}
       
-      <td className="px-6 py-4 whitespace-nowrap w-[40%]" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap w-[40%] col-document" role="cell" style={{ width: "40%" }}>
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
             {getFileIcon()}
@@ -213,23 +213,23 @@ const DocumentRow = ({
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%]" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%] col-category" role="cell" style={{ width: "15%" }}>
         <div className="text-sm text-gray-900">
           {document.category_name || 'Sin categoría'}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%]" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-center w-[15%] col-updated" role="cell" style={{ width: "15%" }}>
         <div className="text-sm text-gray-900">
           {formatDate(document.updated_at || document.created_at)}
         </div>
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center w-[10%]" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center w-[10%] col-size" role="cell" style={{ width: "10%" }}>
         {formatFileSize(document.file_size)}
       </td>
       
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[20%]" role="cell">
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-[20%] col-actions" role="cell" style={{ width: "20%" }}>
         <div className="flex items-center justify-end space-x-4">
           <button 
             onClick={handleToggleFavorite} 

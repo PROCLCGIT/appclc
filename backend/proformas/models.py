@@ -154,10 +154,21 @@ class Proforma(TimeStampedModel):
         """Calcula subtotal, impuesto y total basado en los ítems"""
         # Obtenemos los ítems relacionados, si la proforma ya está guardada
         if self.pk:
-            items = self.items.all()
-            self.subtotal = sum(item.total for item in items)
-            self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
-            self.total = self.subtotal + self.impuesto
+            try:
+                # Método optimizado usando agregación de base de datos
+                from django.db.models import Sum
+                items_sum = self.items.aggregate(subtotal_sum=Sum('total'))
+                self.subtotal = items_sum['subtotal_sum'] or Decimal('0')
+                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
+                self.total = self.subtotal + self.impuesto
+            except Exception as e:
+                # Método de respaldo para garantizar funcionamiento en caso de error
+                import logging
+                logging.warning(f"Error en método optimizado de calcular_montos: {e}. Usando método de respaldo.")
+                items = self.items.all()
+                self.subtotal = sum(item.total for item in items)
+                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
+                self.total = self.subtotal + self.impuesto
         
     def generar_numero(self):
         """Genera un número secuencial para la proforma"""

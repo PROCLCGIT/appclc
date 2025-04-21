@@ -1,6 +1,6 @@
 // src/hooks/useEnhancedProforma.js
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createEmptyProforma } from "../utils/proformaUtils";
 import { proformasService, proformaItemsService } from "@/services/api";
 import { toast } from "sonner";
@@ -492,21 +492,26 @@ export default function useEnhancedProforma() {
    */
   /**
    * Actualiza una proforma en particular dentro del array de proformas
-   * Con verificación mejorada para evitar actualizaciones innecesarias y ciclos
+   * Con optimización avanzada para minimizar actualizaciones y render
    */
-  const updateProforma = (id, updates) => {
-    // Usamos un debounce rudimentario para evitar llamadas muy frecuentes
+  const updateProforma = useCallback((id, updates) => {
+    // Usamos debounce con cache de operaciones pendientes
     const now = Date.now();
-    if (!window._lastProformaUpdateTime) window._lastProformaUpdateTime = {};
     
-    // Control específico por ID de proforma
-    if (window._lastProformaUpdateTime[id] && 
-        now - window._lastProformaUpdateTime[id] < 500) {
-      return; // Ignorar actualizaciones muy frecuentes a la misma proforma
+    // Inicializar estructuras de control si no existen
+    if (!window._proformaUpdateState) {
+      window._proformaUpdateState = {
+        lastUpdateTime: {}, // Última actualización por ID
+        pendingUpdates: {}, // Actualizaciones pendientes por ID
+        updateScheduled: {}, // Timeouts programados por ID
+        batchFrequency: 300, // ms entre actualizaciones agrupadas
+        debounceTime: 100    // ms para ignorar actualizaciones muy rápidas
+      };
     }
-    window._lastProformaUpdateTime[id] = now;
     
-    // Comprobaciones iniciales para reducir logs innecesarios
+    const state = window._proformaUpdateState;
+    
+    // Comprobaciones iniciales para reducir operaciones innecesarias
     if (!id) {
       console.error("ID de proforma no proporcionado");
       return;
@@ -516,126 +521,190 @@ export default function useEnhancedProforma() {
       return; // Evitar actualizaciones vacías
     }
     
-    console.log(`Intentando actualizar proforma con ID: ${id}`, 
-                Object.keys(updates).join(', ')); // Solo mostrar las claves, no el objeto completo
+    // Control de frecuencia: ignorar actualizaciones muy rápidas
+    if (state.lastUpdateTime[id] && (now - state.lastUpdateTime[id] < state.debounceTime)) {
+      // En vez de ignorar completamente, acumular para la próxima actualización
+      if (!state.pendingUpdates[id]) state.pendingUpdates[id] = {};
+      
+      // Acumular cambios pendientes
+      Object.entries(updates).forEach(([key, value]) => {
+        state.pendingUpdates[id][key] = value;
+      });
+      
+      return; // No procesamos ahora, esperamos el próximo ciclo
+    }
     
+    // Registrar esta llamada como la última actualización
+    state.lastUpdateTime[id] = now;
+    
+    // Combinar con actualizaciones pendientes si existen
+    let finalUpdates = { ...updates };
+    if (state.pendingUpdates[id]) {
+      finalUpdates = { ...state.pendingUpdates[id], ...updates };
+      state.pendingUpdates[id] = {}; // Limpiar pendientes
+    }
+    
+    // Limitar logging para reducir ruido en consola
+    const keys = Object.keys(finalUpdates);
+    if (keys.length <= 3) {
+      console.log(`Actualizando proforma #${id}:`, keys.join(', '));
+    } else {
+      console.log(`Actualizando proforma #${id}: ${keys.length} campos`);
+    }
+    
+    // Procesamiento real con memo
     setProformas((prev) => {
-      // Buscar la proforma a actualizar
-      const proformaToUpdate = prev.find(pf => pf.id === id);
+      // Optimización: busqueda rápida de índice y proforma
+      let proformaIndex = -1;
+      let proformaToUpdate = null;
+      
+      for (let i = 0; i < prev.length; i++) {
+        if (prev[i].id === id) {
+          proformaIndex = i;
+          proformaToUpdate = prev[i];
+          break;
+        }
+      }
       
       // Si no encontramos la proforma, devolver el array sin cambios
-      if (!proformaToUpdate) {
+      if (proformaIndex === -1 || !proformaToUpdate) {
         console.error(`No se encontró proforma con ID: ${id} para actualizar`);
         return prev;
       }
       
-      // Verificación mejorada de cambios para reducir actualizaciones innecesarias
+      // Comparación inteligente para minimizar actualizaciones de estado
       let hasChanges = false;
       let changedKeys = [];
       
-      for (const key in updates) {
-        // Manejo especial para 'quote' para evitar muchas actualizaciones innecesarias
-        if (key === 'quote') {
-          const oldQuote = proformaToUpdate.quote || {};
-          const newQuote = updates.quote || {};
-          
-          // Comparamos solo valores numéricos importantes con tolerancia
-          const subtotalChanged = Math.abs(parseFloat(oldQuote.subtotal || 0) - 
-                                         parseFloat(newQuote.subtotal || 0)) > 0.001;
-          const taxChanged = Math.abs(parseFloat(oldQuote.tax || 0) - 
-                                    parseFloat(newQuote.tax || 0)) > 0.001;
-          const totalChanged = Math.abs(parseFloat(oldQuote.total || 0) - 
-                                      parseFloat(newQuote.total || 0)) > 0.001;
-          const taxRateChanged = parseFloat(oldQuote.taxRate || 0) !== 
-                                parseFloat(newQuote.taxRate || 0);
-                                
-          // Comparar otros campos importantes de quote
-          const importantFields = ['number', 'name', 'paymentTerms', 'deliveryTime', 'notes'];
-          const otherFieldsChanged = importantFields.some(field => 
-            oldQuote[field] !== newQuote[field]
-          );
-          
-          // Si algún campo cambió, consideramos que todo el quote cambió
-          if (subtotalChanged || taxChanged || totalChanged || 
-              taxRateChanged || otherFieldsChanged) {
-            hasChanges = true;
-            changedKeys.push('quote');
-          }
-        } 
-        // Manejo especial para 'items' para evitar comparaciones costosas
-        else if (key === 'items') {
-          const oldItems = proformaToUpdate.items || [];
-          const newItems = updates.items || [];
-          
-          // Si la longitud es diferente, definitivamente hay cambios
-          if (oldItems.length !== newItems.length) {
-            hasChanges = true;
-            changedKeys.push('items');
-          } 
-          // Si longitud es igual y hay items, verificar al menos el primer item
-          else if (newItems.length > 0) {
-            // Verificar solo algunos items para mejor rendimiento
-            const itemsToCheck = Math.min(3, newItems.length);
-            for (let i = 0; i < itemsToCheck; i++) {
-              if (JSON.stringify(oldItems[i]) !== JSON.stringify(newItems[i])) {
-                hasChanges = true;
-                changedKeys.push('items');
-                break;
-              }
-            }
+      // Función para comparar números con tolerancia
+      const compareNumbers = (a, b, tolerance = 0.001) => {
+        const numA = parseFloat(a) || 0;
+        const numB = parseFloat(b) || 0;
+        return Math.abs(numA - numB) <= tolerance;
+      };
+      
+      // Función para comparar arrays de objetos superficialmente
+      const areArraysSimilar = (arrA, arrB, sampleSize = 3) => {
+        if (!Array.isArray(arrA) || !Array.isArray(arrB)) return false;
+        if (arrA.length !== arrB.length) return false;
+        if (arrA.length === 0) return true;
+        
+        // Verificar una muestra de elementos para comparación rápida
+        const samplesToCheck = Math.min(sampleSize, arrA.length);
+        const positions = arrA.length <= sampleSize 
+          ? Array.from({length: arrA.length}, (_, i) => i)
+          : [0, Math.floor(arrA.length / 2), arrA.length - 1]; // Principio, medio y final
+        
+        for (const pos of positions) {
+          if (JSON.stringify(arrA[pos]) !== JSON.stringify(arrB[pos])) {
+            return false;
           }
         }
-        // Manejo de cliente y otros objetos
-        else if (typeof updates[key] === 'object') {
-          // Comparación simplificada para objetos
-          const oldJSON = JSON.stringify(proformaToUpdate[key] || {});
-          const newJSON = JSON.stringify(updates[key] || {});
-          
-          if (oldJSON !== newJSON) {
-            hasChanges = true;
-            changedKeys.push(key);
+        
+        return true;
+      };
+      
+      // Analizar cada campo de la actualización
+      for (const key in finalUpdates) {
+        // Manejo optimizado caso por caso
+        switch(key) {
+          case 'quote':
+            const oldQuote = proformaToUpdate.quote || {};
+            const newQuote = finalUpdates.quote || {};
             
-            // Log específico si es el cliente
-            if (key === 'client') {
-              console.log("Actualizando cliente en proforma:", id);
+            // Comparar solo campos clave para evitar renders innecesarios
+            if (
+              oldQuote.number !== newQuote.number ||
+              oldQuote.name !== newQuote.name ||
+              oldQuote.paymentTerms !== newQuote.paymentTerms ||
+              oldQuote.deliveryTime !== newQuote.deliveryTime ||
+              oldQuote.notes !== newQuote.notes ||
+              !compareNumbers(oldQuote.subtotal, newQuote.subtotal) ||
+              !compareNumbers(oldQuote.tax, newQuote.tax) ||
+              !compareNumbers(oldQuote.total, newQuote.total) ||
+              !compareNumbers(oldQuote.taxRate, newQuote.taxRate)
+            ) {
+              hasChanges = true;
+              changedKeys.push('quote');
             }
-          }
-        }
-        // Para otros tipos de campos simples, comparación directa
-        else if (proformaToUpdate[key] !== updates[key]) {
-          hasChanges = true;
-          changedKeys.push(key);
+            break;
+            
+          case 'items':
+            // Optimizar comparación de arrays
+            const oldItems = proformaToUpdate.items || [];
+            const newItems = finalUpdates.items || [];
+            
+            if (!areArraysSimilar(oldItems, newItems)) {
+              hasChanges = true;
+              changedKeys.push('items');
+            }
+            break;
+            
+          case 'client':
+            // Comparación inteligente para clientes
+            const oldClient = proformaToUpdate.client || {};
+            const newClient = finalUpdates.client || {};
+            
+            if (oldClient.id !== newClient.id) {
+              // Si cambia el ID del cliente, definitivamente hay un cambio
+              hasChanges = true;
+              changedKeys.push('client');
+            } else if (oldClient.id && newClient.id) {
+              // Solo verificar campos importantes si IDs son iguales
+              if (
+                oldClient.name !== newClient.name ||
+                oldClient.attention !== newClient.attention ||
+                oldClient.ruc !== newClient.ruc
+              ) {
+                hasChanges = true;
+                changedKeys.push('client');
+              }
+            } else if (JSON.stringify(oldClient) !== JSON.stringify(newClient)) {
+              // Fallback a comparación completa
+              hasChanges = true;
+              changedKeys.push('client');
+            }
+            break;
+            
+          default:
+            // Para campos primitivos o desconocidos, comparación directa
+            if (typeof finalUpdates[key] === 'object') {
+              if (JSON.stringify(proformaToUpdate[key]) !== JSON.stringify(finalUpdates[key])) {
+                hasChanges = true;
+                changedKeys.push(key);
+              }
+            } else if (proformaToUpdate[key] !== finalUpdates[key]) {
+              hasChanges = true;
+              changedKeys.push(key);
+            }
         }
       }
       
-      // Si no hay cambios reales, devolver el array sin modificar
+      // Si no hay cambios reales, evitar actualizar estado
       if (!hasChanges) {
-        console.log(`No hay cambios reales para la proforma ${id}`);
-        return prev;
+        return prev; // Retornar estado previo sin cambios
       }
       
-      console.log(`Actualizando proforma ${id}, campos cambiados:`, changedKeys);
+      // Optimización: solo crear nuevo array si realmente hay cambios
+      const newProformas = [...prev];
       
-      // Si hay cambios, aplicarlos
-      return prev.map((pf) => {
-        if (pf.id === id) {
-          // Actualizamos con más cuidado para preservar estructura
-          const updatedProforma = { ...pf };
-          
-          // Actualizar cada campo individualmente
-          for (const key of changedKeys) {
-            updatedProforma[key] = updates[key];
-          }
-          
-          // Añadir timestamp de última modificación
-          updatedProforma.lastModified = Date.now();
-          
-          return updatedProforma;
-        }
-        return pf;
+      // Crear copia inmutable con solo los campos que cambiaron
+      const updatedProforma = { ...proformaToUpdate };
+      
+      // Aplicar solo los cambios detectados
+      changedKeys.forEach(key => {
+        updatedProforma[key] = finalUpdates[key];
       });
+      
+      // Añadir timestamp de última modificación
+      updatedProforma.lastModified = now;
+      
+      // Reemplazar la proforma en el array  
+      newProformas[proformaIndex] = updatedProforma;
+      
+      return newProformas;
     });
-  };
+  }, []);
 
   /**
    * Agrega una nueva proforma y la define como la activa

@@ -3,6 +3,31 @@ import { useVirtual } from 'react-virtual';
 import DocumentRow from './DocumentRow';
 import PropTypes from 'prop-types';
 
+// Custom CSS for fixed column sizing
+const fixedColumnStyles = `
+  .document-list-table th, .document-list-table td {
+    box-sizing: border-box;
+  }
+  .document-list-table .col-select {
+    width: 48px !important;
+  }
+  .document-list-table .col-document {
+    width: 40% !important;
+  }
+  .document-list-table .col-category {
+    width: 15% !important;
+  }
+  .document-list-table .col-updated {
+    width: 15% !important;
+  }
+  .document-list-table .col-size {
+    width: 10% !important;
+  }
+  .document-list-table .col-actions {
+    width: 20% !important;
+  }
+`;
+
 /**
  * Componente para mostrar documentos en vista de lista con virtualización
  * para mejorar el rendimiento con grandes conjuntos de datos
@@ -56,9 +81,9 @@ const DocumentList = ({
   
   // Memorizar los encabezados de la tabla para evitar re-renders innecesarios
   const tableHeaders = useMemo(() => (
-    <tr>
+    <tr className="table-fixed w-full">
       {selectionMode && (
-        <th scope="col" className="px-4 py-3 w-12" aria-label="Seleccionar">
+        <th scope="col" className="px-4 py-3 w-12 col-select" style={{ width: "48px" }} aria-label="Seleccionar">
           <div className="flex items-center justify-center">
             <div className="relative w-5 h-5">
               <input 
@@ -84,11 +109,11 @@ const DocumentList = ({
           </div>
         </th>
       )}
-      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[40%]">Documento</th>
-      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Categoría</th>
-      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Actualizado</th>
-      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Tamaño</th>
-      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[40%] col-document" style={{ width: "40%" }}>Documento</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%] col-category" style={{ width: "15%" }}>Categoría</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%] col-updated" style={{ width: "15%" }}>Actualizado</th>
+      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%] col-size" style={{ width: "10%" }}>Tamaño</th>
+      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%] col-actions" style={{ width: "20%" }}>
         <div className="flex items-center justify-between">
           <span>Acciones</span>
           {!selectionMode && (
@@ -181,31 +206,37 @@ const DocumentList = ({
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Add style element for fixed column styles */}
+      <style dangerouslySetInnerHTML={{ __html: fixedColumnStyles }} />
+      
       {selectionPanel}
       
-      <div className="overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 table-fixed border-collapse" role="grid" aria-rowcount={validDocuments.length} style={{ tableLayout: 'fixed' }}>
+      <div className="overflow-hidden w-full">
+        <table className="min-w-full divide-y divide-gray-200 table-fixed border-collapse document-list-table" role="grid" aria-rowcount={validDocuments.length} style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
-            {selectionMode && <col className="w-12" />}
-            <col className="w-[40%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[10%]" />
-            <col className="w-[20%]" />
+            {selectionMode && <col className="w-12 col-select" style={{ width: "48px" }} />}
+            <col className="w-[40%] col-document" style={{ width: "40%" }} />
+            <col className="w-[15%] col-category" style={{ width: "15%" }} />
+            <col className="w-[15%] col-updated" style={{ width: "15%" }} />
+            <col className="w-[10%] col-size" style={{ width: "10%" }} />
+            <col className="w-[20%] col-actions" style={{ width: "20%" }} />
           </colgroup>
-          <thead className="bg-gray-50 sticky top-0 z-10">
+          <thead className="bg-gray-50 sticky top-0 z-10 table-fixed w-full">
             {tableHeaders}
           </thead>
           
           {/* Tabla con cuerpo virtualizado */}
           <tbody 
-            className="bg-white divide-y divide-gray-200 relative"
+            className="bg-white divide-y divide-gray-200 relative w-full"
             ref={parentRef}
-            style={{ height: `${Math.min(600, validDocuments.length * 60)}px` }} // Altura máxima o basada en el número de documentos
+            style={{ 
+              height: `${Math.min(600, validDocuments.length * 60)}px`, // Altura máxima o basada en el número de documentos
+              width: '100%'
+            }}
             aria-live="polite"
           >
-            <tr style={{ height: `${rowVirtualizer.totalSize}px` }} className="virtual-placeholder">
-              <td colSpan={totalColumns} aria-hidden="true" style={{ padding: 0, border: 'none' }} />
+            <tr style={{ height: `${rowVirtualizer.totalSize}px`, width: '100%' }} className="virtual-placeholder w-full">
+              <td colSpan={totalColumns} aria-hidden="true" style={{ padding: 0, border: 'none', width: '100%' }} />
             </tr>
             
             {rowVirtualizer.virtualItems.map(virtualRow => {
@@ -224,7 +255,9 @@ const DocumentList = ({
                     top: 0,
                     left: 0,
                     height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`
+                    transform: `translateY(${virtualRow.start}px)`,
+                    width: '100%',
+                    tableLayout: 'fixed'
                   }}
                   role="row"
                   aria-rowindex={virtualRow.index + 1}

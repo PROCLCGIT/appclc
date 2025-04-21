@@ -7,7 +7,7 @@ import { toast } from 'sonner';
  * Hook personalizado para búsqueda y gestión de productos
  * @param {Object} proformasService - Instancia del servicio de proformas para llamadas API
  */
-export const useProductSearch = (proformasService) => {
+export default function useProductSearch(proformasService) {
   // Estados
   const [searchTerm, setSearchTerm] = useState("");
   const [searchSource, setSearchSource] = useState("ofertados"); // Por defecto buscar en productos ofertados
@@ -266,5 +266,3 @@ export const useProductSearch = (proformasService) => {
     loadInitialProducts
   };
 };
-
-export default useProductSearch;

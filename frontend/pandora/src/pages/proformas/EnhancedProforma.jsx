@@ -1,11 +1,7 @@
 // src/pages/proformas/EnhancedProforma.jsx
 
-import React, { useState, useEffect, useCallback } from "react"; // Added useEffect, useCallback
+import React, { useEffect, useMemo, useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
-
-// Servicios API
-import { proformasService } from "@/services/api";
 
 // Componentes UI
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +14,11 @@ import ProformaHeader from "./components/ProformaHeader";
 import ProformaActions from "./components/ProformaActions";
 import ProformaDialogs from "./components/ProformaDialogs";
 
-// Custom hooks
+// Contexto y hooks
+import {
+  ProformaProvider,
+  useProformaContext,
+} from "./hooks/useProformaContext.jsx";
 import useEnhancedProforma from "./hooks/useEnhancedProforma";
 import useClientSearch from "./hooks/useClientSearch";
 import useProductSearch from "./hooks/useProductSearch";
@@ -28,96 +28,89 @@ import useProformaActions from "./hooks/useProformaActions";
 import { useItemsHandlers } from "./handlers/itemsHandlers";
 import { useClientHandlers } from "./handlers/clientHandlers";
 import useProformaTemplate from "./hooks/useProformaTemplate";
-import useProformaSync from "./hooks/useProformaSync";
 import useProformaInitialization from "./hooks/useProformaInitialization";
-import useErrorHandler from "./hooks/useErrorHandler";
+import useErrorHandler from "./hooks/useErrorHandler.jsx";
+import useNotifications from "./hooks/useNotifications.jsx";
+import useProformaSelection from "./hooks/useProformaSelection.jsx";
 
 /**
- * Este componente principal:
- * - Usa múltiples custom hooks para manejar diferentes aspectos de la funcionalidad
- * - Controla el estado de preview (vista previa / edición)
- * - Sincroniza los datos (quote, client, items) de la proforma activa
- * - Renderiza las pestañas y, dentro, el ProformaTemplate para la proforma seleccionada
+ * Componente principal que implementa el contexto y la lógica de proformas
  */
-export default function EnhancedProforma() {
+const EnhancedProformaContent = () => {
+  // Estado para capturar errores específicos
+  const [contentError, setContentError] = useState(null);
+
+  // Manejador de errores global para este componente
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error("Error capturado en EnhancedProformaContent:", event.error);
+      setContentError(event.error);
+      event.preventDefault();
+    };
+    
+    window.addEventListener("error", handleError);
+    return () => window.removeEventListener("error", handleError);
+  }, []);
+
+  if (contentError) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h2 className="text-xl font-bold text-yellow-700 mb-4">Error en el contenido</h2>
+        <p className="text-yellow-600 mb-2">{contentError.message}</p>
+        <pre className="bg-yellow-100 p-4 rounded overflow-auto text-xs">
+          {contentError.stack}
+        </pre>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors mt-4"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
   // Obtener parámetros de la URL
   const [searchParams] = useSearchParams();
-  const isNewProforma = searchParams.get('new') === 'true';
+  const isNewProforma = searchParams.get("new") === "true";
 
-  // Inicializar el manejador centralizado de errores
+  // Hooks para notificaciones y errores
+  const notify = useNotifications();
   const errorHandler = useErrorHandler();
 
-  // Inicializar hook principal de proformas
+  // Acceder al contexto de proformas
+  const { state, actions } = useProformaContext();
   const {
-    proformas,
-    activeProformaId,
-    setActiveProformaId,
-    updateProforma,
-    addNewProforma,
-    closeProforma,
-    loadExisting,
-    setLoadExisting,
-    loadProforma,
-    loadSavedProformas,
-    loading,
-    setLoading // Added setLoading
-  } = useEnhancedProforma();
+    proformas = [],
+    activeProformaId = null,
+    loading = false,
+    client = null,
+    items = [],
+    previewMode = false,
+    config = {},
+    searchState = {},
+  } = state || {};
+
+  // Inicializar hook principal de proformas (algunos métodos siguen fuera del contexto)
+  const { loadExisting, setLoadExisting, loadProforma, loadSavedProformas } =
+    useEnhancedProforma();
 
   // Inicializar hook para la plantilla y configuración
-  const {
-    config,
-    company,
-    previewMode,
-    setPreviewMode
-  } = useProformaTemplate();
+  const { company } = useProformaTemplate();
 
-  // Inicializar hook para sincronización de datos
-  const {
-    items,
-    setItems,
-    client,
-    setClient
-  } = useProformaSync({
-    activeProformaId,
-    proformas,
-    updateProforma,
-    loading
-  });
+  // Inicializar hooks para búsqueda
+  const { clientes, loadingClientes, loadClientes } = useClientSearch();
 
-  // Inicializar hooks para búsqueda primero
-  const {
-    clientes,
-    loadingClientes,
-    loadClientes
-  } = useClientSearch();
+  const { loadInitialProducts, searchProducts } = useProductSearch();
 
-  const {
-    searchTerm,
-    setSearchTerm,
-    searchSource,
-    setSearchSource,
-    searchResults,
-    setSearchResults,
-    showSearchResults,
-    setShowSearchResults,
-    loadingProducts,
-    viewType,
-    setViewType,
-    searchProducts,
-    loadInitialProducts
-  } = useProductSearch(proformasService);
-
-  // Inicializar hook para inicialización de proformas luego de tener loadClientes y loadInitialProducts
-  // Evitamos pasar loadSavedProformas directamente para evitar problemas de referencias circulares
-  const {
-    loadSpecificProforma
-  } = useProformaInitialization({
+  // Inicializar hook para inicialización de proformas
+  const { loadSpecificProforma } = useProformaInitialization({
     isNewProforma,
     setLoadExisting,
-    addNewProforma,
+    addNewProforma: actions.addNewProforma,
     loadProforma,
     loadClientes,
-    loadInitialProducts
+    loadInitialProducts,
   });
 
   // Inicializar hooks para diálogos
@@ -134,62 +127,62 @@ export default function EnhancedProforma() {
     closeClientSearch,
     openProformasDialog,
     closeProformasDialog,
+    closeSaveDialog,
     showErrorDialog,
     showWarningDialog,
     showSuccessDialog,
-    closeSaveDialog
-  } = useDialogControl({ loadSavedProformas }); // Pass loadSavedProformas
+  } = useDialogControl({ loadSavedProformas });
 
   // Inicializar hooks para cálculos y acciones
-  const {
-    formatCurrency,
-    recalculateTotals
-  } = useTotalsCalculation({
+  const { formatCurrency, recalculateTotals } = useTotalsCalculation({
     activeProformaId,
     proformas,
-    updateProforma,
+    updateProforma: actions.updateProforma,
     config,
-    items
+    items,
   });
 
-  const {
-    handleAction
-  } = useProformaActions({
+  const { handleAction } = useProformaActions({
     proformas,
     activeProformaId,
-    updateProforma,
-    addNewProforma,
-    closeProforma,
+    updateProforma: actions.updateProforma,
+    addNewProforma: actions.addNewProforma,
+    closeProforma: actions.closeProforma,
     loadProforma,
     formatCurrency,
     showSuccessDialog,
     showErrorDialog,
-    showWarningDialog
+    showWarningDialog,
+  });
+
+  // Hook para la selección de proformas
+  const { handleSelectProforma } = useProformaSelection({
+    proformas,
+    setActiveProformaId: actions.setActiveProformaId,
+    closeProformasDialog,
+    handleAction,
+    loadSpecificProforma,
+    errorHandler,
+    setLoading: actions.setLoading,
   });
 
   // Inicializar hooks para gestión de items y clientes
-  const {
-    addItem,
-    updateItem,
-    removeItem,
-    addProductFromSearch
-  } = useItemsHandlers({
+  const { addItem, updateItem, removeItem, addProductFromSearch } =
+    useItemsHandlers({
+      activeProformaId,
+      proformas,
+      updateProforma: actions.updateProforma,
+      setItems: actions.setItems,
+      recalculateTotals,
+    });
+
+  const { handleSelectClient } = useClientHandlers({
     activeProformaId,
-    proformas,
-    updateProforma,
-    setItems,
-    recalculateTotals
+    updateProforma: actions.updateProforma,
+    setClient: actions.setClient,
   });
 
-  const {
-    handleSelectClient
-  } = useClientHandlers({
-    activeProformaId,
-    updateProforma,
-    setClient
-  });
-
-  // Función para manejar la selección de un cliente incorporando la acción de cerrar el diálogo
+  // Función para manejar la selección de un cliente
   const handleClientSelection = (selectedClient) => {
     const success = handleSelectClient(selectedClient);
     if (success) {
@@ -197,267 +190,119 @@ export default function EnhancedProforma() {
     }
   };
 
-  // Control de rate limiting
-  const [lastProformaSelectionTime, setLastProformaSelectionTime] = useState(0);
-
-  // Función para manejar la selección de una proforma con control de rate limiting mejorado y manejo centralizado de errores
-  const handleSelectProforma = useCallback(async (proformaId) => { // Added useCallback
-    try {
-      console.log(`handleSelectProforma: Seleccionada proforma con ID: ${proformaId}`);
-
-      // Control de rate limiting más estricto con backoff exponencial
-      const now = Date.now();
-      const timeSinceLastSelection = now - lastProformaSelectionTime;
-      const minWaitTime = 3000; // Tiempo mínimo base entre selecciones
-
-      // Tiempo de espera aumenta según la cantidad de errores de tipo rateLimit
-      const rateLimitCount = errorHandler.errorCounts.rateLimit || 0;
-      const waitMultiplier = Math.max(1, 1 + (rateLimitCount * 0.5)); // 1x, 1.5x, 2x, etc.
-      const adjustedWaitTime = minWaitTime * waitMultiplier;
-
-      if (timeSinceLastSelection < adjustedWaitTime) {
-        const remainingTime = Math.ceil((adjustedWaitTime - timeSinceLastSelection) / 1000);
-        console.log(`Ignorando selección rápida de proforma (debounce). Espere ${remainingTime}s más`);
-
-        // Notificar al usuario solo si es muy rápido (menos de la mitad del tiempo requerido)
-        if (timeSinceLastSelection < (adjustedWaitTime / 2)) {
-          toast.warning(`Por favor, espere ${remainingTime} segundos entre acciones`, {
-            description: "Procesando la solicitud anterior...",
-            duration: 3000
-          });
-        }
-        return;
-      }
-
-      // Registrar el momento de esta selección
-      setLastProformaSelectionTime(now);
-
-      // Si es una nueva proforma
-      if (proformaId === "new") {
-        console.log("Solicitando crear nueva proforma");
-
-        // Cerrar el diálogo primero para evitar interacciones dobles
-        if (typeof closeProformasDialog === 'function') {
-          closeProformasDialog();
-        }
-
-        // Pequeño delay para asegurar que el diálogo se cierre primero
-        setTimeout(() => {
-          handleAction("new");
-        }, 300);
-        return;
-      }
-
-      // Convertir a string para comparación consistente
-      const proformaIdStr = proformaId?.toString();
-
-      // Validar el ID antes de continuar
-      if (!proformaIdStr || proformaIdStr === 'undefined' || proformaIdStr === 'null') {
-        errorHandler.handleError(
-          new Error('ID de proforma inválido: ' + proformaId),
-          'handleSelectProforma'
-        );
-        return;
-      }
-
-      // Ya no soportamos proformas de demostración
-      const isDemoProforma = proformaIdStr.startsWith('demo-');
-      if (isDemoProforma) {
-        toast.info("Las proformas de demostración están deshabilitadas. Cargando desde la base de datos.");
-        return;
-      }
-
-      // Comprobar si la proforma ya está cargada por su ID en la base de datos
-      const proformaIndex = proformas.findIndex(p =>
-        (p.savedId && p.savedId.toString() === proformaIdStr) ||
-        (p.id && p.id.toString() === proformaIdStr)
-      );
-
-      if (proformaIndex !== -1) {
-        // Si ya está cargada, solo cambiar la activa
-        console.log(`La proforma ${proformaId} ya está cargada, cambiando a activa`);
-
-        // Cerrar el diálogo primero
-        if (typeof closeProformasDialog === 'function') {
-          closeProformasDialog();
-        }
-
-        // Pequeño delay para asegurar que la UI responda bien
-        setTimeout(() => {
-          setActiveProformaId(proformas[proformaIndex].id);
-          toast.success("Proforma cargada", { duration: 2000 });
-
-          // Resetear contadores de error cuando hay una operación exitosa
-          errorHandler.resetErrorCounts();
-        }, 100);
-      } else {
-        // Si no está cargada, cargarla con manejo de bloqueo mejorado
-        console.log(`Cargando proforma ${proformaId} desde el servidor`);
-
-        // Usar un flag para evitar múltiples notificaciones
-        let isHandled = false;
-
-        // Mostrar indicador de carga con retraso para evitar parpadeos en cargas rápidas
-        const loadToastTimeoutId = setTimeout(() => {
-          if (!isHandled) {
-            toast.loading("Cargando proforma...", { id: "proforma-loading" });
-          }
-        }, 500);
-
-        try {
-          // Cerrar el diálogo de proformas antes de cargar para evitar múltiples interacciones
-          if (typeof closeProformasDialog === 'function') {
-            closeProformasDialog();
-          }
-
-          // Intentar cargar la proforma
-          const loadedProforma = await loadSpecificProforma(proformaId);
-
-          // Marcar como manejado para evitar que se muestre el toast retrasado
-          isHandled = true;
-          clearTimeout(loadToastTimeoutId);
-
-          // Ocultar el toast de carga si existe
-          toast.dismiss("proforma-loading");
-
-          if (!loadedProforma) {
-            errorHandler.handleError(
-              new Error(`No se pudo cargar la proforma ${proformaId}`),
-              'handleSelectProforma'
-            );
-          } else {
-            toast.success("Proforma cargada correctamente");
-
-            // Resetear contadores de error cuando hay una operación exitosa
-            errorHandler.resetErrorCounts();
-          }
-        } catch (loadError) {
-          // Marcar como manejado
-          isHandled = true;
-          clearTimeout(loadToastTimeoutId);
-
-          // Ocultar el toast de carga si existe
-          toast.dismiss("proforma-loading");
-
-          // Usar el manejador centralizado de errores
-          const errorType = errorHandler.handleError(loadError, 'loadSpecificProforma');
-
-          // Acciones específicas según tipo de error
-          if (errorType === 'rateLimit') {
-            // Actualizar el tiempo de la última selección para forzar un tiempo de espera más largo
-            setLastProformaSelectionTime(now + (10000 * (errorHandler.errorCounts.rateLimit || 1)));
-          }
-        }
-      }
-    } catch (error) {
-      // Manejar errores generales no capturados
-      errorHandler.handleError(error, 'handleSelectProforma-general');
-    } finally {
-      setLoading(false);
+  // Función para cargar proformas guardadas
+  const handleLoadProformas = async () => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Solicitando carga de proformas guardadas");
     }
-  }, [proformas, setActiveProformaId, closeProformasDialog, handleAction, loadSpecificProforma, errorHandler, loadSavedProformas]); // Added dependencies
 
-  // Función para cargar proformas, independiente del efecto para que pueda ser pasada a ProformasDialog
-  const handleLoadProformas = useCallback(async () => {
-    console.log("handleLoadProformas: Solicitando carga de proformas guardadas");
     try {
-      setLoading(true);
-      // Usar opciones específicas para este contexto
+      actions.setLoading(true);
+
       const options = {
         showToasts: true,
         itemsLimit: 10,
-        forceRefresh: true // Forzar actualización desde el servidor
+        forceRefresh: true,
       };
-      
+
       const loadedProformas = await loadSavedProformas(options);
-      console.log(`handleLoadProformas: ${loadedProformas?.length || 0} proformas cargadas`);
       return loadedProformas || [];
     } catch (error) {
-      console.error("Error en handleLoadProformas:", error);
-      errorHandler.handleError(error, 'handleLoadProformas');
-      return []; // Devolver array vacío en caso de error
+      errorHandler.handleError(error, "handleLoadProformas");
+      return [];
     } finally {
-      setLoading(false);
+      actions.setLoading(false);
     }
-  }, [loadSavedProformas, errorHandler, setLoading]);
-  
-  // Load saved proformas when the dialog is opened - simplificado
+  };
+
+  // Cargar proformas cuando se abre el diálogo
   useEffect(() => {
     if (showProformasDialog) {
-      handleLoadProformas().catch(e => {
-        console.error("Error al cargar proformas en efecto:", e);
+      handleLoadProformas().catch((e) => {
+        errorHandler.handleError(e, "loadProformasEffect");
       });
     }
-  }, [showProformasDialog, handleLoadProformas]);
-  
+  }, [showProformasDialog]);
+
   // Efecto para recalcular totales cuando cambia la proforma activa
   useEffect(() => {
     if (activeProformaId && !loading) {
-      // Pequeño retraso para asegurar que todos los datos están cargados
       const recalcTimer = setTimeout(() => {
-        // Obtener la proforma activa actual
-        const currentProforma = proformas.find(p => p.id === activeProformaId);
-        // Solo recalcular si hay items
-        if (currentProforma && currentProforma.items && currentProforma.items.length > 0) {
-          console.log(`Forzando recálculo de totales para proforma activa: ${activeProformaId}`);
+        const currentProforma = proformas.find(
+          (p) => p.id === activeProformaId,
+        );
+        if (currentProforma?.items?.length > 0) {
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `Recalculando totales para proforma: ${activeProformaId}`,
+            );
+          }
           recalculateTotals();
         }
       }, 300);
-      
+
       return () => clearTimeout(recalcTimer);
     }
-  }, [activeProformaId, loading, recalculateTotals, proformas]);
+  }, [activeProformaId, loading, proformas]);
 
-  return (
-    <div className="p-6 max-w-6xl mx-auto">
-      {/* Encabezado de la página */}
-      <ProformaHeader
-        previewMode={previewMode}
-        setPreviewMode={setPreviewMode}
-        openProformasDialog={openProformasDialog}
-        handleNew={() => handleAction("new")}
-      />
-
-      {/* Pestañas (Tabs) */}
+  // Memoizar las pestañas para evitar re-renders innecesarios
+  const proformaTabs = useMemo(
+    () => (
       <ProformaTabs
         proformas={proformas}
         activeProformaId={activeProformaId}
-        setActiveProformaId={setActiveProformaId}
-        closeProforma={closeProforma}
-        addNewProforma={addNewProforma}
+        setActiveProformaId={actions.setActiveProformaId}
+        closeProforma={actions.closeProforma}
+        addNewProforma={actions.addNewProforma}
       >
         {proformas.map((proforma) => (
           <TabsContent key={proforma.id} value={proforma.id.toString()}>
             <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
               <CardContent className="p-0">
-                <div className={`p-6 ${previewMode ? "bg-gray-50 bg-opacity-50" : ""}`}>
+                <div
+                  className={`p-6 ${previewMode ? "bg-gray-50 bg-opacity-50" : ""}`}
+                >
                   <ProformaTemplate
                     previewMode={previewMode}
                     quote={proforma.quote}
-                    setQuote={(newQuote) => updateProforma(proforma.id, { quote: newQuote })}
+                    setQuote={(newQuote) =>
+                      actions.updateProforma(proforma.id, { quote: newQuote })
+                    }
                     client={proforma.client}
-                    setClient={(newClient) => updateProforma(proforma.id, { client: newClient })}
+                    setClient={(newClient) =>
+                      actions.updateProforma(proforma.id, { client: newClient })
+                    }
                     items={proforma.items || []}
-                    setItems={(newItems) => updateProforma(proforma.id, { items: newItems })}
+                    setItems={(newItems) =>
+                      actions.updateProforma(proforma.id, { items: newItems })
+                    }
                     company={company}
-                    config={config}
+                    config={config || {}}
                     handleClientSearch={openClientSearch}
                     addItem={addItem}
                     updateItem={updateItem}
                     removeItem={removeItem}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    searchSource={searchSource}
-                    setSearchSource={setSearchSource}
-                    showSearchResults={showSearchResults}
-                    setShowSearchResults={setShowSearchResults}
-                    searchResults={searchResults}
+                    searchTerm={searchState?.searchTerm || ""}
+                    setSearchTerm={(term) =>
+                      actions?.updateSearchState?.({ searchTerm: term })
+                    }
+                    searchSource={searchState?.searchSource || "database"}
+                    setSearchSource={(source) =>
+                      actions?.updateSearchState?.({ searchSource: source })
+                    }
+                    showSearchResults={searchState?.showSearchResults || false}
+                    setShowSearchResults={(show) =>
+                      actions?.updateSearchState?.({ showSearchResults: show })
+                    }
+                    searchResults={searchState?.searchResults || []}
                     addProductFromSearch={addProductFromSearch}
                     searchProducts={searchProducts}
-                    viewType={viewType}
-                    setViewType={setViewType}
-                    loadingProducts={loadingProducts}
-                    formatCurrency={value => formatCurrency(value)}
+                    viewType={searchState?.viewType || "grid"}
+                    setViewType={(type) =>
+                      actions?.updateSearchState?.({ viewType: type })
+                    }
+                    loadingProducts={searchState?.loadingProducts || false}
+                    formatCurrency={formatCurrency}
                   />
                 </div>
               </CardContent>
@@ -465,6 +310,38 @@ export default function EnhancedProforma() {
           </TabsContent>
         ))}
       </ProformaTabs>
+    ),
+    [
+      proformas,
+      activeProformaId,
+      actions,
+      previewMode,
+      company,
+      config,
+      searchState,
+      openClientSearch,
+      addItem,
+      updateItem,
+      removeItem,
+      addProductFromSearch,
+      searchProducts,
+      formatCurrency,
+    ],
+  );
+
+  try {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        {/* Encabezado de la página */}
+        <ProformaHeader
+        previewMode={previewMode}
+        setPreviewMode={actions.setPreviewMode}
+        openProformasDialog={openProformasDialog}
+        handleNew={() => handleAction("new")}
+      />
+
+      {/* Pestañas con proformas */}
+      {proformaTabs}
 
       {/* Botones de acción */}
       <ProformaActions handleAction={handleAction} />
@@ -477,16 +354,14 @@ export default function EnhancedProforma() {
         handleClientSelection={handleClientSelection}
         clientes={clientes}
         loadingClientes={loadingClientes}
-
         // Diálogo de proformas guardadas
         showProformasDialog={showProformasDialog}
         closeProformasDialog={closeProformasDialog}
         handleSelectProforma={handleSelectProforma}
-        onLoadProformas={handleLoadProformas} // Pasar la función para cargar proformas
+        onLoadProformas={handleLoadProformas}
         proformas={proformas}
-        loading={loading} // Pass the loading state
-        errorHandler={errorHandler} // Pass the errorHandler
-
+        loading={loading}
+        errorHandler={errorHandler}
         // Diálogo de confirmación/guardado
         showSaveDialog={showSaveDialog}
         saveDialogType={saveDialogType}
@@ -500,4 +375,50 @@ export default function EnhancedProforma() {
       />
     </div>
   );
+  } catch (err) {
+    console.error("Error en EnhancedProformaContent:", err);
+    setContentError(err);
+    return null;
+  }
+};
+
+/**
+ * Componente wrapper que proporciona el contexto de proformas
+ */
+export default function EnhancedProforma() {
+  // Añadir un manejador de errores para capturar cualquier problema
+  const [error, setError] = useState(null);
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto bg-red-50 border border-red-200 rounded-lg">
+        <h2 className="text-xl font-bold text-red-700 mb-4">Error al cargar el componente</h2>
+        <p className="text-red-600 mb-2">{error.message}</p>
+        <details className="mb-4">
+          <summary className="cursor-pointer text-red-500 mb-2">Ver detalles técnicos</summary>
+          <pre className="bg-red-100 p-4 rounded overflow-auto text-xs">
+            {error.stack}
+          </pre>
+        </details>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <ProformaProvider>
+        <EnhancedProformaContent />
+      </ProformaProvider>
+    );
+  } catch (err) {
+    console.error("Error al renderizar EnhancedProforma:", err);
+    setError(err);
+    return null;
+  }
 }

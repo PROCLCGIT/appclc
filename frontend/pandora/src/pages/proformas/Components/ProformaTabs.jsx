@@ -74,12 +74,14 @@ export default function ProformaTabs({
             <span className="truncate max-w-[100px]">
               {getTabLabel(proforma)}
             </span>
-            <button
+            <span
               onClick={(e) => handleCloseTab(e, proforma.id)}
-              className="ml-1 rounded-full hover:bg-gray-200 p-1 transition-colors"
+              className="ml-1 rounded-full hover:bg-gray-200 p-1 transition-colors cursor-pointer"
+              role="button"
+              aria-label="Cerrar pestaña"
             >
               <X className="h-3 w-3" />
-            </button>
+            </span>
           </TabsTrigger>
         ))}
         
