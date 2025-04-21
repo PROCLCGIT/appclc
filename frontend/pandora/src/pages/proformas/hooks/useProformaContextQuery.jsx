@@ -490,7 +490,7 @@ export const ProformaProvider = ({ children }) => {
   const contextValue = useMemo(() => ({
     state,
     actions
-  }), [state]);
+  }), [state, actions]);
 
   return (
     <ProformaContext.Provider value={contextValue}>

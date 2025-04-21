@@ -63,6 +63,18 @@ const EnhancedProformaContent = () => {
     config = {},
     searchState = {}, // Recuperar searchState del contexto
   } = state || {};
+  
+  // Desestructurar solo las acciones que necesitamos para romper el ciclo de dependencias
+  const { 
+    updateSearchState, 
+    setLoading, 
+    addNewProforma, 
+    loadSavedProformas,
+    updateProforma,
+    setActiveProformaId,
+    setPreviewMode,
+    closeProforma
+  } = actions;
 
   // Usar delayed flag para evitar flash de loading
   const showSkeletons = useDelayedFlag(loading, 300);
@@ -94,8 +106,8 @@ const EnhancedProformaContent = () => {
   // Inicializar hook para inicialización de proformas
   const { loadSpecificProforma } = useProformaInitialization({
     isNewProforma,
-    setLoadExisting: actions.setLoading,
-    addNewProforma: actions.addNewProforma,
+    setLoadExisting: setLoading, // Usar setLoading como equivalente a setLoadExisting
+    addNewProforma,
     loadProforma: actions.loadProforma,
     loadClientes,
     loadInitialProducts,
@@ -140,9 +152,9 @@ const EnhancedProformaContent = () => {
   const { handleAction } = useProformaActions({
     proformas,
     activeProformaId,
-    updateProforma: actions.updateProforma,
-    addNewProforma: actions.addNewProforma,
-    closeProforma: actions.closeProforma,
+    updateProforma,
+    addNewProforma,
+    closeProforma,
     loadProforma: actions.loadProforma,
     saveProforma: actions.saveProforma,
     changeProformaState: actions.changeProformaState,
@@ -157,12 +169,12 @@ const EnhancedProformaContent = () => {
   // Hook para la selección de proformas
   const { handleSelectProforma } = useProformaSelection({
     proformas,
-    setActiveProformaId: actions.setActiveProformaId,
+    setActiveProformaId,
     closeProformasDialog,
     handleAction,
     loadSpecificProforma,
     errorHandler,
-    setLoading: actions.setLoading,
+    setLoading,
   });
 
   // Inicializar hooks para gestión de items y clientes
@@ -170,7 +182,7 @@ const EnhancedProformaContent = () => {
     useItemsHandlers({
       activeProformaId,
       proformas,
-      updateProforma: actions.updateProforma,
+      updateProforma,
       setItems: actions.setItems, // Asegúrate que actions.setItems exista y sea correcto
       recalculateTotals,
       errorHandler, // Pasar errorHandler
@@ -178,7 +190,7 @@ const EnhancedProformaContent = () => {
 
   const { handleSelectClient } = useClientHandlers({
     activeProformaId,
-    updateProforma: actions.updateProforma,
+    updateProforma,
     setClient: actions.setClient, // Asegúrate que actions.setClient exista
     errorHandler, // Pasar errorHandler
   });
@@ -194,7 +206,7 @@ const EnhancedProformaContent = () => {
   // Función para cargar proformas guardadas
   const handleLoadProformas = useCallback(async () => {
     try {
-      actions.setLoading(true);
+      setLoading(true);
 
       const options = {
         showToasts: true,
@@ -202,15 +214,15 @@ const EnhancedProformaContent = () => {
         forceRefresh: true,
       };
 
-      const loadedProformas = await actions.loadSavedProformas(options);
+      const loadedProformas = await loadSavedProformas(options);
       return loadedProformas || [];
     } catch (error) {
       errorHandler.handleError(error, "handleLoadProformas");
       return [];
     } finally {
-      actions.setLoading(false);
+      setLoading(false);
     }
-  }, [actions, errorHandler]);
+  }, [loadSavedProformas, setLoading, errorHandler]);
 
   // Cargar proformas cuando se abre el diálogo
   useEffect(() => {
@@ -224,13 +236,13 @@ const EnhancedProformaContent = () => {
   // Actualizar estado de búsqueda en el contexto global
   useEffect(() => {
     // Solo actualizar searchState en contexto cuando cambien criterios principales
-    actions.updateSearchState({
+    updateSearchState({
       searchTerm,
       searchSource,
       viewType,
       showSearchResults: searchTerm.length >= 2,
     });
-  }, [searchTerm, searchSource, viewType, actions]);
+  }, [searchTerm, searchSource, viewType, updateSearchState]);
 
   // Manejador de errores para capturar errores asíncronos o de eventos
   useEffect(() => {
@@ -265,8 +277,8 @@ const EnhancedProformaContent = () => {
       <ProformaTabs
         proformas={proformas}
         activeProformaId={activeProformaId}
-        setActiveProformaId={actions.setActiveProformaId}
-        closeProforma={actions.closeProforma}
+        setActiveProformaId={setActiveProformaId}
+        closeProforma={closeProforma}
         addNewProforma={() => handleAction("new")} // Usar handleAction para consistencia si aplica
       >
         {proformas.map((proforma) => (
@@ -281,15 +293,15 @@ const EnhancedProformaContent = () => {
                     // Pasar datos específicos de la proforma actual
                     quote={proforma.quote} 
                     setQuote={(newQuote) =>
-                      actions.updateProforma(proforma.id, { quote: newQuote })
+                      updateProforma(proforma.id, { quote: newQuote })
                     }
                     client={proforma.client} // Pasar cliente de la proforma actual
                     setClient={(newClient) => // Esto parece asignar el cliente a la proforma, no globalmente
-                      actions.updateProforma(proforma.id, { client: newClient })
+                      updateProforma(proforma.id, { client: newClient })
                     } 
                     items={proforma.items || []} // Pasar items de la proforma actual
                     setItems={(newItems) => // Esto actualiza items de la proforma específica
-                      actions.updateProforma(proforma.id, { items: newItems })
+                      updateProforma(proforma.id, { items: newItems })
                     }
                     company={company}
                     config={config || {}}
@@ -305,7 +317,7 @@ const EnhancedProformaContent = () => {
                     setSearchSource={setSearchSource}
                     showSearchResults={searchState.showSearchResults} // Usar estado del contexto
                     setShowSearchResults={(show) =>
-                      actions.updateSearchState({ showSearchResults: show })
+                      updateSearchState({ showSearchResults: show })
                     }
                     searchResults={searchResults}
                     addProductFromSearch={addProductFromSearch} // Añade a la proforma activa
@@ -325,19 +337,18 @@ const EnhancedProformaContent = () => {
     [
       proformas,
       activeProformaId,
-      actions, // Asegúrate que 'actions' sea estable o esté memoizado en el contexto
       previewMode,
       company,
       config,
       searchTerm,
-      setSearchTerm, // Añadir setters si cambian
+      setSearchTerm,
       searchSource,
-      setSearchSource, // Añadir setters si cambian
-      searchState.showSearchResults, // Usar estado del contexto
+      setSearchSource,
+      searchState.showSearchResults,
       searchResults,
       loadingProducts,
       viewType,
-      setViewType, // Añadir setters si cambian
+      setViewType,
       openClientSearch,
       addItem,
       updateItem,
@@ -345,7 +356,12 @@ const EnhancedProformaContent = () => {
       addProductFromSearch,
       searchProducts,
       formatCurrency,
-      handleAction, // Añadir handleAction si se usa dentro
+      handleAction,
+      // Funciones desestructuradas de actions
+      setActiveProformaId, 
+      closeProforma,
+      updateProforma,
+      updateSearchState
     ]
   );
 
@@ -383,7 +399,7 @@ const EnhancedProformaContent = () => {
       {/* Encabezado de la página */}
       <ProformaHeader
         previewMode={previewMode}
-        setPreviewMode={actions.setPreviewMode}
+        setPreviewMode={setPreviewMode}
         openProformasDialog={openProformasDialog}
         handleNew={() => handleAction("new")}
       />
