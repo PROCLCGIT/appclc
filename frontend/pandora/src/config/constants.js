@@ -1,7 +1,7 @@
 // src/config/constants.js
 
 // API base URL (asegurarnos de no tener barra al final)
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/+$/, '');
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
 
 // Configuración API paths (asegurarnos de que empiezan con barra)
 export const API_PATHS = {

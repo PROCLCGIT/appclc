@@ -36,9 +36,9 @@ const useAuthStore = create((set) => ({
       };
 
       try {
-        // Llamada a /auth/login/ - usamos la nueva ruta sin limitaciones
-        console.log('Enviando solicitud de autenticación a endpoint sin limitaciones...');
-        const response = await api.post('auth/login/', loginData, {
+        // Llamada al endpoint correcto de autenticación
+        console.log('Enviando solicitud de autenticación al endpoint token...');
+        const response = await api.post('auth/token/', loginData, {
           headers: { 'Content-Type': 'application/json' },
           // Desactivamos el retry automático para este endpoint
           _disableRetry: true

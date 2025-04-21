@@ -47,8 +47,8 @@ const VentasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/V
 const ComprasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/ComprasHistoricaProducto'));
 
 // Proformas
-const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProforma'));
-const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformas'));
+const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProformaWithQuery'));
+const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformasWithQuery'));
 const ProformasGuardadas = lazy(() => import('@/pages/proformas/ProformasGuardadas'));
 
 // Brief
@@ -201,6 +201,8 @@ export const router = createBrowserRouter([
       { path: 'enhancedproforma', element: <PageWrapper component={EnhancedProforma} /> },
       { path: 'dashboardproformas', element: <PageWrapper component={DashboardProformas} /> },
       { path: 'proformas-guardadas', element: <PageWrapper component={ProformasGuardadas} /> },
+      // Redirector for compatibility with old routes
+      { path: 'proformas', element: <Navigate to="/enhancedproforma" replace /> },
       
       // Brief
       { path: 'briefs', element: <PageWrapper component={BriefsPage} /> },

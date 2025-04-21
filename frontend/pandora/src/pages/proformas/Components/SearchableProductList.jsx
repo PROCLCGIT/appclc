@@ -1,13 +1,16 @@
 import React from "react";
-import { SearchBar, LoadingSpinner, EmptyState } from "@/components/shared";
+import { SearchBar, EmptyState } from "@/components/shared";
 import { proformasService } from "@/services/api";
 import { useAsyncSearch } from "@/lib/hooks";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus, FileBarChart, Search } from "lucide-react";
+import useDelayedFlag from "@/hooks/useDelayedFlag";
+import { SkeletonTable } from "@/components/SkeletonList";
 
 /**
  * A component that demonstrates using the useAsyncSearch hook for product search
+ * with improved loading UX using skeletons instead of spinners
  */
 const SearchableProductList = ({ onSelectProduct }) => {
   // Use the useAsyncSearch hook to handle async search with debounce
@@ -30,6 +33,9 @@ const SearchableProductList = ({ onSelectProduct }) => {
       minChars: 2 // Minimum characters to trigger search
     }
   );
+
+  // Use delayed flag to avoid loading flash
+  const showSkeletons = useDelayedFlag(isLoading, 300);
 
   // Render product table
   const renderProductTable = () => (
@@ -77,20 +83,24 @@ const SearchableProductList = ({ onSelectProduct }) => {
         />
       </div>
 
-      {isLoading && (
-        <div className="h-40 flex items-center justify-center">
-          <LoadingSpinner size="lg" text="Buscando productos..." />
+      {showSkeletons && (
+        <div className="mt-6">
+          <SkeletonTable
+            rows={5}
+            columns={4}
+            showHeader={true}
+          />
         </div>
       )}
 
-      {!isLoading && error && (
+      {!showSkeletons && error && (
         <div className="rounded-md bg-red-50 p-4 text-red-700">
           <p className="font-medium">Error al buscar productos</p>
           <p className="text-sm mt-1">{error.message || "Ocurrió un error inesperado"}</p>
         </div>
       )}
 
-      {!isLoading && !error && hasSearched && results.length === 0 && (
+      {!showSkeletons && !error && hasSearched && results.length === 0 && (
         <EmptyState
           icon={<Search className="h-10 w-10 text-gray-400" />}
           title="No se encontraron productos"
@@ -103,7 +113,7 @@ const SearchableProductList = ({ onSelectProduct }) => {
         />
       )}
 
-      {!isLoading && !error && !hasSearched && (
+      {!showSkeletons && !error && !hasSearched && (
         <EmptyState
           icon={<FileBarChart className="h-10 w-10 text-blue-400" />}
           title="Busque productos"
@@ -111,7 +121,7 @@ const SearchableProductList = ({ onSelectProduct }) => {
         />
       )}
 
-      {!isLoading && !error && results.length > 0 && renderProductTable()}
+      {!showSkeletons && !error && results.length > 0 && renderProductTable()}
     </div>
   );
 };

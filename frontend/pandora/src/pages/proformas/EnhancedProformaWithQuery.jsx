@@ -1,6 +1,6 @@
-// src/pages/proformas/EnhancedProforma.jsx
+// src/pages/proformas/EnhancedProformaWithQuery.jsx
 
-import React, { useEffect, useMemo, useCallback, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // Componentes UI
@@ -14,14 +14,13 @@ import ProformaHeader from "./components/ProformaHeader";
 import ProformaActions from "./components/ProformaActions";
 import ProformaDialogs from "./components/ProformaDialogs";
 
-// Contexto y hooks
+// Contexto y hooks con React Query
 import {
   ProformaProvider,
-  useProformaContext,
-} from "./hooks/useProformaContext.jsx";
-import useEnhancedProforma from "./hooks/useEnhancedProforma";
-import useClientSearch from "./hooks/useClientSearch";
-import useProductSearch from "./hooks/useProductSearch";
+  useProformaContextQuery,
+} from "./hooks/useProformaContextQuery";
+import useClientSearchQuery from "./hooks/useClientSearchQuery";
+import useProductSearchQuery from "./hooks/useProductSearchQuery";
 import useDialogControl from "./hooks/useDialogControl";
 import useTotalsCalculation from "./hooks/useTotalsCalculation";
 import useProformaActions from "./hooks/useProformaActions";
@@ -32,9 +31,11 @@ import useProformaInitialization from "./hooks/useProformaInitialization";
 import useErrorHandler from "./hooks/useErrorHandler.jsx";
 import useNotifications from "./hooks/useNotifications.jsx";
 import useProformaSelection from "./hooks/useProformaSelection.jsx";
+import useDelayedFlag from "@/hooks/useDelayedFlag";
+import { SkeletonProforma } from "@/components/SkeletonList";
 
 /**
- * Componente principal que implementa el contexto y la lógica de proformas
+ * Componente principal que implementa el contexto y la lógica de proformas con React Query
  */
 const EnhancedProformaContent = () => {
   // Estado para capturar errores específicos
@@ -78,8 +79,8 @@ const EnhancedProformaContent = () => {
   const notify = useNotifications();
   const errorHandler = useErrorHandler();
 
-  // Acceder al contexto de proformas
-  const { state, actions } = useProformaContext();
+  // Acceder al contexto de proformas con React Query
+  const { state, actions } = useProformaContextQuery();
   const {
     proformas = [],
     activeProformaId = null,
@@ -90,25 +91,40 @@ const EnhancedProformaContent = () => {
     config = {},
     searchState = {},
   } = state || {};
-
-  // Inicializar hook principal de proformas (algunos métodos siguen fuera del contexto)
-  const { loadExisting, setLoadExisting, loadProforma, loadSavedProformas } =
-    useEnhancedProforma();
+  
+  // Usar delayed flag para evitar flash de loading
+  const showSkeletons = useDelayedFlag(loading, 300);
 
   // Inicializar hook para la plantilla y configuración
   const { company } = useProformaTemplate();
 
-  // Inicializar hooks para búsqueda
-  const { clientes, loadingClientes, loadClientes } = useClientSearch();
+  // Inicializar hooks para búsqueda con React Query
+  const { 
+    clientes, 
+    loadingClientes, 
+    loadClientes,
+    searchCliente
+  } = useClientSearchQuery();
 
-  const { loadInitialProducts, searchProducts } = useProductSearch();
+  const { 
+    searchTerm,
+    setSearchTerm,
+    searchSource, 
+    setSearchSource,
+    viewType,
+    setViewType,
+    searchResults,
+    loadingProducts,
+    searchProducts,
+    loadInitialProducts
+  } = useProductSearchQuery();
 
   // Inicializar hook para inicialización de proformas
   const { loadSpecificProforma } = useProformaInitialization({
     isNewProforma,
-    setLoadExisting,
+    setLoadExisting: actions.setLoadExisting,
     addNewProforma: actions.addNewProforma,
-    loadProforma,
+    loadProforma: actions.loadProforma,
     loadClientes,
     loadInitialProducts,
   });
@@ -131,7 +147,9 @@ const EnhancedProformaContent = () => {
     showErrorDialog,
     showWarningDialog,
     showSuccessDialog,
-  } = useDialogControl({ loadSavedProformas });
+  } = useDialogControl({ 
+    loadSavedProformas: actions.loadSavedProformas 
+  });
 
   // Inicializar hooks para cálculos y acciones
   const { formatCurrency, recalculateTotals } = useTotalsCalculation({
@@ -148,7 +166,10 @@ const EnhancedProformaContent = () => {
     updateProforma: actions.updateProforma,
     addNewProforma: actions.addNewProforma,
     closeProforma: actions.closeProforma,
-    loadProforma,
+    loadProforma: actions.loadProforma,
+    saveProforma: actions.saveProforma,
+    changeProformaState: actions.changeProformaState,
+    duplicateProforma: actions.duplicateProforma,
     formatCurrency,
     showSuccessDialog,
     showErrorDialog,
@@ -183,19 +204,15 @@ const EnhancedProformaContent = () => {
   });
 
   // Función para manejar la selección de un cliente
-  const handleClientSelection = (selectedClient) => {
+  const handleClientSelection = useCallback((selectedClient) => {
     const success = handleSelectClient(selectedClient);
     if (success) {
       closeClientSearch();
     }
-  };
+  }, [handleSelectClient, closeClientSearch]);
 
   // Función para cargar proformas guardadas
-  const handleLoadProformas = async () => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Solicitando carga de proformas guardadas");
-    }
-
+  const handleLoadProformas = useCallback(async () => {
     try {
       actions.setLoading(true);
 
@@ -205,7 +222,7 @@ const EnhancedProformaContent = () => {
         forceRefresh: true,
       };
 
-      const loadedProformas = await loadSavedProformas(options);
+      const loadedProformas = await actions.loadSavedProformas(options);
       return loadedProformas || [];
     } catch (error) {
       errorHandler.handleError(error, "handleLoadProformas");
@@ -213,7 +230,7 @@ const EnhancedProformaContent = () => {
     } finally {
       actions.setLoading(false);
     }
-  };
+  }, [actions, errorHandler]);
 
   // Cargar proformas cuando se abre el diálogo
   useEffect(() => {
@@ -222,7 +239,7 @@ const EnhancedProformaContent = () => {
         errorHandler.handleError(e, "loadProformasEffect");
       });
     }
-  }, [showProformasDialog]);
+  }, [showProformasDialog, handleLoadProformas, errorHandler]);
 
   // Efecto para recalcular totales cuando cambia la proforma activa
   useEffect(() => {
@@ -232,18 +249,25 @@ const EnhancedProformaContent = () => {
           (p) => p.id === activeProformaId,
         );
         if (currentProforma?.items?.length > 0) {
-          if (process.env.NODE_ENV === "development") {
-            console.log(
-              `Recalculando totales para proforma: ${activeProformaId}`,
-            );
-          }
           recalculateTotals();
         }
       }, 300);
 
       return () => clearTimeout(recalcTimer);
     }
-  }, [activeProformaId, loading, proformas]);
+  }, [activeProformaId, loading, proformas, recalculateTotals]);
+
+  // Actualizar estado de búsqueda en el contexto global
+  useEffect(() => {
+    actions.updateSearchState({
+      searchTerm,
+      searchSource,
+      searchResults,
+      loadingProducts,
+      viewType,
+      showSearchResults: searchTerm.length >= 2,
+    });
+  }, [searchTerm, searchSource, searchResults, loadingProducts, viewType, actions]);
 
   // Memoizar las pestañas para evitar re-renders innecesarios
   const proformaTabs = useMemo(
@@ -282,26 +306,20 @@ const EnhancedProformaContent = () => {
                     addItem={addItem}
                     updateItem={updateItem}
                     removeItem={removeItem}
-                    searchTerm={searchState?.searchTerm || ""}
-                    setSearchTerm={(term) =>
-                      actions?.updateSearchState?.({ searchTerm: term })
-                    }
-                    searchSource={searchState?.searchSource || "database"}
-                    setSearchSource={(source) =>
-                      actions?.updateSearchState?.({ searchSource: source })
-                    }
-                    showSearchResults={searchState?.showSearchResults || false}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    searchSource={searchSource}
+                    setSearchSource={setSearchSource}
+                    showSearchResults={searchTerm.length >= 2}
                     setShowSearchResults={(show) =>
-                      actions?.updateSearchState?.({ showSearchResults: show })
+                      actions.updateSearchState({ showSearchResults: show })
                     }
-                    searchResults={searchState?.searchResults || []}
+                    searchResults={searchResults}
                     addProductFromSearch={addProductFromSearch}
                     searchProducts={searchProducts}
-                    viewType={searchState?.viewType || "grid"}
-                    setViewType={(type) =>
-                      actions?.updateSearchState?.({ viewType: type })
-                    }
-                    loadingProducts={searchState?.loadingProducts || false}
+                    viewType={viewType}
+                    setViewType={setViewType}
+                    loadingProducts={loadingProducts}
                     formatCurrency={formatCurrency}
                   />
                 </div>
@@ -318,7 +336,11 @@ const EnhancedProformaContent = () => {
       previewMode,
       company,
       config,
-      searchState,
+      searchTerm,
+      searchSource,
+      searchResults,
+      loadingProducts,
+      viewType,
       openClientSearch,
       addItem,
       updateItem,
@@ -326,7 +348,10 @@ const EnhancedProformaContent = () => {
       addProductFromSearch,
       searchProducts,
       formatCurrency,
-    ],
+      setSearchTerm,
+      setSearchSource,
+      setViewType,
+    ]
   );
 
   try {
@@ -334,47 +359,55 @@ const EnhancedProformaContent = () => {
       <div className="p-6 max-w-6xl mx-auto">
         {/* Encabezado de la página */}
         <ProformaHeader
-        previewMode={previewMode}
-        setPreviewMode={actions.setPreviewMode}
-        openProformasDialog={openProformasDialog}
-        handleNew={() => handleAction("new")}
-      />
+          previewMode={previewMode}
+          setPreviewMode={actions.setPreviewMode}
+          openProformasDialog={openProformasDialog}
+          handleNew={() => handleAction("new")}
+        />
 
-      {/* Pestañas con proformas */}
-      {proformaTabs}
+        {/* Mostrar skeleton si está cargando, o las pestañas con proformas si no */}
+        {showSkeletons ? (
+          <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
+            <CardContent className="p-6">
+              <SkeletonProforma />
+            </CardContent>
+          </Card>
+        ) : (
+          proformaTabs
+        )}
 
-      {/* Botones de acción */}
-      <ProformaActions handleAction={handleAction} />
+        {/* Botones de acción */}
+        <ProformaActions handleAction={handleAction} />
 
-      {/* Diálogos */}
-      <ProformaDialogs
-        // Diálogo de búsqueda de clientes
-        showClientSearch={showClientSearch}
-        closeClientSearch={closeClientSearch}
-        handleClientSelection={handleClientSelection}
-        clientes={clientes}
-        loadingClientes={loadingClientes}
-        // Diálogo de proformas guardadas
-        showProformasDialog={showProformasDialog}
-        closeProformasDialog={closeProformasDialog}
-        handleSelectProforma={handleSelectProforma}
-        onLoadProformas={handleLoadProformas}
-        proformas={proformas}
-        loading={loading}
-        errorHandler={errorHandler}
-        // Diálogo de confirmación/guardado
-        showSaveDialog={showSaveDialog}
-        saveDialogType={saveDialogType}
-        saveDialogTitle={saveDialogTitle}
-        saveDialogMessage={saveDialogMessage}
-        saveDialogDetails={saveDialogDetails}
-        savedProformaId={savedProformaId}
-        closeSaveDialog={closeSaveDialog}
-        activeProformaId={activeProformaId}
-        handleAction={handleAction}
-      />
-    </div>
-  );
+        {/* Diálogos */}
+        <ProformaDialogs
+          // Diálogo de búsqueda de clientes
+          showClientSearch={showClientSearch}
+          closeClientSearch={closeClientSearch}
+          handleClientSelection={handleClientSelection}
+          clientes={clientes}
+          loadingClientes={loadingClientes}
+          // Diálogo de proformas guardadas
+          showProformasDialog={showProformasDialog}
+          closeProformasDialog={closeProformasDialog}
+          handleSelectProforma={handleSelectProforma}
+          onLoadProformas={handleLoadProformas}
+          proformas={proformas}
+          loading={loading}
+          errorHandler={errorHandler}
+          // Diálogo de confirmación/guardado
+          showSaveDialog={showSaveDialog}
+          saveDialogType={saveDialogType}
+          saveDialogTitle={saveDialogTitle}
+          saveDialogMessage={saveDialogMessage}
+          saveDialogDetails={saveDialogDetails}
+          savedProformaId={savedProformaId}
+          closeSaveDialog={closeSaveDialog}
+          activeProformaId={activeProformaId}
+          handleAction={handleAction}
+        />
+      </div>
+    );
   } catch (err) {
     console.error("Error en EnhancedProformaContent:", err);
     setContentError(err);
@@ -385,7 +418,7 @@ const EnhancedProformaContent = () => {
 /**
  * Componente wrapper que proporciona el contexto de proformas
  */
-export default function EnhancedProforma() {
+export default function EnhancedProformaWithQuery() {
   // Añadir un manejador de errores para capturar cualquier problema
   const [error, setError] = useState(null);
 
@@ -417,7 +450,7 @@ export default function EnhancedProforma() {
       </ProformaProvider>
     );
   } catch (err) {
-    console.error("Error al renderizar EnhancedProforma:", err);
+    console.error("Error al renderizar EnhancedProformaWithQuery:", err);
     setError(err);
     return null;
   }

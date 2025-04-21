@@ -10,7 +10,7 @@ import { toast } from "sonner";
  * @param {boolean} options.showInDevelopment - Si mostrar logs en consola en desarrollo (default: true)
  * @returns {Object} Funciones para mostrar diferentes tipos de notificaciones
  */
-export default function useNotifications(options = {}) {
+export function useNotifications(options = {}) {
   const {
     enabled = true,
     showInDevelopment = process.env.NODE_ENV === "development",
@@ -213,3 +213,6 @@ export default function useNotifications(options = {}) {
     updateToError,
   };
 }
+
+// También exportamos como default para mantener compatibilidad
+export default useNotifications;

@@ -262,6 +262,16 @@ export class ProformaService extends ActionService {
   }
   
   /**
+   * Alias for getDashboard for compatibility with existing code
+   * @param {string} startDate - Start date in YYYY-MM-DD format
+   * @param {string} endDate - End date in YYYY-MM-DD format
+   * @returns {Promise<Object>} - Dashboard metrics
+   */
+  async obtenerDashboard(startDate, endDate) {
+    return this.getDashboard(startDate, endDate);
+  }
+  
+  /**
    * Exports a proforma as CSV
    * @param {number|string} id - The proforma ID
    * @returns {Promise<Blob>} - The CSV file

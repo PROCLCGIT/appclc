@@ -2,9 +2,12 @@
 
 import { toast } from 'sonner';
 import { proformasService, proformaItemsService } from '@/services/api';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { debounce } from 'lodash';
 
 /**
  * Hook personalizado para manejar acciones de proforma (guardar, exportar, etc.)
+ * Con implementación de debounce para evitar acciones repetidas
  */
 export const useProformaActions = ({
   proformas, 
@@ -18,58 +21,15 @@ export const useProformaActions = ({
   showErrorDialog,
   showWarningDialog
 }) => {
-  /**
-   * Maneja la acción principal solicitada por el usuario
-   */
-  const handleAction = async (action) => {
-    console.log(`Acción: ${action}`);
+  // Variable para almacenar el último tiempo de creación de proforma nueva
+  const [lastNewProformaTime, setLastNewProformaTime] = useState(0);
 
-    // Nueva proforma es un caso especial que no requiere verificación
-    if (action === "new") {
-      // Evitamos crear múltiples proformas en sucesión rápida
-      // implementando un bloqueo de 1 segundo
-      const now = Date.now();
-      if (now - (window.lastNewProformaTime || 0) < 1000) {
-        console.log("Ignorando solicitud de nueva proforma (muy rápida)");
-        return;
-      }
-      window.lastNewProformaTime = now;
-      
-      addNewProforma();
-      return;
-    }
-
-    // Para todas las demás acciones, verificar que existe una proforma activa
-    const activeProforma = proformas.find(p => p.id === activeProformaId);
-    if (!activeProforma) {
-      toast.error("No hay una proforma activa para realizar esta acción");
-      return;
-    }
-    
-    if (action === "save") {
-      await saveProforma(activeProforma);
-    }
-    else if (action === "export") {
-      exportProforma(activeProforma);
-    }
-    else if (action === "print") {
-      printProforma();
-    }
-    else if (action === "generate") {
-      await generateProforma(activeProforma);
-    }
-    else if (action === "configure") {
-      configureProforma();
-    }
-    else if (action === "share") {
-      toast.info("Función de compartir proforma estará disponible próximamente");
-    }
-  };
+// These declarations will be moved after the other function definitions
 
   /**
    * Guarda una proforma en el backend
    */
-  const saveProforma = async (currentProforma) => {
+  const saveProformaRaw = useCallback(async (currentProforma) => {
     if (!currentProforma) {
       toast.error("No hay una proforma activa para guardar", {
         description: "Ocurrió un error al identificar la proforma que desea guardar"
@@ -374,12 +334,20 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
       
       return null;
     }
-  };
+  }, [updateProforma, formatCurrency, showSuccessDialog, showErrorDialog, showWarningDialog]);
+
+  /**
+   * Versión con debounce de saveProforma
+   */
+  const saveProforma = useMemo(
+    () => debounce(saveProformaRaw, 800),  // tiempo más largo para operación crítica
+    [saveProformaRaw]
+  );
 
   /**
    * Exporta la proforma como PDF
    */
-  const exportProforma = async (currentProforma) => {
+  const exportProformaRaw = useCallback(async (currentProforma) => {
     try {
       if (!currentProforma) {
         toast.error("No hay una proforma activa para exportar");
@@ -560,19 +528,35 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
       console.error("Error general en exportProforma:", error);
       toast.error("Ocurrió un error inesperado al exportar el PDF");
     }
-  };
+  }, [saveProforma, loadProforma, showWarningDialog]);
+
+  /**
+   * Versión con debounce de exportProforma
+   */
+  const exportProforma = useMemo(
+    () => debounce(exportProformaRaw, 600),
+    [exportProformaRaw]
+  );
 
   /**
    * Imprime la proforma actual
    */
-  const printProforma = () => {
+  const printProformaRaw = useCallback(() => {
     window.print();
-  };
+  }, []);
+
+  /**
+   * Versión con debounce de printProforma
+   */
+  const printProforma = useMemo(
+    () => debounce(printProformaRaw, 500),
+    [printProformaRaw]
+  );
 
   /**
    * Genera/envía la proforma (cambia su estado a enviada)
    */
-  const generateProforma = async (currentProforma) => {
+  const generateProformaRaw = useCallback(async (currentProforma) => {
     if (!currentProforma.savedId) {
       toast.error("Debe guardar la proforma antes de enviarla");
       const shouldSave = window.confirm("¿Desea guardar la proforma ahora?");
@@ -602,14 +586,108 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
       console.error("Error al enviar la proforma:", error);
       toast.error("No se pudo enviar la proforma. Verifica los datos e inténtalo de nuevo.");
     }
-  };
+  }, [saveProforma, closeProforma, proformas, addNewProforma]);
+
+  /**
+   * Versión con debounce de generateProforma
+   */
+  const generateProforma = useMemo(
+    () => debounce(generateProformaRaw, 800),
+    [generateProformaRaw]
+  );
 
   /**
    * Configura las opciones de la proforma
    */
-  const configureProforma = () => {
+  const configureProformaRaw = useCallback(() => {
     toast.info("La configuración de proformas estará disponible próximamente");
-  };
+  }, []);
+
+  /**
+   * Versión con debounce de configureProforma
+   */
+  const configureProforma = useMemo(
+    () => debounce(configureProformaRaw, 500),
+    [configureProformaRaw]
+  );
+
+  /**
+   * Maneja la acción principal solicitada por el usuario (con debounce)
+   */
+  const handleActionRaw = useCallback(async (action) => {
+    console.log(`Acción: ${action}`);
+
+    // Nueva proforma es un caso especial que no requiere verificación
+    if (action === "new") {
+      // Evitamos crear múltiples proformas en sucesión rápida
+      const now = Date.now();
+      if (now - lastNewProformaTime < 1000) {
+        console.log("Ignorando solicitud de nueva proforma (muy rápida)");
+        return;
+      }
+      setLastNewProformaTime(now);
+      
+      addNewProforma();
+      return;
+    }
+
+    // Para todas las demás acciones, verificar que existe una proforma activa
+    const activeProforma = proformas.find(p => p.id === activeProformaId);
+    if (!activeProforma) {
+      toast.error("No hay una proforma activa para realizar esta acción");
+      return;
+    }
+    
+    if (action === "save") {
+      await saveProforma(activeProforma);
+    }
+    else if (action === "export") {
+      exportProforma(activeProforma);
+    }
+    else if (action === "print") {
+      printProforma();
+    }
+    else if (action === "generate") {
+      await generateProforma(activeProforma);
+    }
+    else if (action === "configure") {
+      configureProforma();
+    }
+    else if (action === "share") {
+      toast.info("Función de compartir proforma estará disponible próximamente");
+    }
+  }, [
+    activeProformaId, 
+    addNewProforma,
+    lastNewProformaTime, 
+    proformas, 
+    setLastNewProformaTime,
+    saveProforma,
+    exportProforma,
+    printProforma,
+    generateProforma,
+    configureProforma
+  ]);
+
+  /**
+   * Versión con debounce de handleAction
+   */
+  const handleAction = useMemo(
+    () => debounce(handleActionRaw, 500),
+    [handleActionRaw]
+  );
+
+  // Limpiar las funciones debounced al desmontar para evitar fugas de memoria
+  useEffect(() => {
+    return () => {
+      handleAction.cancel();
+      saveProforma.cancel();
+      exportProforma.cancel();
+      printProforma.cancel();
+      generateProforma.cancel();
+      configureProforma.cancel();
+    };
+  }, [handleAction, saveProforma, exportProforma, printProforma, generateProforma, configureProforma]);
 
   return {
     handleAction,

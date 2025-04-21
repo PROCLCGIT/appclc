@@ -32,8 +32,12 @@ const ClientSearchDialog = ({ isOpen, onClose, onSelectClient, clientes, loading
   useEffect(() => {
     if (isOpen) {
       console.log(`ClientSearchDialog: abierto con ${clientes.length} clientes disponibles`);
-      setFilteredClientes(clientes.slice(0, 10));
-      setSearchTerm("");
+      // Use a timeout to move state updates out of the layout phase
+      const timer = setTimeout(() => {
+        setFilteredClientes(clientes.slice(0, 10));
+        setSearchTerm("");
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, clientes]);
   

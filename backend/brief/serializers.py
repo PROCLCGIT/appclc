@@ -1,7 +1,7 @@
 # backend/brief/serializers.py
 from rest_framework import serializers
 from .models import Brief, BriefItems
-from pandora.serializers import BaseModelSerializer
+from pandora.serializers import AuditedModelSerializer as BaseModelSerializer
 
 
 class BriefItemsSerializer(BaseModelSerializer):

@@ -7,7 +7,7 @@ from .models import (
     ImagenProductoDisponible, DocumentoProductoDisponible, 
     DocumentoProductoOfertado, HistorialDeVentas, HistorialDeCompras
 )
-from pandora.serializers import (
+from pandora.serializers_models import (
     CategoriasSerializer,
     MarcaSerializer,
     UnidadesSerializer,

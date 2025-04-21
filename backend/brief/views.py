@@ -6,9 +6,16 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie
 
-from pandora.views import BaseModelViewSet
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Brief, BriefItems
 from .serializers import BriefSerializer, BriefItemsSerializer
+
+# Definición temporal de BaseModelViewSet para compatibilidad
+class BaseModelViewSet(viewsets.ModelViewSet):
+    """Base ViewSet con funcionalidades extendidas."""
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = {}
 
 
 class BriefViewSet(BaseModelViewSet):

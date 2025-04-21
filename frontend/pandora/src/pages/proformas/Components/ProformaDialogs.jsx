@@ -99,8 +99,9 @@ export default function ProformaDialogs({
                   // Función para exportar la proforma
                   const proforma = proformas.find(p => p.id === activeProformaId);
                   if (proforma) {
-                    handleAction("export");
+                    // First close dialog, then trigger action after a microtask delay
                     closeSaveDialog();
+                    setTimeout(() => handleAction("export"), 50);
                   }
                 }}
               >
@@ -113,9 +114,9 @@ export default function ProformaDialogs({
               <Button
                 className="bg-amber-600 hover:bg-amber-700"
                 onClick={() => {
-                  // Volver a intentar guardar 
+                  // Volver a intentar guardar - keep the timeout but increase it slightly
                   closeSaveDialog();
-                  setTimeout(() => handleAction("save"), 100);
+                  setTimeout(() => handleAction("save"), 150);
                 }}
               >
                 Reintentar

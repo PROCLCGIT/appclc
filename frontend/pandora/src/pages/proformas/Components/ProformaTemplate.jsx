@@ -358,8 +358,7 @@ export default function ProformaTemplate({
                               // El siguiente botón sería el de nombre de proforma
                               if (proformaNameButtonRef.current) {
                                 proformaNameButtonRef.current.focus();
-                                // Opcionalmente, activar el siguiente popover automáticamente
-                                setProformaNamePopoverOpen(true);
+                                // Removed automatic opening of the next popover
                               }
                             }, 100);
                           } else if (e.key === 'Escape') {
@@ -458,8 +457,7 @@ export default function ProformaTemplate({
                               // El siguiente botón sería el de forma de pago
                               if (paymentTermsButtonRef.current) {
                                 paymentTermsButtonRef.current.focus();
-                                // Opcionalmente, activar el siguiente popover automáticamente
-                                setPaymentTermsPopoverOpen(true);
+                                // Removed automatic opening of the next popover
                               }
                             }, 100);
                           } else if (e.key === 'Escape') {
@@ -721,8 +719,7 @@ export default function ProformaTemplate({
                                 // El siguiente botón sería el de tiempo de entrega
                                 if (deliveryTimeButtonRef.current) {
                                   deliveryTimeButtonRef.current.focus();
-                                  // Opcionalmente, activar el siguiente popover automáticamente
-                                  setDeliveryTimePopoverOpen(true);
+                                  // Removed automatic opening of the next popover
                                 }
                               }, 100);
                             } else if (e.key === 'Escape') {
@@ -813,8 +810,9 @@ export default function ProformaTemplate({
                                 // Volver al primer botón (atención)
                                 if (attentionButtonRef.current) {
                                   attentionButtonRef.current.focus();
-                                  // Opcionalmente, activar el primer popover automáticamente
-                                  // setAttentionPopoverOpen(true); // Descomentado si desea activación automática
+                                  // Removed automatic opening of the next popover
+                                  // The commented line below was already correctly not activating the popover
+                                  // setAttentionPopoverOpen(true);
                                 }
                               }, 100);
                             } else if (e.key === 'Escape') {

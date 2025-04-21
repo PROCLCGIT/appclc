@@ -3,7 +3,7 @@ from django.utils import timezone
 from decimal import Decimal
 
 from .models import Proforma, ProformaItem, ProformaHistorial, ConfiguracionProforma
-from pandora.serializers import ClientesSerializer, EmpresaClcSerializer
+from pandora.serializers_models import ClientesSerializer, EmpresaClcSerializer
 from pandora.models import Clientes, EmpresaClc
 from products.serializers import ProductoOfertadoSerializer, ProductoDisponibleSerializer
 from products.models import ProductoOfertado, ProductoDisponible

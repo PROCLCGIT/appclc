@@ -1,0 +1,475 @@
+INFO 2025-04-20 21:37:26,088 autoreload 16409 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:37:58,056 autoreload 16409 140704262474688 /Users/clc/WS/appclc/backend/products/serializers.py changed, reloading.
+INFO 2025-04-20 21:37:58,708 autoreload 17240 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:12,535 autoreload 17240 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:13,132 autoreload 17484 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:17,627 autoreload 17484 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:18,175 autoreload 17708 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:24,710 autoreload 17708 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:25,300 autoreload 17821 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:32,919 autoreload 17821 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:33,499 autoreload 17948 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:45,204 autoreload 17948 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:45,801 autoreload 18185 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:38:56,504 autoreload 18185 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:38:57,077 autoreload 18520 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:39:01,619 autoreload 18520 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:39:02,197 autoreload 18639 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:39:23,168 autoreload 18639 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:39:23,734 autoreload 19111 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:39:28,233 autoreload 19111 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:39:28,919 autoreload 19329 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:39:39,599 autoreload 19329 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:39:40,173 autoreload 19565 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:39:54,950 autoreload 19565 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:39:55,523 autoreload 19805 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:40:06,216 autoreload 19805 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 21:40:06,799 autoreload 20036 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:40:27,932 autoreload 20036 140704262474688 /Users/clc/WS/appclc/backend/proformas/serializers.py changed, reloading.
+INFO 2025-04-20 21:40:28,491 autoreload 20507 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:40:33,564 autoreload 20730 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:42:41,321 autoreload 20507 140704262474688 /Users/clc/WS/appclc/backend/brief/serializers.py changed, reloading.
+INFO 2025-04-20 21:42:41,901 autoreload 23528 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:42:44,489 autoreload 23729 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:44:55,619 autoreload 23528 140704262474688 /Users/clc/WS/appclc/backend/brief/views.py changed, reloading.
+INFO 2025-04-20 21:44:56,231 autoreload 26640 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:45:02,066 autoreload 26640 140704262474688 /Users/clc/WS/appclc/backend/brief/views.py changed, reloading.
+INFO 2025-04-20 21:45:02,643 autoreload 26764 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:45:05,650 autoreload 26777 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 21:56:56,957 basehttp 26764 123145571692544 "OPTIONS /api/v1/auth/login/ HTTP/1.1" 200 0
+WARNING 2025-04-20 21:56:57,023 log 26764 123145571692544 Not Found: /api/v1/auth/login/
+WARNING 2025-04-20 21:56:57,023 basehttp 26764 123145571692544 "POST /api/v1/auth/login/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 21:57:05,667 log 26764 123145571692544 Not Found: /api/v1/auth/login/
+WARNING 2025-04-20 21:57:05,667 basehttp 26764 123145571692544 "POST /api/v1/auth/login/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 21:58:12,803 log 26764 123145588482048 Not Found: /api/v1/auth/login/
+WARNING 2025-04-20 21:58:12,804 basehttp 26764 123145588482048 "POST /api/v1/auth/login/ HTTP/1.1" 404 4497
+INFO 2025-04-20 21:59:30,931 basehttp 26764 123145605271552 "POST /api/auth/token/ HTTP/1.1" 200 875
+INFO 2025-04-20 21:59:46,820 basehttp 26764 123145588482048 "OPTIONS /api/v1/auth/token/ HTTP/1.1" 200 0
+WARNING 2025-04-20 21:59:46,828 log 26764 123145588482048 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 21:59:46,829 basehttp 26764 123145588482048 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:00:00,705 log 26764 123145588482048 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:00:00,706 basehttp 26764 123145588482048 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:00:01,057 log 26764 123145588482048 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:00:01,057 basehttp 26764 123145588482048 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:00:48,213 log 26764 123145588482048 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:00:48,214 basehttp 26764 123145588482048 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+INFO 2025-04-20 22:02:38,233 autoreload 50878 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 22:02:48,374 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:02:48,374 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:03:02,329 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:03:02,329 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:03:04,898 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:03:04,899 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:03:37,230 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:03:37,230 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:03:45,055 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:03:45,056 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:03:47,447 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:03:47,448 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+INFO 2025-04-20 22:04:57,247 autoreload 53934 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 22:04:58,943 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:04:58,944 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+INFO 2025-04-20 22:07:28,554 basehttp 50878 123145433960448 "POST /api/auth/token/ HTTP/1.1" 200 853
+WARNING 2025-04-20 22:07:39,876 log 50878 123145433960448 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:07:39,877 basehttp 50878 123145433960448 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+WARNING 2025-04-20 22:07:52,006 log 50878 123145417170944 Not Found: /api/v1/auth/token/
+WARNING 2025-04-20 22:07:52,006 basehttp 50878 123145417170944 "POST /api/v1/auth/token/ HTTP/1.1" 404 4497
+INFO 2025-04-20 22:08:15,928 basehttp 50878 123145417170944 "OPTIONS /api/auth/token/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:08:16,740 basehttp 50878 123145417170944 "POST /api/auth/token/ HTTP/1.1" 200 853
+INFO 2025-04-20 22:08:45,209 basehttp 50878 123145417170944 "OPTIONS /api/pandora/clientes/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:08:46,024 basehttp 50878 123145417170944 "OPTIONS /api/auth/token/verify/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:08:46,038 basehttp 50878 123145417170944 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-20 22:08:46,856 log 50878 123145417170944 Not Found: /api/pandora/clientes/
+WARNING 2025-04-20 22:08:46,858 basehttp 50878 123145417170944 "GET /api/pandora/clientes/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:08:47,356 log 50878 123145417170944 Not Found: /api/pandora/clientes/
+WARNING 2025-04-20 22:08:47,356 basehttp 50878 123145417170944 "GET /api/pandora/clientes/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:08:47,857 log 50878 123145417170944 Not Found: /api/pandora/clientes/
+WARNING 2025-04-20 22:08:47,857 basehttp 50878 123145417170944 "GET /api/pandora/clientes/ HTTP/1.1" 404 4505
+INFO 2025-04-20 22:10:48,162 basehttp 50878 123145450749952 "GET /admin/pandora/clientes/ HTTP/1.1" 302 0
+INFO 2025-04-20 22:10:48,209 basehttp 50878 123145450749952 "GET /admin/login/?next=/admin/pandora/clientes/ HTTP/1.1" 200 4259
+INFO 2025-04-20 22:10:48,222 basehttp 50878 123145467539456 "GET /static/admin/js/theme.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,222 basehttp 50878 123145450749952 "GET /static/admin/css/base.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,223 basehttp 50878 123145433960448 "GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,229 basehttp 50878 123145467539456 "GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,230 basehttp 50878 123145433960448 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,230 basehttp 50878 123145450749952 "GET /static/admin/css/login.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:48,232 basehttp 50878 123145450749952 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:53,868 basehttp 50878 123145450749952 "POST /admin/login/?next=/admin/pandora/clientes/ HTTP/1.1" 302 0
+INFO 2025-04-20 22:10:53,977 basehttp 50878 123145450749952 "GET /admin/pandora/clientes/ HTTP/1.1" 200 38722
+INFO 2025-04-20 22:10:53,998 basehttp 50878 123145433960448 "GET /static/admin/css/changelists.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,001 basehttp 50878 123145467539456 "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,002 basehttp 50878 123145484328960 "GET /static/admin/js/jquery.init.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,003 basehttp 50878 123145433960448 "GET /static/admin/js/actions.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,003 basehttp 50878 123145467539456 "GET /static/admin/js/urlify.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,007 basehttp 50878 123145501118464 "GET /static/admin/js/core.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,007 basehttp 50878 123145433960448 "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,008 basehttp 50878 123145517907968 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,009 basehttp 50878 123145484328960 "GET /static/admin/js/prepopulate.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,009 basehttp 50878 123145467539456 "GET /static/admin/img/search.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,011 basehttp 50878 123145517907968 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,014 basehttp 50878 123145517907968 "GET /static/admin/js/filters.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,035 basehttp 50878 123145450749952 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:10:54,050 basehttp 50878 123145450749952 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,052 basehttp 50878 123145450749952 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,053 basehttp 50878 123145450749952 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:10:54,086 basehttp 50878 123145450749952 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:21,164 basehttp 50878 123145450749952 "GET /admin/auth/user/ HTTP/1.1" 200 36858
+INFO 2025-04-20 22:12:21,208 basehttp 50878 123145450749952 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:12:27,484 basehttp 50878 123145450749952 "GET /admin/auth/user/1/change/ HTTP/1.1" 200 69279
+INFO 2025-04-20 22:12:27,497 basehttp 50878 123145501118464 "GET /static/admin/css/forms.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,501 basehttp 50878 123145501118464 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,503 basehttp 50878 123145484328960 "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2025-04-20 22:12:27,505 basehttp 50878 123145467539456 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2025-04-20 22:12:27,505 basehttp 50878 123145517907968 "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+INFO 2025-04-20 22:12:27,506 basehttp 50878 123145501118464 "GET /static/admin/css/widgets.css HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,506 basehttp 50878 123145433960448 "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15502
+INFO 2025-04-20 22:12:27,509 basehttp 50878 123145433960448 "GET /static/admin/js/change_form.js HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,532 basehttp 50878 123145450749952 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:12:27,593 basehttp 50878 123145517907968 "GET /static/admin/img/icon-unknown.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,594 basehttp 50878 123145467539456 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 304 0
+INFO 2025-04-20 22:12:27,595 basehttp 50878 123145501118464 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2025-04-20 22:12:27,595 basehttp 50878 123145433960448 "GET /static/admin/img/icon-unknown-alt.svg HTTP/1.1" 200 655
+INFO 2025-04-20 22:12:27,595 basehttp 50878 123145450749952 "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+INFO 2025-04-20 22:12:41,068 basehttp 50878 123145433960448 "GET /admin/auth/user/1/password/ HTTP/1.1" 200 33934
+INFO 2025-04-20 22:12:41,081 basehttp 50878 123145501118464 "GET /static/admin/js/unusable_password_field.js HTTP/1.1" 200 1480
+INFO 2025-04-20 22:12:41,081 basehttp 50878 123145433960448 "GET /static/admin/css/unusable_password_field.css HTTP/1.1" 200 663
+INFO 2025-04-20 22:12:52,156 basehttp 50878 123145501118464 "POST /admin/auth/user/1/password/ HTTP/1.1" 200 34195
+INFO 2025-04-20 22:13:34,238 basehttp 50878 123145501118464 "POST /admin/auth/user/1/password/ HTTP/1.1" 200 34113
+INFO 2025-04-20 22:13:47,040 basehttp 50878 123145501118464 "POST /admin/auth/user/1/password/ HTTP/1.1" 200 34113
+INFO 2025-04-20 22:14:29,690 basehttp 50878 123145501118464 "POST /admin/auth/user/1/password/ HTTP/1.1" 302 0
+INFO 2025-04-20 22:14:29,803 basehttp 50878 123145501118464 "GET /admin/auth/user/1/change/ HTTP/1.1" 200 69426
+INFO 2025-04-20 22:14:29,848 basehttp 50878 123145501118464 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:14:36,473 basehttp 50878 123145417170944 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:14:50,013 autoreload 67475 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:14:56,676 basehttp 67475 123145587900416 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:15:04,271 basehttp 67475 123145604689920 "GET /admin/auth/group/ HTTP/1.1" 200 32707
+INFO 2025-04-20 22:15:04,314 basehttp 67475 123145604689920 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:15:05,988 basehttp 67475 123145604689920 "GET /admin/auth/user/ HTTP/1.1" 200 36858
+INFO 2025-04-20 22:15:06,031 basehttp 67475 123145604689920 "GET /admin/jsi18n/ HTTP/1.1" 200 8691
+INFO 2025-04-20 22:16:18,360 basehttp 67475 123145587900416 "OPTIONS /api/docmanager/categories/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:16:18,364 basehttp 67475 123145621479424 "OPTIONS /api/docmanager/categories/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:16:18,425 basehttp 67475 123145587900416 "GET /api/docmanager/categories/ HTTP/1.1" 200 1501
+INFO 2025-04-20 22:16:18,433 basehttp 67475 123145621479424 "OPTIONS /api/docmanager/documents/?_t=1745205378430&page=1 HTTP/1.1" 200 0
+INFO 2025-04-20 22:16:18,517 basehttp 67475 123145587900416 "GET /api/docmanager/categories/ HTTP/1.1" 200 1501
+INFO 2025-04-20 22:16:18,521 basehttp 67475 123145587900416 "OPTIONS /api/docmanager/documents/?_t=1745205378518&page=1 HTTP/1.1" 200 0
+INFO 2025-04-20 22:16:18,598 basehttp 67475 123145621479424 "GET /api/docmanager/documents/?_t=1745205378430&page=1 HTTP/1.1" 200 6065
+INFO 2025-04-20 22:16:18,605 basehttp 67475 123145621479424 "OPTIONS /api/docmanager/tags/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:16:18,651 basehttp 67475 123145621479424 "GET /api/docmanager/tags/ HTTP/1.1" 200 302
+INFO 2025-04-20 22:16:18,667 basehttp 67475 123145587900416 "GET /api/docmanager/documents/?_t=1745205378518&page=1 HTTP/1.1" 200 6065
+INFO 2025-04-20 22:16:18,736 basehttp 67475 123145587900416 "GET /api/docmanager/tags/ HTTP/1.1" 200 302
+INFO 2025-04-20 22:18:34,343 basehttp 67475 123145587900416 "OPTIONS /api/products/productosdisponibles/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:18:34,634 basehttp 67475 123145587900416 "GET /api/products/productosdisponibles/ HTTP/1.1" 200 24322
+INFO 2025-04-20 22:18:34,640 basehttp 67475 123145587900416 "OPTIONS /api/pandora/categorias/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:18:34,647 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:34,648 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:34,813 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:34,813 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+INFO 2025-04-20 22:18:35,142 basehttp 67475 123145587900416 "OPTIONS /api/pandora/marca/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:18:35,148 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:18:35,149 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+INFO 2025-04-20 22:18:35,167 basehttp 67475 123145587900416 "OPTIONS /api/products/productosofertados/?page=1&page_size=50&ordering=-created_at HTTP/1.1" 200 0
+INFO 2025-04-20 22:18:35,425 basehttp 67475 123145587900416 "GET /api/products/productosofertados/?page=1&page_size=50&ordering=-created_at HTTP/1.1" 200 47458
+WARNING 2025-04-20 22:18:35,435 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:35,435 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+INFO 2025-04-20 22:18:35,644 basehttp 67475 123145587900416 "OPTIONS /api/products/productosofertados/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:18:35,831 basehttp 67475 123145587900416 "GET /api/products/productosofertados/ HTTP/1.1" 200 43868
+INFO 2025-04-20 22:18:36,147 basehttp 67475 123145587900416 "OPTIONS /api/pandora/unidades/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:18:36,155 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:18:36,155 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:18:36,178 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:36,179 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:36,306 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:18:36,307 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+WARNING 2025-04-20 22:18:37,308 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:18:37,309 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:18:38,130 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:38,130 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+INFO 2025-04-20 22:18:38,162 basehttp 67475 123145638268928 "GET /media/productos_disponibles/imagenes/10/7e548c55-cfa3-4acc-9cae-23b965be29b3.jpg HTTP/1.1" 304 0
+INFO 2025-04-20 22:18:38,163 basehttp 67475 123145655058432 "GET /media/productos_disponibles/imagenes/8/48cd538c-dd63-4ec2-aad3-8fd16e96d4cd.jpg HTTP/1.1" 304 0
+INFO 2025-04-20 22:18:38,163 basehttp 67475 123145604689920 "GET /media/productos_disponibles/imagenes/9/ffa5caff-4fa9-4a53-881d-258f1bd7b0f3.jpg HTTP/1.1" 304 0
+INFO 2025-04-20 22:18:38,167 basehttp 67475 123145671847936 "GET /media/productos_disponibles/imagenes/11/9b07e789-3e69-4aac-a33f-f2215bc116e7.jpg HTTP/1.1" 304 0
+WARNING 2025-04-20 22:18:38,632 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:18:38,633 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+WARNING 2025-04-20 22:18:39,135 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:18:39,135 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:18:39,638 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:39,639 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:40,141 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:18:40,141 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+WARNING 2025-04-20 22:18:40,643 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:18:40,643 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+INFO 2025-04-20 22:18:41,312 basehttp 67475 123145587900416 "OPTIONS /api/products/historial-ventas/?page=1&page_size=10&search= HTTP/1.1" 200 0
+INFO 2025-04-20 22:18:41,483 basehttp 67475 123145587900416 "GET /api/products/historial-ventas/?page=1&page_size=10&search= HTTP/1.1" 200 12360
+WARNING 2025-04-20 22:18:41,819 log 67475 123145587900416 Not Found: /api/pandora/clientes/
+WARNING 2025-04-20 22:18:41,819 basehttp 67475 123145587900416 "GET /api/pandora/clientes/ HTTP/1.1" 404 4505
+INFO 2025-04-20 22:18:42,317 basehttp 67475 123145587900416 "OPTIONS /api/pandora/empresasclc/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:18:42,324 log 67475 123145587900416 Not Found: /api/pandora/empresasclc/
+WARNING 2025-04-20 22:18:42,324 basehttp 67475 123145587900416 "GET /api/pandora/empresasclc/ HTTP/1.1" 404 4514
+INFO 2025-04-20 22:18:42,549 basehttp 67475 123145587900416 "OPTIONS /api/products/historial-compras/?page=1&page_size=10&search= HTTP/1.1" 200 0
+INFO 2025-04-20 22:18:42,678 basehttp 67475 123145587900416 "GET /api/products/historial-compras/?page=1&page_size=10&search= HTTP/1.1" 200 8678
+INFO 2025-04-20 22:18:43,051 basehttp 67475 123145587900416 "OPTIONS /api/pandora/proveedores/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:18:43,058 log 67475 123145587900416 Not Found: /api/pandora/proveedores/
+WARNING 2025-04-20 22:18:43,059 basehttp 67475 123145587900416 "GET /api/pandora/proveedores/ HTTP/1.1" 404 4514
+WARNING 2025-04-20 22:18:43,327 log 67475 123145587900416 Not Found: /api/pandora/clientes/
+WARNING 2025-04-20 22:18:43,328 basehttp 67475 123145587900416 "GET /api/pandora/clientes/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:18:43,559 log 67475 123145587900416 Not Found: /api/pandora/empresasclc/
+WARNING 2025-04-20 22:18:43,560 basehttp 67475 123145587900416 "GET /api/pandora/empresasclc/ HTTP/1.1" 404 4514
+WARNING 2025-04-20 22:18:43,829 log 67475 123145587900416 Not Found: /api/pandora/empresasclc/
+WARNING 2025-04-20 22:18:43,829 basehttp 67475 123145587900416 "GET /api/pandora/empresasclc/ HTTP/1.1" 404 4514
+WARNING 2025-04-20 22:18:44,313 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:44,313 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:44,563 log 67475 123145587900416 Not Found: /api/pandora/proveedores/
+WARNING 2025-04-20 22:18:44,564 basehttp 67475 123145587900416 "GET /api/pandora/proveedores/ HTTP/1.1" 404 4514
+WARNING 2025-04-20 22:18:44,814 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:44,815 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:45,067 log 67475 123145587900416 Not Found: /api/pandora/empresasclc/
+WARNING 2025-04-20 22:18:45,067 basehttp 67475 123145587900416 "GET /api/pandora/empresasclc/ HTTP/1.1" 404 4514
+INFO 2025-04-20 22:18:48,733 basehttp 67475 123145587900416 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-20 22:18:49,004 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:49,004 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:18:49,504 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:18:49,504 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:19:57,753 log 67475 123145688637440 Not Found: /api/core/categorias/
+WARNING 2025-04-20 22:19:57,753 basehttp 67475 123145688637440 "GET /api/core/categorias/ HTTP/1.1" 404 5327
+INFO 2025-04-20 22:20:43,208 basehttp 67475 123145587900416 "GET /api/products/productosdisponibles/ HTTP/1.1" 200 24322
+WARNING 2025-04-20 22:20:43,221 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:20:43,222 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:20:43,488 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:20:43,488 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:20:43,720 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:20:43,721 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+WARNING 2025-04-20 22:20:43,990 log 67475 123145587900416 Not Found: /api/pandora/marca/
+WARNING 2025-04-20 22:20:43,990 basehttp 67475 123145587900416 "GET /api/pandora/marca/ HTTP/1.1" 404 4496
+INFO 2025-04-20 22:20:44,395 basehttp 67475 123145587900416 "GET /api/products/productosofertados/ HTTP/1.1" 200 43868
+WARNING 2025-04-20 22:20:44,734 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:20:44,735 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:20:44,994 log 67475 123145587900416 Not Found: /api/pandora/unidades/
+WARNING 2025-04-20 22:20:44,994 basehttp 67475 123145587900416 "GET /api/pandora/unidades/ HTTP/1.1" 404 4505
+WARNING 2025-04-20 22:20:45,244 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:20:45,245 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:20:45,746 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:20:45,746 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+INFO 2025-04-20 22:21:03,302 basehttp 67475 123145587900416 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:21:03,787 basehttp 67475 123145587900416 "GET /api/products/productosofertados/?page=1&page_size=50&ordering=-created_at HTTP/1.1" 200 47458
+WARNING 2025-04-20 22:21:03,799 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:21:03,799 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+WARNING 2025-04-20 22:21:04,089 log 67475 123145587900416 Not Found: /api/pandora/categorias/
+WARNING 2025-04-20 22:21:04,089 basehttp 67475 123145587900416 "GET /api/pandora/categorias/ HTTP/1.1" 404 4511
+INFO 2025-04-20 22:21:30,534 autoreload 67475 140704262474688 /Users/clc/WS/appclc/backend/pandora/views.py changed, reloading.
+INFO 2025-04-20 22:21:31,793 autoreload 76565 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:21:41,924 autoreload 76565 140704262474688 /Users/clc/WS/appclc/backend/pandora/serializers.py changed, reloading.
+INFO 2025-04-20 22:21:42,646 autoreload 76796 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:21:59,868 autoreload 76796 140704262474688 /Users/clc/WS/appclc/backend/pandora/serializers.py changed, reloading.
+INFO 2025-04-20 22:22:00,519 autoreload 77144 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:22:06,211 basehttp 77144 123145397096448 "POST /api/auth/token/ HTTP/1.1" 200 853
+INFO 2025-04-20 22:22:12,741 autoreload 77144 140704262474688 /Users/clc/WS/appclc/backend/pandora/views.py changed, reloading.
+INFO 2025-04-20 22:22:13,593 autoreload 77506 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:22:27,927 autoreload 77506 140704262474688 /Users/clc/WS/appclc/backend/pandora/urls.py changed, reloading.
+INFO 2025-04-20 22:22:28,692 autoreload 77750 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:22:34,713 autoreload 77750 140704262474688 /Users/clc/WS/appclc/backend/pandora/urls.py changed, reloading.
+INFO 2025-04-20 22:22:35,507 autoreload 77976 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:22:39,440 autoreload 77976 140704262474688 /Users/clc/WS/appclc/backend/pandora/views.py changed, reloading.
+INFO 2025-04-20 22:22:40,145 autoreload 77985 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:22:44,126 autoreload 77985 140704262474688 /Users/clc/WS/appclc/backend/pandora/views.py changed, reloading.
+INFO 2025-04-20 22:22:44,844 autoreload 78204 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:23:53,926 autoreload 79617 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 22:24:11,019 log 78204 123145453125632 Unauthorized: /api/core/categorias/
+WARNING 2025-04-20 22:24:11,019 basehttp 78204 123145453125632 "GET /api/core/categorias/ HTTP/1.1" 401 166
+INFO 2025-04-20 22:24:17,746 basehttp 78204 123145453125632 "OPTIONS /api/core/clientes/ HTTP/1.1" 200 0
+WARNING 2025-04-20 22:24:17,762 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:17,763 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:24:18,251 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:18,252 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:24:18,753 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:18,753 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+INFO 2025-04-20 22:24:35,523 basehttp 78204 123145453125632 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-20 22:24:41,829 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:41,830 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:24:42,331 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:42,332 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:24:42,835 log 78204 123145453125632 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:24:42,835 basehttp 78204 123145453125632 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+INFO 2025-04-20 22:27:47,280 basehttp 78204 123145469915136 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-20 22:27:47,778 log 78204 123145469915136 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:27:47,778 basehttp 78204 123145469915136 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:27:48,265 log 78204 123145469915136 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:27:48,266 basehttp 78204 123145469915136 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+WARNING 2025-04-20 22:27:48,766 log 78204 123145469915136 Not Found: /api/core/clientes/
+WARNING 2025-04-20 22:27:48,767 basehttp 78204 123145469915136 "GET /api/core/clientes/ HTTP/1.1" 404 9565
+INFO 2025-04-20 22:28:50,096 autoreload 78204 140704262474688 /Users/clc/WS/appclc/backend/pandora/serializers.py changed, reloading.
+INFO 2025-04-20 22:28:53,764 autoreload 86379 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:29:23,925 autoreload 86379 140704262474688 /Users/clc/WS/appclc/backend/pandora/views.py changed, reloading.
+INFO 2025-04-20 22:29:26,001 autoreload 87083 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:29:32,152 autoreload 87083 140704262474688 /Users/clc/WS/appclc/backend/pandora/urls.py changed, reloading.
+INFO 2025-04-20 22:29:34,556 autoreload 87306 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:29:37,668 autoreload 87306 140704262474688 /Users/clc/WS/appclc/backend/pandora/urls.py changed, reloading.
+INFO 2025-04-20 22:29:40,056 autoreload 87330 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 22:29:55,130 log 87330 123145406746624 Unauthorized: /api/core/clientes/
+WARNING 2025-04-20 22:29:55,131 basehttp 87330 123145406746624 "GET /api/core/clientes/ HTTP/1.1" 401 166
+INFO 2025-04-20 22:30:24,093 basehttp 87330 123145406746624 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:30:25,153 basehttp 87330 123145406746624 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 22:30:36,667 basehttp 87330 123145406746624 "GET /api/products/productosofertados/?page=1&page_size=50&ordering=-created_at HTTP/1.1" 200 47458
+INFO 2025-04-20 22:30:36,739 basehttp 87330 123145406746624 "OPTIONS /api/core/categorias/ HTTP/1.1" 200 0
+INFO 2025-04-20 22:30:36,803 basehttp 87330 123145406746624 "GET /api/core/categorias/ HTTP/1.1" 200 526
+INFO 2025-04-20 22:31:45,596 basehttp 87330 123145406746624 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:31:46,895 basehttp 87330 123145406746624 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 22:39:04,483 autoreload 87330 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-20 22:39:05,582 autoreload 99964 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:39:30,654 autoreload 99964 140704262474688 /Users/clc/WS/appclc/backend/proformas/signals.py changed, reloading.
+INFO 2025-04-20 22:39:31,853 autoreload 790 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:42:50,699 autoreload 5552 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 22:43:01,256 basehttp 5552 123145456902144 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:43:01,926 basehttp 5552 123145456902144 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 22:55:40,456 basehttp 5552 123145456902144 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:55:40,911 basehttp 5552 123145456902144 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 22:57:11,068 basehttp 5552 123145456902144 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:57:14,520 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:57:34,598 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 22:57:35,106 basehttp 5552 123145473691648 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 23:01:28,638 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:01:29,118 basehttp 5552 123145473691648 "GET /api/core/clientes/ HTTP/1.1" 200 2391
+INFO 2025-04-20 23:01:34,086 basehttp 5552 123145473691648 "GET /api/docmanager/categories/ HTTP/1.1" 200 1501
+INFO 2025-04-20 23:01:34,091 basehttp 5552 123145456902144 "OPTIONS /api/docmanager/documents/?_t=1745208094088&page=1 HTTP/1.1" 200 0
+INFO 2025-04-20 23:01:34,143 basehttp 5552 123145473691648 "GET /api/docmanager/categories/ HTTP/1.1" 200 1501
+INFO 2025-04-20 23:01:34,148 basehttp 5552 123145473691648 "OPTIONS /api/docmanager/documents/?_t=1745208094144&page=1 HTTP/1.1" 200 0
+INFO 2025-04-20 23:01:34,212 basehttp 5552 123145456902144 "GET /api/docmanager/documents/?_t=1745208094088&page=1 HTTP/1.1" 200 6065
+INFO 2025-04-20 23:01:34,254 basehttp 5552 123145456902144 "GET /api/docmanager/tags/ HTTP/1.1" 200 302
+INFO 2025-04-20 23:01:34,264 basehttp 5552 123145473691648 "GET /api/docmanager/documents/?_t=1745208094144&page=1 HTTP/1.1" 200 6065
+INFO 2025-04-20 23:01:34,305 basehttp 5552 123145473691648 "GET /api/docmanager/tags/ HTTP/1.1" 200 302
+INFO 2025-04-20 23:03:43,977 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:03:50,730 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:04:10,464 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:04:36,433 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:04:44,864 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:04:47,038 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:07:08,159 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:07:08,546 basehttp 5552 123145473691648 "OPTIONS /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 0
+INFO 2025-04-20 23:07:08,594 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:08,619 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:08,620 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:08,620 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:09,663 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:09,680 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:09,680 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:09,680 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:14,328 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:07:14,843 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:14,866 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:14,867 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:14,867 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:15,908 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:15,931 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:15,932 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:15,932 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:27,794 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:27,816 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:27,817 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:27,817 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:28,860 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:28,882 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:28,882 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:28,883 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:37,247 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:07:37,637 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:37,661 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:37,662 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:37,662 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:38,706 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:38,730 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:38,730 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:38,731 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:53,761 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:07:54,139 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:54,163 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:54,163 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:54,163 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:07:55,204 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:07:55,228 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:07:55,229 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:07:55,230 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+WARNING 2025-04-20 23:10:01,701 log 5552 123145456902144 Unauthorized: /api/proformas/dashboard/
+WARNING 2025-04-20 23:10:01,701 basehttp 5552 123145456902144 "GET /api/proformas/dashboard/ HTTP/1.1" 401 166
+INFO 2025-04-20 23:10:01,729 basehttp 5552 123145473691648 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:10:02,079 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:10:02,103 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:10:02,104 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:10:02,104 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:10:03,144 views 5552 123145473691648 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+ERROR 2025-04-20 23:10:03,168 views 5552 123145473691648 Error en dashboard: name 'models' is not defined
+ERROR 2025-04-20 23:10:03,168 log 5552 123145473691648 Internal Server Error: /api/proformas/dashboard/
+ERROR 2025-04-20 23:10:03,168 basehttp 5552 123145473691648 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 500 41
+INFO 2025-04-20 23:10:14,201 autoreload 5552 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 23:10:15,327 autoreload 42806 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 23:10:20,780 autoreload 42806 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 23:10:21,722 autoreload 43029 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 23:10:29,775 autoreload 43029 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 23:10:30,484 autoreload 43191 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 23:10:33,798 basehttp 43191 123145421766656 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:10:34,181 views 43191 123145421766656 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:10:34,240 basehttp 43191 123145421766656 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:10:45,268 autoreload 43191 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 23:10:45,927 autoreload 43531 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-20 23:10:48,965 basehttp 43531 123145575518208 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:10:49,378 views 43531 123145575518208 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:10:49,423 basehttp 43531 123145575518208 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:10:57,082 autoreload 43531 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-20 23:10:57,759 autoreload 43771 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 23:11:32,228 log 43771 123145509003264 Unauthorized: /api/proformas/dashboard/
+WARNING 2025-04-20 23:11:32,229 basehttp 43771 123145509003264 "GET /api/proformas/dashboard/ HTTP/1.1" 401 285
+INFO 2025-04-20 23:12:08,740 autoreload 45435 140704262474688 Watching for file changes with StatReloader
+WARNING 2025-04-20 23:12:12,735 log 43771 123145509003264 Unauthorized: /api/proformas/dashboard/
+WARNING 2025-04-20 23:12:12,736 basehttp 43771 123145509003264 "GET /api/proformas/dashboard/ HTTP/1.1" 401 166
+INFO 2025-04-20 23:12:29,758 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:12:30,130 views 43771 123145525792768 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:12:30,171 basehttp 43771 123145525792768 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:14:37,161 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:15:49,731 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:16:04,477 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:16:13,899 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:17:31,748 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:18:20,920 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:18:30,543 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:18:31,023 views 43771 123145525792768 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:18:31,067 basehttp 43771 123145525792768 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:19:36,332 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:19:36,726 views 43771 123145525792768 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:19:36,774 basehttp 43771 123145525792768 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:20:02,615 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:20:03,013 views 43771 123145525792768 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:20:03,056 basehttp 43771 123145525792768 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:20:42,081 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:22:06,487 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:22:13,378 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:22:13,718 views 43771 123145525792768 Dashboard filtrado: fechas=2025-04-01~2025-04-30, estado=None, cliente=None, total=None~None, resultados=4
+INFO 2025-04-20 23:22:13,759 basehttp 43771 123145525792768 "GET /api/proformas/dashboard/?start_date=2025-04-01&end_date=2025-04-30 HTTP/1.1" 200 1428
+INFO 2025-04-20 23:23:21,587 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:23:25,363 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:23:30,621 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:23:34,552 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:23:38,180 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:23:42,914 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:24:06,904 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:25:48,707 basehttp 43771 123145525792768 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:25:49,185 basehttp 43771 123145525792768 "OPTIONS /api/proformas/configuracion-actual/ HTTP/1.1" 200 0
+INFO 2025-04-20 23:25:49,237 basehttp 43771 123145525792768 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:27:14,333 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:27:14,798 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:27:58,812 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:28:03,720 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:28:06,608 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:28:10,394 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:28:46,612 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:28:52,335 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:30:52,258 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:32:10,179 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:32:10,636 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:33:32,658 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:33:33,358 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:34:24,241 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:34:24,682 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:37:26,150 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:37:26,675 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:38:43,394 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:38:43,868 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-20 23:39:19,070 basehttp 43771 123145509003264 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-20 23:39:19,565 basehttp 43771 123145509003264 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482

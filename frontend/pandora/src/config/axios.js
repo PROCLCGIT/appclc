@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Usamos VITE_API_URL desde las variables de entorno si está disponible
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
 console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
 
 console.log('BASE_URL configurada:', BASE_URL);
@@ -37,11 +37,11 @@ api.interceptors.request.use(
         // El interceptor debe regresar un objeto compatible con Promise.reject para que 
         // axios piense que la petición falló, pero en realidad regresará un objeto personalizado
         // que será procesado por nuestro interceptor de respuesta
-        return Promise.reject({
-          __cachedResponse: true,
-          cachedData: cachedResponse,
-          config
-        });
+        const customError = new Error("Using cached response");
+        customError.__cachedResponse = true;
+        customError.cachedData = cachedResponse;
+        customError.config = config;
+        return Promise.reject(customError);
       }
     }
     
@@ -181,14 +181,15 @@ api.interceptors.response.use(
     // Manejo especial para respuestas cacheadas
     if (error.__cachedResponse) {
       console.log('Usando respuesta de caché para:', error.config.url);
-      return Promise.resolve({ 
+      const response = {
         data: error.cachedData,
         config: error.config,
         status: 200,
         statusText: 'OK (cached)',
         headers: {},
         cached: true
-      });
+      };
+      return Promise.resolve(response);
     }
     
     // Decrementar contador de peticiones activas (excepto cuando vamos a reintentar)
@@ -228,14 +229,15 @@ api.interceptors.response.use(
         
         if (cachedResponse) {
           console.log('Usando caché como fallback para error 429 en:', error.config.url);
-          return Promise.resolve({ 
+          const response = {
             data: cachedResponse,
             config: error.config,
             status: 200,
             statusText: 'OK (cached fallback)',
             headers: {},
             cached: true
-          });
+          };
+          return Promise.resolve(response);
         }
       }
       

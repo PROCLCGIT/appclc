@@ -10,7 +10,7 @@ import { BaseService } from './BaseService';
  * @returns {BaseService} - A service instance for the catalog
  */
 export const createCatalogService = (endpoint) => {
-  return new BaseService(`pandora/${endpoint}/`);
+  return new BaseService(`core/${endpoint}/`);
 };
 
 // Create services for all the catalogs/reference data

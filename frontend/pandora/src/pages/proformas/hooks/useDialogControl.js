@@ -1,6 +1,7 @@
 // src/pages/proformas/hooks/useDialogControl.js
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { debounce } from 'lodash';
 
 /**
  * Hook personalizado para controlar diálogos y modales en la aplicación
@@ -21,11 +22,16 @@ export const useDialogControl = () => {
   const [savedProformaId, setSavedProformaId] = useState(null);
 
   /**
-   * Muestra el diálogo de búsqueda de clientes
+   * Muestra el diálogo de búsqueda de clientes (con debounce para evitar múltiples aperturas)
    */
-  const openClientSearch = () => {
-    setShowClientSearch(true);
-  };
+  const openClientSearch = useMemo(
+    () =>
+      debounce(() => {
+        console.log('Abriendo diálogo de búsqueda de clientes (debounced)');
+        setShowClientSearch(true);
+      }, 300),
+    []
+  );
 
   /**
    * Cierra el diálogo de búsqueda de clientes
@@ -35,11 +41,16 @@ export const useDialogControl = () => {
   };
 
   /**
-   * Muestra el diálogo de proformas guardadas
+   * Muestra el diálogo de proformas guardadas (con debounce para evitar múltiples aperturas)
    */
-  const openProformasDialog = () => {
-    setShowProformasDialog(true);
-  };
+  const openProformasDialog = useMemo(
+    () =>
+      debounce(() => {
+        console.log('Abriendo diálogo de proformas guardadas (debounced)');
+        setShowProformasDialog(true);
+      }, 300),
+    []
+  );
 
   /**
    * Cierra el diálogo de proformas guardadas
@@ -49,18 +60,23 @@ export const useDialogControl = () => {
   };
 
   /**
-   * Configura y muestra el diálogo de guardado con un tipo, título y mensaje
+   * Configura y muestra el diálogo de guardado con un tipo, título y mensaje (con debounce)
    */
-  const showSaveConfirmation = (type, title, message, details = "", proformaId = null) => {
-    setSaveDialogType(type);
-    setSaveDialogTitle(title);
-    setSaveDialogMessage(message);
-    setSaveDialogDetails(details);
-    if (proformaId) {
-      setSavedProformaId(proformaId);
-    }
-    setShowSaveDialog(true);
-  };
+  const showSaveConfirmation = useMemo(
+    () =>
+      debounce((type, title, message, details = "", proformaId = null) => {
+        console.log(`Mostrando diálogo de tipo ${type} (debounced)`);
+        setSaveDialogType(type);
+        setSaveDialogTitle(title);
+        setSaveDialogMessage(message);
+        setSaveDialogDetails(details);
+        if (proformaId) {
+          setSavedProformaId(proformaId);
+        }
+        setShowSaveDialog(true);
+      }, 300),
+    []
+  );
 
   /**
    * Cierra el diálogo de guardado
@@ -72,23 +88,54 @@ export const useDialogControl = () => {
   /**
    * Muestra un mensaje de error en el diálogo de guardado
    */
-  const showErrorDialog = (title, message, details = "") => {
-    showSaveConfirmation("error", title, message, details);
-  };
+  const showErrorDialog = useMemo(
+    () =>
+      debounce((title, message, details = "") => {
+        showSaveConfirmation("error", title, message, details);
+      }, 300),
+    [showSaveConfirmation]
+  );
 
   /**
    * Muestra un mensaje de advertencia en el diálogo de guardado
    */
-  const showWarningDialog = (title, message, details = "") => {
-    showSaveConfirmation("warning", title, message, details);
-  };
+  const showWarningDialog = useMemo(
+    () =>
+      debounce((title, message, details = "") => {
+        showSaveConfirmation("warning", title, message, details);
+      }, 300),
+    [showSaveConfirmation]
+  );
 
   /**
    * Muestra un mensaje de éxito en el diálogo de guardado
    */
-  const showSuccessDialog = (title, message, details = "", proformaId = null) => {
-    showSaveConfirmation("success", title, message, details, proformaId);
-  };
+  const showSuccessDialog = useMemo(
+    () =>
+      debounce((title, message, details = "", proformaId = null) => {
+        showSaveConfirmation("success", title, message, details, proformaId);
+      }, 300),
+    [showSaveConfirmation]
+  );
+
+  // Limpiar las funciones debounced al desmontar para evitar fugas de memoria
+  useEffect(() => {
+    return () => {
+      openClientSearch.cancel();
+      openProformasDialog.cancel();
+      showSaveConfirmation.cancel();
+      showErrorDialog.cancel();
+      showWarningDialog.cancel();
+      showSuccessDialog.cancel();
+    };
+  }, [
+    openClientSearch,
+    openProformasDialog,
+    showSaveConfirmation,
+    showErrorDialog,
+    showWarningDialog,
+    showSuccessDialog
+  ]);
 
   return {
     // Estados

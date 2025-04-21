@@ -7,7 +7,7 @@ import { toast } from "sonner";
  * Hook para manejar errores de forma centralizada en el módulo de proformas
  * Proporciona funciones para registrar, clasificar y manejar errores
  */
-export default function useErrorHandler() {
+export function useErrorHandler() {
   // Contador de errores por tipo
   const errorCounts = useRef({
     network: 0,
@@ -357,3 +357,6 @@ export default function useErrorHandler() {
       !["aborted", "unauthorized"].includes(errorType),
   };
 }
+
+// También exportamos como default para mantener compatibilidad
+export default useErrorHandler;
