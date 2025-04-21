@@ -226,6 +226,7 @@ const EnhancedProformaContent = () => {
 
   // Cargar proformas cuando se abre el diálogo
   useEffect(() => {
+    console.log('Efecto de diálogo proformas', showProformasDialog);
     if (showProformasDialog) {
       handleLoadProformas().catch((e) => {
         errorHandler.handleError(e, "loadProformasEffect");
@@ -235,6 +236,7 @@ const EnhancedProformaContent = () => {
 
   // Actualizar estado de búsqueda en el contexto global
   useEffect(() => {
+    console.log('Efecto updateSearchState', searchTerm, searchSource, viewType);
     // Solo actualizar searchState en contexto cuando cambien criterios principales
     updateSearchState({
       searchTerm,

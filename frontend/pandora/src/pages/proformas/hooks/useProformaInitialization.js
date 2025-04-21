@@ -1,6 +1,6 @@
 // src/pages/proformas/hooks/useProformaInitialization.js
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 /**

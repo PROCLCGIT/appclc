@@ -1,6 +1,6 @@
 // src/pages/proformas/hooks/useEnhancedProformaQuery.js
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createEmptyProforma } from "../utils/proformaUtils";
 import { toast } from "sonner";
@@ -552,14 +552,23 @@ export default function useEnhancedProformaQuery() {
    * Efecto para cargar proformas cuando cambia loadExisting
    */
   useEffect(() => {
+    console.log("useEffect loadExisting", loadExisting, didLoadExistingRun.current);
     if (loadExisting && !didLoadExistingRun.current) {
       didLoadExistingRun.current = true;
-      loadSavedProformas({ showToasts: true });
+      loadSavedProformas({ showToasts: true })
+        .finally(() => {
+          // Una vez cargado, reseteamos loadExisting
+          console.log("Reseteando loadExisting");
+          // Usar setTimeout para evitar actualizaciones de estado durante renders
+          if (typeof setLoadExisting === 'function') {
+            setTimeout(() => setLoadExisting(false), 0);
+          }
+        });
     }
     
     // No necesitamos limpiar en este caso ya que queremos preservar el valor
     // entre montajes/desmontajes del componente
-  }, [loadExisting, loadSavedProformas]);
+  }, [loadExisting, loadSavedProformas, setLoadExisting]);
 
   // Devolver todas las funciones y estados necesarios
   return {

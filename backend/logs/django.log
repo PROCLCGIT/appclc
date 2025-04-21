@@ -563,3 +563,11 @@ INFO 2025-04-21 01:19:57,101 basehttp 9079 123145544613888 "POST /api/auth/token
 INFO 2025-04-21 01:20:45,180 basehttp 9079 123145544613888 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
 INFO 2025-04-21 01:21:27,191 basehttp 9079 123145544613888 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
 INFO 2025-04-21 01:21:27,726 basehttp 9079 123145544613888 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:27:03,135 basehttp 9079 123145544613888 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:29:01,881 basehttp 9079 123145561403392 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:29:02,221 basehttp 9079 123145561403392 "OPTIONS /api/proformas/configuracion-actual/ HTTP/1.1" 200 0
+INFO 2025-04-21 01:29:02,268 basehttp 9079 123145561403392 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:29:15,445 basehttp 9079 123145561403392 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:29:15,864 basehttp 9079 123145561403392 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:30:23,499 basehttp 9079 123145561403392 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:30:23,986 basehttp 9079 123145561403392 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482

@@ -1,6 +1,13 @@
 // src/pages/proformas/hooks/useProformaContextQuery.jsx
 
-import React, { createContext, useContext, useReducer, useMemo } from "react";
+import React, { 
+  createContext, 
+  useContext, 
+  useReducer, 
+  useMemo, 
+  useCallback,
+  useEffect
+} from "react";
 import PropTypes from 'prop-types';
 // import { createEmptyProforma } from "../utils/proformaUtils"; // No usado
 import { useProformaConfigQuery } from "@/hooks/queries/useProformasQuery";
@@ -157,6 +164,10 @@ function proformaReducer(state, action) {
     }
 
     case ActionTypes.SET_LOADING:
+      // Evitar renders innecesarios si el estado no cambia
+      if (state.loading === action.payload) {
+        return state;
+      }
       return {
         ...state,
         loading: action.payload,
@@ -273,6 +284,10 @@ function proformaReducer(state, action) {
       };
 
     case ActionTypes.SET_PREVIEW_MODE:
+      // Evitar renders innecesarios si el modo no cambia
+      if (state.previewMode === action.payload) {
+        return state;
+      }
       return {
         ...state,
         previewMode: action.payload,
@@ -284,14 +299,28 @@ function proformaReducer(state, action) {
         searchState: action.payload,
       };
 
-    case ActionTypes.UPDATE_SEARCH_STATE:
+    case ActionTypes.UPDATE_SEARCH_STATE: {
+      const updates = action.payload;
+      
+      // Verificar si realmente hay cambios en el estado de búsqueda
+      const isChanged = Object.keys(updates).some(key => {
+        return state.searchState[key] !== updates[key];
+      });
+      
+      // Si no hay cambios, retornar el estado actual sin modificar
+      if (!isChanged) {
+        return state;
+      }
+      
+      // Si hay cambios, actualizar el estado
       return {
         ...state,
         searchState: {
           ...state.searchState,
-          ...action.payload,
+          ...updates,
         },
       };
+    }
 
     default:
       return state;
@@ -374,116 +403,148 @@ export const ProformaProvider = ({ children }) => {
     dispatch({ type: ActionTypes.SET_PREVIEW_MODE, payload: previewMode });
   }, [previewMode]);
 
-  // Crear acciones adaptadas al nuevo sistema
+  // Definir acciones individuales con useCallback para asegurar su estabilidad
+  const setProformas = useCallback((proformas) => {
+    dispatch({ type: ActionTypes.SET_PROFORMAS, payload: proformas });
+  }, [dispatch]);
+
+  const setActiveProformaIdAction = useCallback((id) => {
+    setActiveProformaId(id);
+  }, [setActiveProformaId]);
+
+  const updateProformaAction = useCallback((proformaId, updates) => {
+    updateProformaLocal(proformaId, updates);
+    dispatch({ type: ActionTypes.UPDATE_PROFORMA, payload: { proformaId, updates } });
+  }, [dispatch, updateProformaLocal]);
+
+  const addNewProformaAction = useCallback((proforma) => {
+    const newProforma = proforma || addNewProformaQuery();
+    if (newProforma) {
+      dispatch({ type: ActionTypes.ADD_NEW_PROFORMA, payload: newProforma });
+    }
+  }, [dispatch, addNewProformaQuery]);
+
+  const closeProformaAction = useCallback((proformaId) => {
+    closeProformaQuery(proformaId);
+    dispatch({ type: ActionTypes.CLOSE_PROFORMA, payload: proformaId });
+  }, [dispatch, closeProformaQuery]);
+
+  const setLoadingAction = useCallback((loadingState) => {
+    dispatch({ type: ActionTypes.SET_LOADING, payload: loadingState });
+  }, [dispatch]);
+
+  const setClientAction = useCallback((clientData) => {
+    dispatch({ type: ActionTypes.SET_CLIENT, payload: clientData });
+    if (state.activeProformaId) {
+      updateProformaLocal(state.activeProformaId, { client: clientData });
+    }
+  }, [dispatch, state.activeProformaId, updateProformaLocal]);
+
+  const setItemsAction = useCallback((itemsData) => {
+    dispatch({ type: ActionTypes.SET_ITEMS, payload: itemsData });
+    if (state.activeProformaId) {
+      updateProformaLocal(state.activeProformaId, { items: itemsData });
+    }
+  }, [dispatch, state.activeProformaId, updateProformaLocal]);
+
+  const addItemAction = useCallback((item) => {
+    dispatch({ type: ActionTypes.ADD_ITEM, payload: item });
+    if (state.activeProformaId) {
+      const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+      updateProformaLocal(state.activeProformaId, { items: [...currentItems, item] });
+    }
+  }, [dispatch, state.activeProformaId, state.proformas, updateProformaLocal]);
+
+  const updateItemAction = useCallback((itemId, updates) => {
+    dispatch({ type: ActionTypes.UPDATE_ITEM, payload: { itemId, updates } });
+    if (state.activeProformaId) {
+      const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+      const updatedItems = currentItems.map(i => i.id === itemId ? { ...i, ...updates } : i);
+      updateProformaLocal(state.activeProformaId, { items: updatedItems });
+    }
+  }, [dispatch, state.activeProformaId, state.proformas, updateProformaLocal]);
+
+  const removeItemAction = useCallback((itemId) => {
+    dispatch({ type: ActionTypes.REMOVE_ITEM, payload: itemId });
+    if (state.activeProformaId) {
+      const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
+      const updatedItems = currentItems.filter(i => i.id !== itemId);
+      updateProformaLocal(state.activeProformaId, { items: updatedItems });
+    }
+  }, [dispatch, state.activeProformaId, state.proformas, updateProformaLocal]);
+
+  const setConfigAction = useCallback((configData) => {
+    dispatch({ type: ActionTypes.SET_CONFIG, payload: configData });
+    updateConfig(configData);
+  }, [dispatch, updateConfig]);
+
+  const setPreviewModeAction = useCallback((mode) => {
+    setPreviewMode(mode);
+  }, [setPreviewMode]);
+
+  const setSearchStateAction = useCallback((searchStateData) => {
+    dispatch({ type: ActionTypes.SET_SEARCH_STATE, payload: searchStateData });
+  }, [dispatch]);
+
+  const updateSearchStateAction = useCallback((updates) => {
+    console.log('updateSearchStateAction llamada con:', updates);
+    // Verificar si el estado realmente está cambiando para evitar renders innecesarios
+    dispatch({ type: ActionTypes.UPDATE_SEARCH_STATE, payload: updates });
+  }, [dispatch]);
+
+  // Funciones que interactúan directamente con React Query (ya son estables)
+  const saveProformaAction = useCallback(saveProforma, [saveProforma]);
+  const changeProformaStateAction = useCallback(changeProformaState, [changeProformaState]);
+  const duplicateProformaAction = useCallback(duplicateProforma, [duplicateProforma]);
+  const loadProformaAction = useCallback(loadProforma, [loadProforma]);
+  const loadSavedProformasAction = useCallback(loadSavedProformas, [loadSavedProformas]);
+  const updateConfigWrapper = useCallback(updateConfig, [updateConfig]);
+
+  // Crear objeto de acciones memoizado con todas las funciones estables
   const actions = useMemo(() => ({
-    setProformas: (proformas) => {
-      dispatch({ type: ActionTypes.SET_PROFORMAS, payload: proformas });
-    },
-
-    setActiveProformaId: (id) => {
-      setActiveProformaId(id);
-    },
-
-    updateProforma: (proformaId, updates) => {
-      updateProformaLocal(proformaId, updates);
-      dispatch({ type: ActionTypes.UPDATE_PROFORMA, payload: { proformaId, updates } });
-    },
-
-    addNewProforma: (proforma) => {
-      const newProforma = proforma || addNewProformaQuery();
-      if (newProforma) {
-        dispatch({ type: ActionTypes.ADD_NEW_PROFORMA, payload: newProforma });
-      }
-    },
-
-    closeProforma: (proformaId) => {
-      closeProformaQuery(proformaId);
-      dispatch({ type: ActionTypes.CLOSE_PROFORMA, payload: proformaId });
-    },
-
-    setLoading: (loadingState) => {
-      dispatch({ type: ActionTypes.SET_LOADING, payload: loadingState });
-    },
-
-    setClient: (clientData) => {
-      dispatch({ type: ActionTypes.SET_CLIENT, payload: clientData });
-      if (state.activeProformaId) {
-        updateProformaLocal(state.activeProformaId, { client: clientData });
-      }
-    },
-
-    setItems: (itemsData) => {
-      dispatch({ type: ActionTypes.SET_ITEMS, payload: itemsData });
-      if (state.activeProformaId) {
-        updateProformaLocal(state.activeProformaId, { items: itemsData });
-      }
-    },
-
-    addItem: (item) => {
-      dispatch({ type: ActionTypes.ADD_ITEM, payload: item });
-      if (state.activeProformaId) {
-        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
-        updateProformaLocal(state.activeProformaId, { items: [...currentItems, item] });
-      }
-    },
-
-    updateItem: (itemId, updates) => {
-      dispatch({ type: ActionTypes.UPDATE_ITEM, payload: { itemId, updates } });
-      if (state.activeProformaId) {
-        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
-        const updatedItems = currentItems.map(i => i.id === itemId ? { ...i, ...updates } : i);
-        updateProformaLocal(state.activeProformaId, { items: updatedItems });
-      }
-    },
-
-    removeItem: (itemId) => {
-      dispatch({ type: ActionTypes.REMOVE_ITEM, payload: itemId });
-      if (state.activeProformaId) {
-        const currentItems = state.proformas.find(p => p.id === state.activeProformaId)?.items || [];
-        const updatedItems = currentItems.filter(i => i.id !== itemId);
-        updateProformaLocal(state.activeProformaId, { items: updatedItems });
-      }
-    },
-
-    setConfig: (configData) => {
-      dispatch({ type: ActionTypes.SET_CONFIG, payload: configData });
-      updateConfig(configData);
-    },
-
-    setPreviewMode: (mode) => {
-      setPreviewMode(mode);
-    },
-
-    setSearchState: (searchStateData) => {
-      dispatch({ type: ActionTypes.SET_SEARCH_STATE, payload: searchStateData });
-    },
-
-    updateSearchState: (updates) => {
-      dispatch({ type: ActionTypes.UPDATE_SEARCH_STATE, payload: updates });
-    },
-
-    // Funciones que interactúan directamente con React Query (ya son estables)
-    saveProforma,
-    changeProformaState,
-    duplicateProforma,
-    loadProforma,
-    loadSavedProformas,
-    updateConfig,
+    setProformas,
+    setActiveProformaId: setActiveProformaIdAction,
+    updateProforma: updateProformaAction,
+    addNewProforma: addNewProformaAction,
+    closeProforma: closeProformaAction,
+    setLoading: setLoadingAction,
+    setClient: setClientAction,
+    setItems: setItemsAction,
+    addItem: addItemAction,
+    updateItem: updateItemAction,
+    removeItem: removeItemAction,
+    setConfig: setConfigAction,
+    setPreviewMode: setPreviewModeAction,
+    setSearchState: setSearchStateAction,
+    updateSearchState: updateSearchStateAction,
+    saveProforma: saveProformaAction,
+    changeProformaState: changeProformaStateAction,
+    duplicateProforma: duplicateProformaAction,
+    loadProforma: loadProformaAction,
+    loadSavedProformas: loadSavedProformasAction,
+    updateConfig: updateConfigWrapper,
   }), [
-    dispatch,
-    setActiveProformaId,
-    updateProformaLocal,
-    addNewProformaQuery,
-    closeProformaQuery,
-    setPreviewMode,
-    saveProforma,
-    changeProformaState,
-    duplicateProforma,
-    loadProforma,
-    loadSavedProformas,
-    updateConfig,
-    state.activeProformaId,
-    state.proformas,
+    setProformas,
+    setActiveProformaIdAction,
+    updateProformaAction,
+    addNewProformaAction,
+    closeProformaAction,
+    setLoadingAction,
+    setClientAction,
+    setItemsAction,
+    addItemAction,
+    updateItemAction,
+    removeItemAction,
+    setConfigAction,
+    setPreviewModeAction,
+    setSearchStateAction,
+    updateSearchStateAction,
+    saveProformaAction,
+    changeProformaStateAction,
+    duplicateProformaAction,
+    loadProformaAction,
+    loadSavedProformasAction,
+    updateConfigWrapper
   ]);
 
   // Crear valor del contexto con state y actions estables
