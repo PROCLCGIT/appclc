@@ -1,6 +1,6 @@
 # Resumen de Mejoras al Módulo Proformas
 
-## Mejoras Implementadas
+## Mejoras Implementadas: Fase 1
 
 ### 1. Generación Automática de Números
 
@@ -59,6 +59,49 @@
   - Analizar secuencia de numeración
   - Corregir problemas automáticamente con la opción `--fix`
 
+## Mejoras Implementadas: Fase 2
+
+### 5. Separación de Lógica de Negocio
+
+**Problema original:**
+- Los modelos `Proforma` y `ProformaItem` contenían demasiada lógica de negocio
+- Los métodos `save()` estaban sobrecargados con múltiples responsabilidades
+- Dificultad para pruebas unitarias y mantenimiento del código
+- Alta cohesión entre la representación de datos y el comportamiento
+
+**Solución implementada:**
+- Aplicación del patrón **Service Layer** para separar la lógica de negocio:
+  - Creación de la clase `ProformaService` que encapsula toda la lógica
+  - Delegación de comportamientos complejos a métodos específicos del servicio
+  - Uso de signals para conectar eventos de modelos con servicios
+  - Simplificación de modelos a representación pura de datos
+
+### 6. Mejora de Transacciones
+
+**Problema original:**
+- Falta de atomicidad en operaciones complejas
+- Potenciales inconsistencias de datos en caso de errores
+- Actualizaciones parciales de datos relacionados
+
+**Solución implementada:**
+- Transacciones atómicas en el servicio para garantizar integridad
+- Uso de `select_for_update()` para operaciones críticas
+- Optimización con `update_fields` para actualizar solo lo necesario
+- Prevención de procesamiento recursivo mediante marcadores de instancia
+
+### 7. Gestión de Excepciones
+
+**Problema original:**
+- Manejo inconsistente de errores
+- Falta de registro detallado para diagnóstico de problemas
+- Propagación inadecuada de excepciones
+
+**Solución implementada:**
+- Sistema robusto de captura y registro de excepciones
+- Logging detallado para todas las operaciones críticas
+- Mecanismos de respaldo para operaciones esenciales
+- Estrategias de recuperación ante fallos
+
 ## Cómo Usar las Nuevas Funcionalidades
 
 ### Creación de Proformas con Número Automático
@@ -74,6 +117,26 @@ proforma = Proforma(
     # No se necesita especificar número, se generará automáticamente
 )
 proforma.save()
+```
+
+### Uso del Servicio para Operaciones Complejas
+
+Se recomienda usar el servicio para operaciones que involucren lógica compleja:
+
+```python
+from proformas.services import ProformaService
+
+# Guardar proforma con validación y actualización de historial
+proforma = Proforma(
+    fecha_emision=date.today(),
+    fecha_vencimiento=date.today() + timedelta(days=15),
+    cliente=cliente,
+    empresa=empresa
+)
+ProformaService.save_proforma(proforma, validate=True, update_history=True)
+
+# Cambiar el estado de una proforma
+ProformaService.change_proforma_state(proforma, 'enviada', user=current_user)
 ```
 
 ### Validaciones Automáticas
@@ -104,49 +167,45 @@ python manage.py check_proformas
 
 # Verificar y corregir problemas
 python manage.py check_proformas --fix
-
-# Verificar solo duplicados
-python manage.py check_proformas --check-duplicates
-
-# Verificar solo el formato
-python manage.py check_proformas --check-format
 ```
 
 ## Beneficios Técnicos
 
-### 1. Mayor Robustez
+### 1. Mayor Robustez y Mantenibilidad
 
-- **Integridad de datos garantizada**: Las validaciones completas previenen datos inconsistentes
-- **Manejo de errores mejorado**: Captura y manejo de excepciones en todos los niveles
-- **Generación numérica a prueba de fallos**: Sistema con plan de respaldo para garantizar unicidad
+- **Separación clara de responsabilidades**: Modelos para datos, servicios para comportamiento
+- **Código más limpio y cohesivo**: Cada componente con propósito único
+- **Mejor testabilidad**: Facilita la implementación de pruebas unitarias
+- **Reducción de duplicación**: Centralización de lógica común
 
 ### 2. Mejoras de Rendimiento
 
-- **Uso eficiente de transacciones**: Reducción de operaciones innecesarias
-- **Optimización de consultas**: Uso de `update_fields` para actualizar solo lo necesario
-- **Evitar recursión infinita**: Marcado de instancias para evitar procesamiento redundante
+- **Uso eficiente de transacciones**: Garantía de atomicidad para operaciones complejas
+- **Optimización de consultas**: Uso de `update_fields` y `select_for_update()`
+- **Evitar procesamiento redundante**: Marcado de instancias para prevenir recursión
 
-### 3. Facilidad de Mantenimiento
+### 3. Calidad y Diagnóstico
 
-- **Código más limpio**: Funciones con responsabilidad única
-- **Logs detallados**: Facilita el diagnóstico de problemas
-- **Herramientas de verificación**: Comando de gestión para mantener integridad de datos
+- **Logs detallados**: Registro exhaustivo para facilitar el diagnóstico
+- **Manejo consistente de errores**: Captura y registro de todas las excepciones
+- **Herramientas de verificación**: Comandos para mantener integridad de datos
 
-## Impacto en el Flujo de Trabajo
+## Impacto en el Desarrollo
 
 ### Positivo
-- Ya no es necesario preocuparse por generar números de proforma manualmente
-- Se detectan errores más temprano en el proceso de creación/actualización
-- Mayor confiabilidad en la integridad de los datos
+- Simplificación de la implementación de nuevas funcionalidades
+- Menor acoplamiento entre componentes del sistema
+- Mayor facilidad para encontrar y corregir bugs
+- Código más fácil de entender para nuevos desarrolladores
 
 ### Consideraciones
-- Las validaciones más estrictas podrían detectar problemas en datos existentes
-- Se recomienda ejecutar `check_proformas` después de la implementación para verificar inconsistencias
+- Los desarrolladores deben familiarizarse con el patrón de servicio
+- Al implementar nuevas funcionalidades, se debe decidir si pertenecen al modelo o al servicio
 
 ## Próximos Pasos Recomendados
 
-1. **Pruebas exhaustivas**: Verificar el funcionamiento con diferentes escenarios
-2. **Monitoreo inicial**: Revisar logs para detectar posibles problemas no anticipados
-3. **Extender mejoras**: Aplicar patrones similares a otros módulos del sistema
-4. **Documentación**: Actualizar la documentación técnica con los nuevos comportamientos
-5. **Entrenamiento**: Informar a los desarrolladores sobre las nuevas funcionalidades y mejores prácticas
+1. **Aplicar el patrón a otros módulos**: Extender esta arquitectura a otras áreas del sistema
+2. **Pruebas exhaustivas**: Implementar tests unitarios para servicios y modelos
+3. **Documentación de API**: Documentar los métodos del servicio para facilitar su uso
+4. **Optimización adicional**: Identificar oportunidades para mejorar rendimiento
+5. **Evaluación de impacto**: Monitorear el rendimiento y mantenibilidad tras los cambios

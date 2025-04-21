@@ -570,6 +570,106 @@ export default function useEnhancedProformaQuery() {
     // entre montajes/desmontajes del componente
   }, [loadExisting, loadSavedProformas, setLoadExisting]);
 
+  /**
+   * Genera una URL para exportar proformas en el formato especificado
+   * 
+   * @param {string} format - Formato de exportación ('excel', 'excel_detalle', 'csv', 'pdf', 'estadisticas')
+   * @param {Object} params - Parámetros adicionales de filtrado
+   * @param {number} id - ID de la proforma (requerido solo para formatos que operan sobre una proforma)
+   * @returns {string} URL para la exportación
+   */
+  const getExportUrl = useCallback((format, params = {}, id = null) => {
+    // Obtener la URL base del API
+    const { ProformaService } = require('@/services/classes/ProformaService');
+    const service = new ProformaService();
+    const baseUrl = service.getBaseUrl();
+    
+    // Para formatos que requieren ID específico
+    if (format === 'excel_detalle' || format === 'csv' || format === 'pdf') {
+      if (!id) {
+        throw new Error(`El formato ${format} requiere un ID de proforma`);
+      }
+      return `${baseUrl}/${id}/${format === 'excel_detalle' ? 'exportar_excel_detalle' : 
+                              format === 'csv' ? 'exportar_csv' : 'exportar_pdf'}`;
+    }
+    
+    // Para formatos generales (sin ID específico)
+    let endpoint = '';
+    switch (format) {
+      case 'excel':
+        endpoint = 'exportar_excel';
+        break;
+      case 'estadisticas':
+        endpoint = 'reporte_estadisticas';
+        break;
+      case 'dashboard':
+        endpoint = 'dashboard';
+        break;
+      default:
+        throw new Error(`Formato de exportación no válido: ${format}`);
+    }
+    
+    // Construir URL con parámetros
+    const url = new URL(`${baseUrl}/${endpoint}/`, window.location.origin);
+    
+    // Añadir parámetros de filtrado
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+          url.searchParams.append(key, params[key]);
+        }
+      });
+    }
+    
+    return url.toString();
+  }, []);
+  
+  /**
+   * Descarga un archivo de exportación en el formato especificado
+   * 
+   * @param {string} format - Formato de exportación
+   * @param {Object} params - Parámetros adicionales de filtrado
+   * @param {number} id - ID de la proforma (para formatos que lo requieren)
+   * @returns {Promise<boolean>} - Promise que se resuelve cuando la descarga comienza
+   */
+  const downloadExport = useCallback(async (format, params = {}, id = null) => {
+    try {
+      // Determinar si es una exportación que requiere ID
+      const requiresId = ['excel_detalle', 'csv', 'pdf'].includes(format);
+      
+      // Verificar que se proporcione ID cuando es necesario
+      if (requiresId && !id) {
+        if (activeProformaId && activeProforma?.savedId) {
+          id = activeProforma.savedId;
+        } else {
+          throw new Error(`El formato ${format} requiere una proforma guardada`);
+        }
+      }
+      
+      // Obtener la URL de exportación
+      const exportUrl = getExportUrl(format, params, id);
+      
+      // Iniciar la descarga
+      const { ProformaService } = require('@/services/classes/ProformaService');
+      const service = new ProformaService();
+      
+      // Si es PDF y se quiere mostrar en lugar de descargar
+      if (format === 'pdf' && params?.inline === true) {
+        window.open(exportUrl, '_blank');
+        return true;
+      }
+      
+      // Solicitar el archivo para descarga
+      await service.downloadFile(exportUrl);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error al descargar exportación en formato ${format}:`, error);
+      // Reenviar el error para que se maneje en la interfaz
+      throw error;
+    }
+  }, [getExportUrl, activeProformaId, activeProforma]);
+
   // Devolver todas las funciones y estados necesarios
   return {
     // Estado
@@ -595,6 +695,22 @@ export default function useEnhancedProformaQuery() {
     saveProforma,
     duplicateProforma,
     changeProformaState,
+    
+    // Funciones de exportación
+    getExportUrl,
+    downloadExport,
+    
+    // Función para obtener datos del dashboard
+    getDashboardData: async (startDate, endDate, additionalParams = {}) => {
+      try {
+        const { ProformaService } = await import('@/services/classes/ProformaService');
+        const service = new ProformaService();
+        return service.getDashboard(startDate, endDate, additionalParams);
+      } catch (error) {
+        console.error('Error al obtener datos del dashboard:', error);
+        throw error;
+      }
+    },
     
     // Transformadores de formato
     transformApiToInternalFormat,

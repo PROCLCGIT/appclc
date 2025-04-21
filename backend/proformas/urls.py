@@ -25,4 +25,7 @@ urlpatterns = [
     
     # Rutas de exportación
     path('proformas/<int:pk>/exportar_pdf/', views.ProformaViewSet.as_view({'get': 'exportar_pdf'}), name='exportar-pdf'),
+    
+    # Ruta para el dashboard estadístico
+    path('stats-dashboard/', views.stats_dashboard, name='stats-dashboard'),
 ]

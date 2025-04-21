@@ -294,11 +294,52 @@ export const useItemsHandlers = ({
     toast.success(`${product.description} agregado a la proforma #${activeProforma.quote.number}`);
   };
 
+  // Reordenar ítems - implementación de arrastrar y soltar
+  const reorderItems = (sourceIndex, destinationIndex) => {
+    // Encontrar la proforma activa
+    const activeProforma = proformas.find(p => p.id === activeProformaId);
+    if (!activeProforma) return;
+    
+    // Asegurarnos que items es un array
+    const currentItems = Array.isArray(activeProforma.items) ? activeProforma.items : [];
+    
+    // No hacer nada si los índices son inválidos o iguales
+    if (
+      sourceIndex < 0 || 
+      destinationIndex < 0 || 
+      sourceIndex >= currentItems.length || 
+      destinationIndex >= currentItems.length ||
+      sourceIndex === destinationIndex
+    ) {
+      return;
+    }
+    
+    // Crear una copia de los ítems para manipular
+    const updatedItems = [...currentItems];
+    
+    // Reordenar los ítems (eliminar de la posición original e insertar en la nueva)
+    const [movedItem] = updatedItems.splice(sourceIndex, 1);
+    updatedItems.splice(destinationIndex, 0, movedItem);
+    
+    // Actualizar los items locales primero
+    setItems(updatedItems);
+    
+    // Actualizar la proforma con los items reordenados
+    updateProforma(activeProformaId, { items: updatedItems });
+    
+    // Mostrar notificación sutil
+    toast.success("Ítem reordenado correctamente", {
+      duration: 2000,
+      position: "bottom-right"
+    });
+  };
+
   return {
     addItem,
     updateItem,
     removeItem,
     searchProducts,
     addProductFromSearch,
+    reorderItems,
   };
 };

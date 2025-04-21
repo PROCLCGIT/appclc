@@ -1,16 +1,21 @@
 """
 Señales (signals) para el módulo de proformas.
-Automatiza tareas como la creación de registros de historial y verificación de vencimientos.
+
+Este módulo define receptores para las señales de Django que se conectan
+a los eventos de los modelos Proforma y ProformaItem, delegando la lógica
+de negocio al servicio ProformaService.
 """
 import logging
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from django.db import transaction
 
-from .models import Proforma, ProformaHistorial, ProformaItem
+from .models import Proforma, ProformaItem, ProformaHistorial
+from .services import ProformaService
 
 logger = logging.getLogger(__name__)
+
 
 @receiver(pre_save, sender=Proforma)
 def verificar_vencimiento_proforma(sender, instance, **kwargs):
@@ -20,16 +25,36 @@ def verificar_vencimiento_proforma(sender, instance, **kwargs):
     try:
         # Verificar si la proforma está en estado enviada y ha vencido
         if instance.estado == 'enviada' and instance.fecha_vencimiento < timezone.now().date():
+            old_estado = instance.estado
             instance.estado = 'vencida'
             logger.info(f"Proforma #{instance.numero} marcada automáticamente como vencida")
+            
+            # Delegamos la lógica de cambio de estado al servicio
+            # Pero solo registramos la acción, no ejecutamos el cambio,
+            # ya que el cambio ya se hizo en la instancia
+            instance._estado_cambiado_en_signal = True
     except Exception as e:
         logger.error(f"Error al verificar vencimiento de Proforma #{getattr(instance, 'id', 'nueva')}: {str(e)}")
+
+
+@receiver(pre_save, sender=Proforma)
+def generar_numero_proforma(sender, instance, **kwargs):
+    """
+    Genera un número de proforma si no existe.
+    Delega la generación al servicio.
+    """
+    try:
+        if not instance.numero or instance.numero.strip() == '':
+            instance.numero = ProformaService.generate_number(instance)
+            logger.info(f"Número de proforma generado automáticamente: {instance.numero}")
+    except Exception as e:
+        logger.error(f"Error al generar número de proforma: {str(e)}")
+
 
 @receiver(post_save, sender=Proforma)
 def crear_historial_proforma(sender, instance, created, update_fields=None, **kwargs):
     """
-    Crea automáticamente un registro en el historial de la proforma cuando
-    se crea o actualiza una proforma.
+    Crea automáticamente un registro en el historial de la proforma.
     """
     try:
         # Evitar crear múltiples registros en una transacción
@@ -115,28 +140,25 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
         # Registrar error pero no interrumpir la operación principal
         logger.error(f"Error al crear historial de Proforma #{getattr(instance, 'id', 'nueva')}: {str(e)}")
 
+
 @receiver(post_save, sender=ProformaItem)
 def actualizar_totales_proforma(sender, instance, created, **kwargs):
     """
     Actualiza los totales de la proforma cuando se crea o modifica un ítem.
+    Delega el cálculo al servicio.
     """
     try:
         # Evitar recálculos innecesarios marcando la instancia
         if hasattr(instance, '_totales_actualizados'):
             return
             
-        # Actualizar los totales de la proforma
+        # Actualizar los totales de la proforma usando el servicio
         proforma = instance.proforma
-        proforma.calcular_montos()
         
-        # Actualizar solo los campos necesarios sin triggear otros signals
+        # Usar el servicio para calcular los totales y guardarlos
+        # Usar update_fields para optimizar y evitar triggers innecesarios
         with transaction.atomic():
-            # Usar update para evitar recursión
-            Proforma.objects.filter(pk=proforma.pk).update(
-                subtotal=proforma.subtotal,
-                impuesto=proforma.impuesto,
-                total=proforma.total
-            )
+            ProformaService.calculate_amounts(proforma, save=True)
             
             # Marcar la instancia para evitar recálculos
             instance._totales_actualizados = True
@@ -145,3 +167,23 @@ def actualizar_totales_proforma(sender, instance, created, **kwargs):
             
     except Exception as e:
         logger.error(f"Error al actualizar totales de Proforma: {str(e)}")
+
+
+@receiver(post_delete, sender=ProformaItem)
+def actualizar_totales_tras_eliminar_item(sender, instance, **kwargs):
+    """
+    Actualiza los totales de la proforma cuando se elimina un ítem.
+    Delega el cálculo al servicio.
+    """
+    try:
+        # Capturar la proforma antes de que se elimine la relación
+        proforma = instance.proforma
+        
+        if proforma:
+            with transaction.atomic():
+                ProformaService.calculate_amounts(proforma, save=True)
+                
+            logger.debug(f"Totales actualizados para Proforma #{proforma.numero} tras eliminar ítem")
+            
+    except Exception as e:
+        logger.error(f"Error al actualizar totales tras eliminar ítem: {str(e)}")

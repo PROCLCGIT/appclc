@@ -1,10 +1,18 @@
-from django.db import models
+"""
+Modelos mejorados para el módulo de proformas.
+
+Esta versión de los modelos tiene la lógica de negocio extraída a un service layer,
+manteniendo los modelos enfocados en la representación de datos y delegando el
+comportamiento a servicios externos.
+"""
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +90,7 @@ class Proforma(TimeStampedModel):
         verbose_name=_('Tiempo de Entrega')
     )
     
-    # Montos
+    # Montos (calculados por el servicio)
     subtotal = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
@@ -150,65 +158,6 @@ class Proforma(TimeStampedModel):
     def __str__(self):
         return f"Proforma #{self.numero} - {self.cliente.nombre}"
     
-    def generar_numero(self):
-        """
-        Genera un número secuencial para la proforma de forma más robusta.
-        Utiliza el año actual y un número secuencial.
-        """
-        from django.utils import timezone
-        
-        # Obtener el año actual
-        year = timezone.now().year
-        
-        try:
-            # Buscar la última proforma de este año
-            last_quote = Proforma.objects.filter(
-                numero__startswith=f'PRO-{year}'
-            ).order_by('-numero').first()
-            
-            if last_quote:
-                try:
-                    # Extraer el número secuencial del último número de proforma
-                    # Formato esperado: PRO-YYYY-NNNN
-                    last_number = int(last_quote.numero.split('-')[-1])
-                    new_number = last_number + 1
-                except (ValueError, IndexError):
-                    # Si hay un error al extraer el número, empezar de 1000
-                    logger.warning(f"No se pudo extraer el número secuencial de {last_quote.numero}, iniciando desde 1000")
-                    new_number = 1000
-            else:
-                # Primera proforma de este año
-                new_number = 1000
-                
-            # Generar el nuevo número
-            numero = f'PRO-{year}-{new_number:04d}'
-            
-            # Verificar que el número generado sea único para evitar colisiones
-            if Proforma.objects.filter(numero=numero).exists():
-                logger.warning(f"Colisión detectada con número {numero}, aumentando contador")
-                # Intentar incrementar hasta encontrar uno disponible (máximo 10 intentos)
-                for _ in range(10):
-                    new_number += 1
-                    numero = f'PRO-{year}-{new_number:04d}'
-                    if not Proforma.objects.filter(numero=numero).exists():
-                        return numero
-                
-                # Si después de 10 intentos no se encuentra un número disponible,
-                # generar un número con timestamp para garantizar unicidad
-                import time
-                timestamp = int(time.time())
-                numero = f'PRO-{year}-{timestamp}'
-            
-            return numero
-            
-        except Exception as e:
-            # Registrar el error y generar un número de respaldo utilizando timestamp
-            logger.error(f"Error al generar número de proforma: {e}")
-            
-            import time
-            timestamp = int(time.time())
-            return f'PRO-{year}-{timestamp}'
-    
     def clean(self):
         """
         Validaciones del modelo:
@@ -241,49 +190,6 @@ class Proforma(TimeStampedModel):
             raise ValidationError({
                 'porcentaje_impuesto': _('El porcentaje de impuesto debe estar entre 0 y 100')
             })
-    
-    def save(self, *args, **kwargs):
-        """
-        Sobrescritura del método save para:
-        1. Realizar validaciones completas con full_clean()
-        2. Generar número de proforma si no existe
-        3. Calcular montos automáticamente
-        """
-        # 1. Realizar validaciones completas
-        self.full_clean()
-        
-        # 2. Generar número de proforma si no existe
-        if not self.numero or self.numero.strip() == '':
-            self.numero = self.generar_numero()
-            logger.info(f"Número de proforma generado automáticamente: {self.numero}")
-        
-        # 3. Calcular montos antes de guardar
-        self.calcular_montos()
-        
-        # Guardar el modelo
-        super().save(*args, **kwargs)
-    
-    def calcular_montos(self):
-        """
-        Calcula subtotal, impuesto y total basado en los ítems.
-        Usa agregación de base de datos para optimizar el rendimiento.
-        """
-        # Obtenemos los ítems relacionados, si la proforma ya está guardada
-        if self.pk:
-            try:
-                # Método optimizado usando agregación de base de datos
-                from django.db.models import Sum
-                items_sum = self.items.aggregate(subtotal_sum=Sum('total'))
-                self.subtotal = items_sum['subtotal_sum'] or Decimal('0')
-                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
-                self.total = self.subtotal + self.impuesto
-            except Exception as e:
-                # Método de respaldo para garantizar funcionamiento en caso de error
-                logger.warning(f"Error en método optimizado de calcular_montos: {e}. Usando método de respaldo.")
-                items = self.items.all()
-                self.subtotal = sum(item.total for item in items)
-                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
-                self.total = self.subtotal + self.impuesto
 
 
 class ProformaItem(TimeStampedModel):
@@ -426,49 +332,6 @@ class ProformaItem(TimeStampedModel):
             raise ValidationError({
                 'producto_disponible': _('Debe seleccionar un producto disponible para este tipo de ítem')
             })
-    
-    def calcular_total(self):
-        """Calcula el total del ítem considerando cantidad, precio y descuento"""
-        subtotal = self.cantidad * self.precio_unitario
-        descuento = subtotal * (self.porcentaje_descuento / Decimal('100.0'))
-        self.total = subtotal - descuento
-    
-    def save(self, *args, **kwargs):
-        """
-        Sobrescritura del método save para:
-        1. Validar datos con full_clean()
-        2. Calcular el total antes de guardar
-        3. Autocompletar datos del producto si es necesario
-        4. Actualizar totales de la proforma
-        """
-        # 1. Validar datos
-        self.full_clean()
-        
-        # 2. Calcular el total antes de guardar
-        self.calcular_total()
-        
-        # 3. Si hay un producto asociado, tomar sus datos
-        if self.tipo_item == 'producto_ofertado' and self.producto_ofertado:
-            if not self.codigo:
-                self.codigo = self.producto_ofertado.code
-            if not self.descripcion:
-                self.descripcion = self.producto_ofertado.nombre
-                
-        elif self.tipo_item == 'producto_disponible' and self.producto_disponible:
-            if not self.codigo:
-                self.codigo = self.producto_disponible.code
-            if not self.descripcion:
-                self.descripcion = self.producto_disponible.nombre
-            if not self.unidad:
-                self.unidad = self.producto_disponible.presentacion.nombre if hasattr(self.producto_disponible, 'presentacion') and self.producto_disponible.presentacion else 'Unidad'
-        
-        # Guardar el ítem
-        super().save(*args, **kwargs)
-        
-        # 4. Actualizar los totales de la proforma
-        if self.proforma:
-            self.proforma.calcular_montos()
-            self.proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
 
 
 class ProformaHistorial(TimeStampedModel):
@@ -524,6 +387,67 @@ class ProformaHistorial(TimeStampedModel):
     
     def __str__(self):
         return f"{self.get_accion_display()} - {self.proforma.numero} - {self.created_at}"
+
+
+class SecuenciaProforma(models.Model):
+    """
+    Modelo para gestionar las secuencias numéricas de las proformas
+    garantizando unicidad y evitando race conditions.
+    """
+    anio = models.PositiveSmallIntegerField(
+        verbose_name=_('Año'),
+        unique=True
+    )
+    ultimo_numero = models.PositiveIntegerField(
+        default=999,  # Empezará en 1000
+        verbose_name=_('Último número utilizado')
+    )
+    ultima_actualizacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_('Última actualización')
+    )
+    
+    class Meta:
+        verbose_name = _('Secuencia de Proforma')
+        verbose_name_plural = _('Secuencias de Proformas')
+        indexes = [
+            models.Index(fields=['anio']),
+        ]
+    
+    def __str__(self):
+        return f"Secuencia proformas {self.anio}: último={self.ultimo_numero}"
+    
+    @classmethod
+    def obtener_siguiente_numero(cls, anio=None):
+        """
+        Obtiene el siguiente número de secuencia para el año especificado
+        de manera atómica, evitando race conditions.
+        
+        Args:
+            anio: Año para el que se quiere obtener el número. Si es None, usa el año actual.
+            
+        Returns:
+            str: El número de proforma en formato 'PRO-YYYY-NNNN'
+        """
+        if anio is None:
+            anio = timezone.now().year
+            
+        with transaction.atomic():
+            # Bloquear la tabla para evitar race conditions con select_for_update()
+            secuencia, created = cls.objects.select_for_update().get_or_create(
+                anio=anio,
+                defaults={'ultimo_numero': 999}  # Empezar desde 1000
+            )
+            
+            # Incrementar el contador
+            secuencia.ultimo_numero += 1
+            secuencia.save(update_fields=['ultimo_numero', 'ultima_actualizacion'])
+            
+            # Generar el número de proforma en formato PRO-YYYY-NNNN
+            numero_proforma = f"PRO-{anio}-{secuencia.ultimo_numero:04d}"
+            
+            logger.info(f"Generado número de proforma: {numero_proforma}")
+            return numero_proforma
 
 
 class ConfiguracionProforma(models.Model):

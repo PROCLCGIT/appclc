@@ -131,6 +131,16 @@ class ProformaSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_username = serializers.CharField(source='updated_by.username', read_only=True)
     
+    # Campos para indicar transiciones disponibles
+    puede_enviar = serializers.SerializerMethodField(read_only=True)
+    puede_aprobar = serializers.SerializerMethodField(read_only=True)
+    puede_rechazar = serializers.SerializerMethodField(read_only=True)
+    puede_convertir = serializers.SerializerMethodField(read_only=True)
+    puede_volver_a_borrador = serializers.SerializerMethodField(read_only=True)
+    
+    # Flag para manejar notificaciones
+    enviar_notificaciones = serializers.BooleanField(write_only=True, required=False, default=True)
+    
     class Meta:
         model = Proforma
         fields = [
@@ -139,9 +149,30 @@ class ProformaSerializer(serializers.ModelSerializer):
             'tiempo_entrega', 'subtotal', 'porcentaje_impuesto', 'impuesto', 'total',
             'notas', 'estado', 'estado_display', 'created_by', 'created_by_username',
             'updated_by', 'updated_by_username', 'created_at', 'updated_at', 'items',
-            'historial', 'items_data'
+            'historial', 'items_data', 'puede_enviar', 'puede_aprobar', 'puede_rechazar',
+            'puede_convertir', 'puede_volver_a_borrador', 'enviar_notificaciones'
         ]
         read_only_fields = ['subtotal', 'impuesto', 'total', 'created_at', 'updated_at']
+    
+    def get_puede_enviar(self, obj):
+        """Determina si la proforma puede ser enviada"""
+        return obj.estado == 'borrador'
+    
+    def get_puede_aprobar(self, obj):
+        """Determina si la proforma puede ser aprobada"""
+        return obj.estado == 'enviada'
+    
+    def get_puede_rechazar(self, obj):
+        """Determina si la proforma puede ser rechazada"""
+        return obj.estado == 'enviada'
+    
+    def get_puede_convertir(self, obj):
+        """Determina si la proforma puede ser convertida a orden"""
+        return obj.estado == 'aprobada'
+    
+    def get_puede_volver_a_borrador(self, obj):
+        """Determina si la proforma puede volver a estado borrador"""
+        return obj.estado in ['enviada', 'rechazada']
     
     def validate(self, data):
         """Validaciones adicionales para proformas"""

@@ -571,3 +571,461 @@ INFO 2025-04-21 01:29:15,445 basehttp 9079 123145561403392 "POST /api/auth/token
 INFO 2025-04-21 01:29:15,864 basehttp 9079 123145561403392 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
 INFO 2025-04-21 01:30:23,499 basehttp 9079 123145561403392 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
 INFO 2025-04-21 01:30:23,986 basehttp 9079 123145561403392 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:37:36,942 autoreload 9079 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 01:37:37,963 autoreload 42209 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 01:37:41,044 autoreload 42209 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 01:37:41,807 autoreload 42218 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 01:38:22,868 autoreload 42218 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 01:38:23,690 autoreload 43144 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 01:38:44,239 autoreload 43144 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 01:38:44,928 autoreload 43611 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 01:40:29,204 basehttp 43611 123145429344256 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:40:29,745 basehttp 43611 123145429344256 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:45:48,873 basehttp 43611 123145446133760 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:45:49,329 basehttp 43611 123145446133760 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:47:19,824 basehttp 43611 123145446133760 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:47:20,288 basehttp 43611 123145446133760 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:51:58,807 basehttp 43611 123145446133760 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:51:59,431 basehttp 43611 123145446133760 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 01:55:51,529 basehttp 43611 123145446133760 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 01:55:52,092 basehttp 43611 123145446133760 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:01:55,919 basehttp 43611 123145429344256 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:01:56,527 basehttp 43611 123145429344256 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:06:30,212 autoreload 43611 140704262474688 /Users/clc/WS/appclc/backend/proformas/apps.py changed, reloading.
+INFO 2025-04-21 02:06:31,311 autoreload 81009 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:06:50,204 autoreload 81009 140704262474688 /Users/clc/WS/appclc/backend/appclc/urls.py changed, reloading.
+INFO 2025-04-21 02:06:51,122 autoreload 81474 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:06:57,963 autoreload 81474 140704262474688 /Users/clc/WS/appclc/backend/proformas/url_switcher.py changed, reloading.
+INFO 2025-04-21 02:06:58,691 autoreload 81701 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:07:04,367 autoreload 81701 140704262474688 /Users/clc/WS/appclc/backend/appclc/urls.py changed, reloading.
+INFO 2025-04-21 02:07:05,006 autoreload 81714 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:07:09,618 autoreload 81714 140704262474688 /Users/clc/WS/appclc/backend/appclc/urls.py changed, reloading.
+INFO 2025-04-21 02:07:10,301 autoreload 81933 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:07:15,159 basehttp 81933 123145595789312 "POST /api/auth/token/ HTTP/1.1" 200 853
+INFO 2025-04-21 02:07:18,295 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:07:22,794 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:07:23,241 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:10:43,547 basehttp 81933 123145595789312 "OPTIONS /api/auth/token/verify/ HTTP/1.1" 200 0
+INFO 2025-04-21 02:10:43,552 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:10:44,208 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:15:15,582 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:15:16,291 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:15:21,664 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:15:22,322 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:16:43,442 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:16:44,006 basehttp 81933 123145595789312 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:30:50,635 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:31:08,635 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:32:20,553 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:32:27,729 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:32:32,546 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:36:14,018 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:36:22,862 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:38:32,580 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:39:22,824 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:39:32,125 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:40:14,051 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:40:22,211 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:40:35,373 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:40:40,775 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:43:41,404 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:46:55,811 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:46:59,441 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:47:08,433 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:47:15,292 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:48:07,842 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:49:22,975 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:49:25,188 basehttp 81933 123145595789312 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:54:38,140 basehttp 81933 123145612578816 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:54:40,908 basehttp 81933 123145612578816 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 02:54:42,052 basehttp 81933 123145612578816 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 02:58:55,835 autoreload 81933 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 02:58:56,970 autoreload 52528 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 02:59:43,771 autoreload 52528 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 02:59:44,506 autoreload 53569 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:00:15,305 autoreload 53569 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:00:16,033 autoreload 54294 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:00:38,568 autoreload 54294 140704262474688 /Users/clc/WS/appclc/backend/proformas/serializers.py changed, reloading.
+INFO 2025-04-21 03:00:39,297 autoreload 54833 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:00:47,292 autoreload 54833 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:00:48,029 autoreload 55060 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:00:54,999 autoreload 55060 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:00:55,726 autoreload 55182 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:02,740 autoreload 55182 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:03,453 autoreload 55400 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:10,479 autoreload 55400 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:11,210 autoreload 55527 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:18,170 autoreload 55527 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:18,909 autoreload 55754 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:27,929 autoreload 55754 140704262474688 /Users/clc/WS/appclc/backend/proformas/serializers.py changed, reloading.
+INFO 2025-04-21 03:01:28,657 autoreload 55988 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:32,518 autoreload 55988 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:33,255 autoreload 55997 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:37,096 autoreload 55997 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:37,857 autoreload 56116 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:41,935 autoreload 56116 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:42,672 autoreload 56234 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:45,501 autoreload 56234 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:46,218 autoreload 56340 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:50,065 autoreload 56340 140704262474688 /Users/clc/WS/appclc/backend/proformas/models.py changed, reloading.
+INFO 2025-04-21 03:01:50,814 autoreload 56463 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:01:57,774 autoreload 56463 140704262474688 /Users/clc/WS/appclc/backend/proformas/signals.py changed, reloading.
+INFO 2025-04-21 03:01:58,521 autoreload 56581 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:02:06,538 autoreload 56581 140704262474688 /Users/clc/WS/appclc/backend/proformas/signals.py changed, reloading.
+INFO 2025-04-21 03:02:07,249 autoreload 56803 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:02:11,410 autoreload 56803 140704262474688 /Users/clc/WS/appclc/backend/proformas/signals.py changed, reloading.
+INFO 2025-04-21 03:02:12,149 autoreload 56926 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:02:30,611 basehttp 56926 123145453543424 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:02:31,310 basehttp 56926 123145453543424 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:04:51,711 autoreload 56926 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:04:52,387 autoreload 60430 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:05:51,944 autoreload 60430 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:05:52,639 autoreload 61807 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:07:09,032 autoreload 61807 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:07:09,910 autoreload 63529 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:12:09,944 autoreload 63529 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:12:10,673 autoreload 70240 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:16:41,518 basehttp 70240 123145438027776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:16:42,206 basehttp 70240 123145438027776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:18:10,383 autoreload 70240 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:18:11,169 autoreload 78375 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:32:01,183 autoreload 78375 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:32:02,196 autoreload 96899 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:32:39,834 basehttp 96899 123145349828608 "OPTIONS /api/auth/token/ HTTP/1.1" 200 0
+INFO 2025-04-21 03:32:40,621 basehttp 96899 123145349828608 "POST /api/auth/token/ HTTP/1.1" 200 853
+INFO 2025-04-21 03:32:43,495 basehttp 96899 123145349828608 "OPTIONS /api/proformas/configuracion-actual/ HTTP/1.1" 200 0
+INFO 2025-04-21 03:32:43,547 basehttp 96899 123145349828608 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:32:47,237 basehttp 96899 123145349828608 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:32:47,716 basehttp 96899 123145349828608 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:36:26,210 basehttp 96899 123145349828608 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:36:26,905 basehttp 96899 123145349828608 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:36:45,970 autoreload 96899 140704262474688 /Users/clc/WS/appclc/backend/proformas/views.py changed, reloading.
+INFO 2025-04-21 03:36:48,208 autoreload 4012 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:37:06,018 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:37:06,714 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:38:09,557 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:38:10,031 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:40:33,498 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:40:34,029 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:40:36,767 autoreload 9258 140704262474688 Watching for file changes with StatReloader
+INFO 2025-04-21 03:40:54,619 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:40:55,184 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 03:40:58,907 basehttp 4012 123145440587776 "OPTIONS /api/core/zonas/ HTTP/1.1" 200 0
+INFO 2025-04-21 03:40:58,949 basehttp 4012 123145440587776 "GET /api/core/zonas/ HTTP/1.1" 200 228
+INFO 2025-04-21 03:40:59,409 basehttp 4012 123145440587776 "OPTIONS /api/core/ciudades/ HTTP/1.1" 200 0
+INFO 2025-04-21 03:40:59,449 basehttp 4012 123145440587776 "GET /api/core/ciudades/ HTTP/1.1" 200 238
+INFO 2025-04-21 03:40:59,911 basehttp 4012 123145440587776 "OPTIONS /api/core/tipocliente/ HTTP/1.1" 200 0
+INFO 2025-04-21 03:40:59,951 basehttp 4012 123145440587776 "GET /api/core/tipocliente/ HTTP/1.1" 200 202
+INFO 2025-04-21 03:43:00,274 basehttp 4012 123145440587776 "OPTIONS /api/clientes/?limit=50 HTTP/1.1" 200 0
+WARNING 2025-04-21 03:43:00,304 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:00,304 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+WARNING 2025-04-21 03:43:01,318 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:01,318 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:43:13,003 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:43:13,622 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:13,623 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:43:14,171 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:43:14,661 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:14,661 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:43:17,953 basehttp 4012 123145440587776 "GET /api/core/zonas/ HTTP/1.1" 200 228
+INFO 2025-04-21 03:43:18,394 basehttp 4012 123145440587776 "GET /api/core/ciudades/ HTTP/1.1" 200 238
+INFO 2025-04-21 03:43:18,899 basehttp 4012 123145440587776 "GET /api/core/tipocliente/ HTTP/1.1" 200 202
+WARNING 2025-04-21 03:43:20,292 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:20,292 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+WARNING 2025-04-21 03:43:21,317 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:21,317 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+WARNING 2025-04-21 03:43:41,756 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:41,757 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+WARNING 2025-04-21 03:43:42,767 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:43:42,768 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:43:58,017 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:44:35,969 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:44:36,515 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:44:36,534 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:44:36,992 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:44:37,563 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:44:37,563 basehttp 4012 123145440587776 "GET /api/clientes/?limit=50 HTTP/1.1" 404 4490
+INFO 2025-04-21 03:45:21,229 basehttp 4012 123145440587776 "OPTIONS /api/madvance/clientes/?limit=50 HTTP/1.1" 200 0
+WARNING 2025-04-21 03:45:21,239 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:45:21,240 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:45:39,187 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:45:39,188 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:45:40,603 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:45:40,604 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:45:41,619 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:45:41,620 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:46:12,360 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:46:12,807 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:46:12,807 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:46:13,334 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:46:13,839 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:46:13,839 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:46:52,944 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:46:53,451 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:46:53,452 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:46:53,985 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:46:54,489 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:46:54,490 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:47:22,220 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:47:22,742 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:47:22,742 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:47:23,271 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:47:23,778 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:47:23,778 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:15,634 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:48:16,076 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:16,077 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:16,604 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:48:17,114 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:17,115 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:48:20,007 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:20,007 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:48:21,024 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:21,025 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:25,622 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:48:26,113 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:26,114 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:26,637 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:48:27,149 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:27,149 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:39,656 basehttp 4012 123145440587776 "OPTIONS /api/core/clientes/?page=1&search= HTTP/1.1" 200 0
+INFO 2025-04-21 03:48:39,714 basehttp 4012 123145440587776 "GET /api/core/clientes/?page=1&search= HTTP/1.1" 200 2391
+INFO 2025-04-21 03:48:40,196 basehttp 4012 123145440587776 "GET /api/core/zonas/ HTTP/1.1" 200 228
+INFO 2025-04-21 03:48:40,697 basehttp 4012 123145440587776 "GET /api/core/ciudades/ HTTP/1.1" 200 238
+INFO 2025-04-21 03:48:41,200 basehttp 4012 123145440587776 "GET /api/core/tipocliente/ HTTP/1.1" 200 202
+WARNING 2025-04-21 03:48:47,042 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:47,042 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+WARNING 2025-04-21 03:48:48,076 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:48,077 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=50 HTTP/1.1" 404 4517
+INFO 2025-04-21 03:48:48,082 basehttp 4012 123145440587776 "OPTIONS /api/madvance/clientes/?limit=100 HTTP/1.1" 200 0
+WARNING 2025-04-21 03:48:48,089 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:48:48,089 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+INFO 2025-04-21 03:49:12,678 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:49:13,257 basehttp 4012 123145440587776 "OPTIONS /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 200 0
+WARNING 2025-04-21 03:49:13,266 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:13,267 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:13,305 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:13,306 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:49:13,795 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:49:39,484 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:39,484 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:39,494 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:39,495 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:39,511 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:39,512 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+WARNING 2025-04-21 03:49:43,662 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:43,667 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:43,703 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:43,705 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:49:44,149 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:49:45,044 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:45,049 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:45,106 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:45,107 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:49:45,490 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:49:46,125 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:46,125 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:46,136 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:46,137 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:49:46,149 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:49:46,149 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+INFO 2025-04-21 03:50:05,320 basehttp 4012 123145440587776 "GET /api/core/zonas/ HTTP/1.1" 200 228
+INFO 2025-04-21 03:50:05,819 basehttp 4012 123145440587776 "GET /api/core/ciudades/ HTTP/1.1" 200 238
+INFO 2025-04-21 03:50:06,321 basehttp 4012 123145440587776 "GET /api/core/tipocliente/ HTTP/1.1" 200 202
+WARNING 2025-04-21 03:50:14,696 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:50:14,696 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:50:14,727 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:50:14,728 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:50:15,747 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:50:15,748 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:50:15,757 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:50:15,757 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:50:15,767 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:50:15,767 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+INFO 2025-04-21 03:51:54,843 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:51:56,355 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:51:56,356 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:51:56,449 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:51:56,551 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:51:56,895 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:51:57,601 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:51:57,603 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:51:57,622 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:51:57,623 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:51:57,640 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:51:57,641 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+INFO 2025-04-21 03:52:24,405 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+WARNING 2025-04-21 03:52:26,070 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:52:26,072 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:52:26,260 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:52:26,262 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:52:26,606 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:52:27,289 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:52:27,325 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:52:27,371 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:52:27,372 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:52:27,395 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:52:27,396 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100 HTTP/1.1" 404 4518
+INFO 2025-04-21 03:53:38,244 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:53:39,647 basehttp 4012 123145440587776 "OPTIONS /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 200 0
+WARNING 2025-04-21 03:53:39,666 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 03:53:39,678 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:53:39,742 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:53:39,743 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 03:53:39,779 basehttp 4012 123145440587776 "OPTIONS /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 200 0
+WARNING 2025-04-21 03:53:39,923 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:53:39,925 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+INFO 2025-04-21 03:53:40,193 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+WARNING 2025-04-21 03:53:40,947 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 03:53:40,948 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:53:40,963 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:53:40,964 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:53:40,983 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:53:40,984 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 03:53:41,006 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 03:53:41,006 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:53:41,023 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 03:53:41,023 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 03:53:41,037 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 03:53:41,038 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+INFO 2025-04-21 03:55:16,473 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:33,382 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:36,764 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:39,432 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:44,118 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:48,467 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:50,479 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:55:57,445 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:19,613 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:23,372 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:31,529 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:40,678 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:47,893 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:53,869 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:56:57,326 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:57:16,170 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:57:59,641 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:58:11,018 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:58:12,447 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:58:14,941 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:58:43,011 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:59:16,126 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:59:23,064 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:59:33,811 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:59:42,325 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 03:59:52,050 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:00:03,695 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:01:52,728 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:03:20,140 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:03:47,194 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:03:47,928 basehttp 4012 123145440587776 "GET /api/proformas/configuracion-actual/ HTTP/1.1" 200 482
+INFO 2025-04-21 04:03:49,213 basehttp 4012 123145440587776 "OPTIONS /api/api/ HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,219 log 4012 123145440587776 Not Found: /api/api/
+WARNING 2025-04-21 04:03:49,220 basehttp 4012 123145440587776 "GET /api/api/ HTTP/1.1" 404 4466
+INFO 2025-04-21 04:03:49,225 basehttp 4012 123145440587776 "OPTIONS /api/api/core/clientes/?limit=5 HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,231 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:49,231 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=5 HTTP/1.1" 404 4516
+INFO 2025-04-21 04:03:49,236 basehttp 4012 123145440587776 "OPTIONS /api/api/clientes/?limit=5 HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,242 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:03:49,242 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=5 HTTP/1.1" 404 4501
+INFO 2025-04-21 04:03:49,250 basehttp 4012 123145440587776 "OPTIONS /api/madvance/clientes/?limit=5 HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,257 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:49,257 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=5 HTTP/1.1" 404 4516
+INFO 2025-04-21 04:03:49,262 basehttp 4012 123145440587776 "OPTIONS /api/clientes/?limit=5 HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,268 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:49,269 basehttp 4012 123145440587776 "GET /api/clientes/?limit=5 HTTP/1.1" 404 4489
+WARNING 2025-04-21 04:03:49,279 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:49,279 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+INFO 2025-04-21 04:03:49,284 basehttp 4012 123145440587776 "OPTIONS /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 200 0
+WARNING 2025-04-21 04:03:49,290 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:03:49,290 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4528
+WARNING 2025-04-21 04:03:49,301 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:49,302 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:49,311 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:49,311 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:03:49,322 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:49,322 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:49,332 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:49,333 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:49,344 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:49,344 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:03:50,231 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:50,232 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:50,249 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:03:50,250 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4528
+WARNING 2025-04-21 04:03:50,265 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:50,268 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:50,289 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:50,290 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:03:51,218 log 4012 123145440587776 Not Found: /api/api/
+WARNING 2025-04-21 04:03:51,219 basehttp 4012 123145440587776 "GET /api/api/ HTTP/1.1" 404 4466
+WARNING 2025-04-21 04:03:51,231 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:51,232 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=5 HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:03:51,243 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:03:51,243 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=5 HTTP/1.1" 404 4501
+WARNING 2025-04-21 04:03:51,252 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:51,253 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=5 HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:03:51,262 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:51,263 basehttp 4012 123145440587776 "GET /api/clientes/?limit=5 HTTP/1.1" 404 4489
+WARNING 2025-04-21 04:03:51,276 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:03:51,276 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:51,286 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:03:51,286 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4528
+WARNING 2025-04-21 04:03:51,295 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:03:51,295 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:03:51,305 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:03:51,306 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:05,278 log 4012 123145440587776 Not Found: /api/api/
+WARNING 2025-04-21 04:04:05,278 basehttp 4012 123145440587776 "GET /api/api/ HTTP/1.1" 404 4466
+WARNING 2025-04-21 04:04:05,294 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:05,294 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=5 HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:05,304 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:04:05,304 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=5 HTTP/1.1" 404 4501
+WARNING 2025-04-21 04:04:05,315 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:05,316 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=5 HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:05,326 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:05,326 basehttp 4012 123145440587776 "GET /api/clientes/?limit=5 HTTP/1.1" 404 4489
+WARNING 2025-04-21 04:04:05,337 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:05,338 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:05,349 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:04:05,349 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4528
+WARNING 2025-04-21 04:04:05,362 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:05,363 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:05,378 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:05,378 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:23,694 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:23,702 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:23,857 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:23,857 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:23,875 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:23,875 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:23,899 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:23,899 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:23,912 log 4012 123145440587776 Not Found: /api/api/clientes/
+WARNING 2025-04-21 04:04:23,913 basehttp 4012 123145440587776 "GET /api/api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4528
+WARNING 2025-04-21 04:04:23,925 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:23,926 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:23,938 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:23,940 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:23,956 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:23,956 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:23,968 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:24,136 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:24,163 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:24,164 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+WARNING 2025-04-21 04:04:25,185 log 4012 123145440587776 Not Found: /api/api/core/clientes/
+WARNING 2025-04-21 04:04:25,185 basehttp 4012 123145440587776 "GET /api/api/core/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:25,197 log 4012 123145440587776 Not Found: /api/madvance/clientes/
+WARNING 2025-04-21 04:04:25,197 basehttp 4012 123145440587776 "GET /api/madvance/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4543
+WARNING 2025-04-21 04:04:25,207 log 4012 123145440587776 Not Found: /api/clientes/
+WARNING 2025-04-21 04:04:25,208 basehttp 4012 123145440587776 "GET /api/clientes/?limit=100&ordering=-created_at HTTP/1.1" 404 4516
+INFO 2025-04-21 04:04:38,049 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:05:11,955 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:05:19,615 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:05:22,691 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:06:00,109 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:06:11,523 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:06:13,947 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:08:39,975 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2
+INFO 2025-04-21 04:12:58,766 basehttp 4012 123145440587776 "OPTIONS /api/auth/token/verify/ HTTP/1.1" 200 0
+INFO 2025-04-21 04:12:58,776 basehttp 4012 123145440587776 "POST /api/auth/token/verify/ HTTP/1.1" 200 2

@@ -28,8 +28,13 @@ export const useDialogControl = () => {
     () =>
       debounce(() => {
         console.log('Abriendo diálogo de búsqueda de clientes (debounced)');
-        setShowClientSearch(true);
-      }, 300),
+        // Asegurarnos de que se actualiza la UI
+        setTimeout(() => {
+          setShowClientSearch(true);
+          // Verificar que realmente se estableció el estado
+          console.log('Estado del diálogo de clientes:', { value: true, visible: 'should be visible now' });
+        }, 0);
+      }, 150), // Reducido a 150ms para mayor responsividad
     []
   );
 

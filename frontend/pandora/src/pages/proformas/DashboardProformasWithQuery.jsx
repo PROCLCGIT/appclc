@@ -29,6 +29,7 @@ import { useProformaDashboardQuery } from '@/hooks/queries/useProformasQuery';
 import { cn } from '@/lib/utils';
 import useDelayedFlag from '@/hooks/useDelayedFlag';
 import { SkeletonDashboard } from '@/components/SkeletonList';
+import { proformaService } from '@/services/api';
 
 // Colores para los gráficos
 const CHART_COLORS = {
@@ -341,6 +342,16 @@ const DashboardProformasWithQuery = () => {
       
       {showSkeletons ? (
         <SkeletonDashboard />
+      ) : isError ? (
+        // Mostrar error si la consulta falló
+        <div className="p-6 bg-red-50 border border-red-200 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold text-red-700 mb-2">Error al cargar datos del dashboard</h3>
+          <p className="text-red-600 mb-4">{error?.message || "Se produjo un error al obtener las estadísticas."}</p>
+          <Button onClick={() => refetch()} variant="outline" className="bg-white">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
       ) : (
         <>
           {/* Tarjetas de métricas principales */}
@@ -354,7 +365,7 @@ const DashboardProformasWithQuery = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {dashboardData.totalStats?.totalProformas || 0}
+                    {dashboardData.totalStats?.totalProformas || dashboardData.total_proformas || 0}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     En el período seleccionado
@@ -370,10 +381,12 @@ const DashboardProformasWithQuery = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-green-600">
-                    {dashboardData.totalStats?.proformasAprobadas || 0}
+                    {dashboardData.totalStats?.proformasAprobadas || dashboardData.por_estado?.aprobada?.count || 0}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Tasa de aprobación: {dashboardData.totalStats?.tasaConversion || 0}%
+                    Tasa de aprobación: {dashboardData.totalStats?.tasaConversion || 
+                    (dashboardData.total_proformas && dashboardData.por_estado?.aprobada ? 
+                     Math.round((dashboardData.por_estado.aprobada.count / dashboardData.total_proformas) * 100) : 0)}%
                   </p>
                 </CardContent>
               </Card>
@@ -386,7 +399,7 @@ const DashboardProformasWithQuery = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-blue-600">
-                    {formatMonto(dashboardData.totalStats?.montoTotal || 0)}
+                    {formatMonto(dashboardData.totalStats?.montoTotal || dashboardData.total_monto || 0)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Valor total de proformas
@@ -403,8 +416,9 @@ const DashboardProformasWithQuery = () => {
                 <CardContent>
                   <div className="text-3xl font-bold">
                     {formatMonto(
-                      dashboardData.totalStats?.totalProformas 
-                        ? (dashboardData.totalStats.montoTotal / dashboardData.totalStats.totalProformas) 
+                      (dashboardData.totalStats?.totalProformas || dashboardData.total_proformas) > 0 
+                        ? ((dashboardData.totalStats?.montoTotal || dashboardData.total_monto) / 
+                           (dashboardData.totalStats?.totalProformas || dashboardData.total_proformas)) 
                         : 0
                     )}
                   </div>
@@ -572,13 +586,31 @@ const DashboardProformasWithQuery = () => {
           
           {/* Tabla de Proformas Recientes */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Proformas Recientes</CardTitle>
+              {!isLoading && dashboardData && (
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RefreshCw className={cn("h-4 w-4 mr-2", {
+                    "animate-spin": isFetching
+                  })} />
+                  Actualizar
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {isError ? (
                 <div className="h-64 flex items-center justify-center">
-                  <p className="text-red-500">Error al cargar los datos</p>
+                  <div className="text-center">
+                    <XCircle className="mx-auto h-12 w-12 text-red-400" />
+                    <h3 className="mt-2 text-sm font-semibold text-red-600">Error al cargar los datos</h3>
+                    <p className="mt-1 text-sm text-red-500">{error?.message || "No se pudieron obtener las proformas recientes"}</p>
+                    <div className="mt-6">
+                      <Button variant="outline" onClick={() => refetch()}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reintentar
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ) : dashboardData?.proformasRecientes?.length === 0 ? (
                 <div className="h-64 flex items-center justify-center">
@@ -599,6 +631,8 @@ const DashboardProformasWithQuery = () => {
               ) : (
                 <ProformasDashboardTable 
                   proformas={dashboardData?.proformasRecientes || []} 
+                  loading={isFetching}
+                  onRefresh={() => refetch()}
                 />
               )}
             </CardContent>

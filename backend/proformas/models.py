@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -8,20 +8,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.utils import timezone
 from pandora.models import TimeStampedModel, Clientes, EmpresaClc, TipoContratacion
 
 
 class Proforma(TimeStampedModel):
     """Modelo principal para las proformas"""
     
-    ESTADO_CHOICES = (
-        ('borrador', _('Borrador')),
-        ('enviada', _('Enviada')),
-        ('aprobada', _('Aprobada')),
-        ('rechazada', _('Rechazada')),
-        ('vencida', _('Vencida')),
-        ('convertida', _('Convertida a Orden')),
-    )
+    class Estado(models.TextChoices):
+        BORRADOR = 'borrador', _('Borrador')
+        ENVIADA = 'enviada', _('Enviada')
+        APROBADA = 'aprobada', _('Aprobada')
+        RECHAZADA = 'rechazada', _('Rechazada')
+        VENCIDA = 'vencida', _('Vencida')
+        CONVERTIDA = 'convertida', _('Convertida a Orden')
+    
+    # Para mantener compatibilidad con código existente
+    ESTADO_CHOICES = Estado.choices
     
     # Campos principales
     numero = models.CharField(
@@ -150,64 +153,338 @@ class Proforma(TimeStampedModel):
     def __str__(self):
         return f"Proforma #{self.numero} - {self.cliente.nombre}"
     
+    def enviar(self, usuario=None, notas=None):
+        """
+        Transición de estado: Borrador -> Enviada
+        Envía la proforma al cliente.
+        
+        Args:
+            usuario: Usuario que realiza la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+            
+        Returns:
+            bool: True si la transición fue exitosa, False en caso contrario
+            
+        Raises:
+            ValueError: Si la proforma no está en estado Borrador
+        """
+        if self.estado != 'borrador':
+            raise ValueError(f"Solo proformas en estado 'Borrador' pueden ser enviadas")
+        
+        estado_anterior = self.estado
+        self.estado = 'enviada'
+        if usuario:
+            self.updated_by = usuario
+            
+        self.save(update_fields=['estado', 'updated_by', 'updated_at'])
+        
+        # La notificación se maneja a través del signal post_save
+        
+        # Adicionalmente, enviar notificación por correo
+        self.notify_estado_por_email(
+            accion='envio',
+            estado_anterior=estado_anterior,
+            estado_nuevo=self.estado,
+            usuario=usuario, 
+            notas=notas
+        )
+        
+        return True
+    
+    def aprobar(self, usuario=None, notas=None):
+        """
+        Transición de estado: Enviada -> Aprobada
+        Marca la proforma como aprobada por el cliente.
+        
+        Args:
+            usuario: Usuario que realiza la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+            
+        Returns:
+            bool: True si la transición fue exitosa, False en caso contrario
+            
+        Raises:
+            ValueError: Si la proforma no está en estado Enviada
+        """
+        if self.estado != 'enviada':
+            raise ValueError(f"Solo proformas en estado 'Enviada' pueden ser aprobadas")
+        
+        estado_anterior = self.estado
+        self.estado = 'aprobada'
+        if usuario:
+            self.updated_by = usuario
+            
+        self.save(update_fields=['estado', 'updated_by', 'updated_at'])
+        
+        # La notificación se maneja a través del signal post_save
+        
+        # Adicionalmente, enviar notificación por correo
+        self.notify_estado_por_email(
+            accion='aprobacion',
+            estado_anterior=estado_anterior,
+            estado_nuevo=self.estado,
+            usuario=usuario, 
+            notas=notas
+        )
+        
+        return True
+    
+    def rechazar(self, usuario=None, notas=None):
+        """
+        Transición de estado: Enviada -> Rechazada
+        Marca la proforma como rechazada por el cliente.
+        
+        Args:
+            usuario: Usuario que realiza la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+            
+        Returns:
+            bool: True si la transición fue exitosa, False en caso contrario
+            
+        Raises:
+            ValueError: Si la proforma no está en estado Enviada
+        """
+        if self.estado != 'enviada':
+            raise ValueError(f"Solo proformas en estado 'Enviada' pueden ser rechazadas")
+        
+        estado_anterior = self.estado
+        self.estado = 'rechazada'
+        if usuario:
+            self.updated_by = usuario
+            
+        self.save(update_fields=['estado', 'updated_by', 'updated_at'])
+        
+        # La notificación se maneja a través del signal post_save
+        
+        # Adicionalmente, enviar notificación por correo
+        self.notify_estado_por_email(
+            accion='rechazo',
+            estado_anterior=estado_anterior,
+            estado_nuevo=self.estado,
+            usuario=usuario, 
+            notas=notas
+        )
+        
+        return True
+    
+    def convertir(self, usuario=None, notas=None):
+        """
+        Transición de estado: Aprobada -> Convertida
+        Convierte la proforma aprobada en una orden.
+        
+        Args:
+            usuario: Usuario que realiza la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+            
+        Returns:
+            bool: True si la transición fue exitosa, False en caso contrario
+            
+        Raises:
+            ValueError: Si la proforma no está en estado Aprobada
+        """
+        if self.estado != 'aprobada':
+            raise ValueError(f"Solo proformas en estado 'Aprobada' pueden ser convertidas a orden")
+        
+        estado_anterior = self.estado
+        self.estado = 'convertida'
+        if usuario:
+            self.updated_by = usuario
+            
+        self.save(update_fields=['estado', 'updated_by', 'updated_at'])
+        
+        # La notificación se maneja a través del signal post_save
+        
+        # Adicionalmente, enviar notificación por correo
+        self.notify_estado_por_email(
+            accion='conversion',
+            estado_anterior=estado_anterior,
+            estado_nuevo=self.estado,
+            usuario=usuario, 
+            notas=notas
+        )
+        
+        return True
+    
+    def volver_a_borrador(self, usuario=None, notas=None):
+        """
+        Transición de estado: Enviada/Rechazada -> Borrador
+        Vuelve a marcar la proforma como borrador para permitir ediciones.
+        
+        Args:
+            usuario: Usuario que realiza la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+            
+        Returns:
+            bool: True si la transición fue exitosa, False en caso contrario
+            
+        Raises:
+            ValueError: Si la proforma no está en estado Enviada o Rechazada
+        """
+        if self.estado not in ['enviada', 'rechazada']:
+            raise ValueError(f"Solo proformas en estado 'Enviada' o 'Rechazada' pueden volver a borrador")
+        
+        estado_anterior = self.estado
+        self.estado = 'borrador'
+        if usuario:
+            self.updated_by = usuario
+            
+        self.save(update_fields=['estado', 'updated_by', 'updated_at'])
+        
+        # La notificación se maneja a través del signal post_save
+        
+        # Adicionalmente, enviar notificación por correo
+        self.notify_estado_por_email(
+            accion='reversion',
+            estado_anterior=estado_anterior,
+            estado_nuevo=self.estado,
+            usuario=usuario, 
+            notas=notas
+        )
+        
+        return True
+    
+    def notify_estado_por_email(self, accion, estado_anterior, estado_nuevo, usuario=None, notas=None):
+        """
+        Envía notificaciones por correo electrónico sobre cambios de estado.
+        
+        Args:
+            accion: Tipo de acción realizada (envio, aprobacion, rechazo, etc.)
+            estado_anterior: Estado anterior de la proforma
+            estado_nuevo: Nuevo estado de la proforma
+            usuario: Usuario que realizó la acción (opcional)
+            notas: Notas adicionales sobre la acción (opcional)
+        """
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            from django.template.loader import render_to_string
+            
+            # Obtener etiquetas legibles de los estados
+            estado_anterior_label = dict(self.ESTADO_CHOICES).get(estado_anterior, estado_anterior)
+            estado_nuevo_label = dict(self.ESTADO_CHOICES).get(estado_nuevo, estado_nuevo)
+            
+            # Preparar contexto para la plantilla de correo
+            context = {
+                'proforma': self,
+                'numero': self.numero,
+                'cliente': self.cliente.nombre if self.cliente else 'Cliente',
+                'estado_anterior': estado_anterior_label,
+                'estado_nuevo': estado_nuevo_label,
+                'accion': accion,
+                'usuario': usuario.get_full_name() if usuario else 'Sistema',
+                'fecha': timezone.now().strftime('%d/%m/%Y %H:%M'),
+                'notas': notas or '',
+                'subtotal': self.subtotal,
+                'impuesto': self.impuesto,
+                'total': self.total,
+            }
+            
+            # Renderizar asunto y cuerpo del correo basado en plantillas
+            subject = f"Proforma #{self.numero} - {estado_nuevo_label}"
+            
+            # Para tener mensajes personalizados según la acción
+            if accion == 'envio':
+                mensaje = f"La proforma #{self.numero} ha sido enviada al cliente {self.cliente.nombre}."
+            elif accion == 'aprobacion':
+                mensaje = f"La proforma #{self.numero} ha sido aprobada por el cliente {self.cliente.nombre}."
+            elif accion == 'rechazo':
+                mensaje = f"La proforma #{self.numero} ha sido rechazada por el cliente {self.cliente.nombre}."
+            elif accion == 'conversion':
+                mensaje = f"La proforma #{self.numero} ha sido convertida a orden."
+            elif accion == 'reversion':
+                mensaje = f"La proforma #{self.numero} ha vuelto a estado borrador para edición."
+            else:
+                mensaje = f"La proforma #{self.numero} ha cambiado de estado: {estado_anterior_label} → {estado_nuevo_label}."
+            
+            # Añadir notas si existen
+            if notas:
+                mensaje += f"\n\nNotas: {notas}"
+                
+            # Añadir detalles de la proforma
+            mensaje += f"\n\nTotal: ${self.total}"
+            
+            # Determinar destinatarios
+            recipients = []
+            
+            # Siempre incluir al usuario que creó la proforma
+            if self.created_by and self.created_by.email:
+                recipients.append(self.created_by.email)
+                
+            # Si hay un usuario asociado a la acción y es diferente, incluirlo
+            if usuario and usuario.email and usuario.email != getattr(self.created_by, 'email', None):
+                recipients.append(usuario.email)
+                
+            # Incluir email del cliente si existe y está en acción relevante
+            if self.cliente and self.cliente.email and accion in ['envio', 'aprobacion', 'rechazo']:
+                recipients.append(self.cliente.email)
+            
+            # Eliminar duplicados y asegurar que hay destinatarios
+            recipients = list(set(recipients))
+            if not recipients:
+                logger.warning(f"No se enviaron notificaciones por email para proforma #{self.numero} - no hay destinatarios")
+                return
+                
+            # Enviar correo
+            send_mail(
+                subject=subject,
+                message=mensaje,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipients,
+                fail_silently=True,  # No interrumpir el flujo principal si falla el envío
+            )
+            
+            logger.info(f"Notificación enviada por email sobre proforma #{self.numero} a {len(recipients)} destinatarios")
+            
+        except Exception as e:
+            # Registrar error pero no interrumpir el flujo principal
+            logger.error(f"Error al enviar notificación por email para proforma #{self.numero}: {str(e)}")
+    
     def generar_numero(self):
         """
-        Genera un número secuencial para la proforma de forma más robusta.
-        Utiliza el año actual y un número secuencial.
+        Genera un número secuencial para la proforma de forma atómica y robusta.
+        Utiliza el modelo SecuenciaProforma para evitar race conditions.
+        
+        Returns:
+            str: Número de proforma en formato 'PRO-YYYY-NNNN'
         """
-        from django.utils import timezone
-        
-        # Obtener el año actual
-        year = timezone.now().year
-        
         try:
-            # Buscar la última proforma de este año
-            last_quote = Proforma.objects.filter(
-                numero__startswith=f'PRO-{year}'
-            ).order_by('-numero').first()
+            # Obtener el año actual
+            year = timezone.now().year
             
-            if last_quote:
-                try:
-                    # Extraer el número secuencial del último número de proforma
-                    # Formato esperado: PRO-YYYY-NNNN
-                    last_number = int(last_quote.numero.split('-')[-1])
-                    new_number = last_number + 1
-                except (ValueError, IndexError):
-                    # Si hay un error al extraer el número, empezar de 1000
-                    logger.warning(f"No se pudo extraer el número secuencial de {last_quote.numero}, iniciando desde 1000")
-                    new_number = 1000
-            else:
-                # Primera proforma de este año
-                new_number = 1000
-                
-            # Generar el nuevo número
-            numero = f'PRO-{year}-{new_number:04d}'
+            # Utilizar el modelo de secuencia para obtener el siguiente número
+            # de manera atómica (con bloqueo de tabla)
+            numero = SecuenciaProforma.obtener_siguiente_numero(year)
             
-            # Verificar que el número generado sea único para evitar colisiones
+            # Verificar que el número generado sea único (doble verificación)
             if Proforma.objects.filter(numero=numero).exists():
-                logger.warning(f"Colisión detectada con número {numero}, aumentando contador")
-                # Intentar incrementar hasta encontrar uno disponible (máximo 10 intentos)
-                for _ in range(10):
-                    new_number += 1
-                    numero = f'PRO-{year}-{new_number:04d}'
-                    if not Proforma.objects.filter(numero=numero).exists():
-                        return numero
+                # Si hay una colisión (muy raro pero posible en caso de inconsistencias),
+                # intentar generar otro número
+                logger.warning(f"Colisión detectada con número {numero} a pesar del uso de secuencia, intentando nuevamente")
                 
-                # Si después de 10 intentos no se encuentra un número disponible,
-                # generar un número con timestamp para garantizar unicidad
+                # Generar un nuevo número con timestamp para garantizar unicidad
                 import time
                 timestamp = int(time.time())
                 numero = f'PRO-{year}-{timestamp}'
+                
+                # Registrar evento inusual para investigación posterior
+                logger.error(f"Se generó número alternativo con timestamp: {numero}")
             
             return numero
             
         except Exception as e:
             # Registrar el error y generar un número de respaldo utilizando timestamp
-            logger.error(f"Error al generar número de proforma: {e}")
+            logger.error(f"Error crítico al generar número de proforma: {str(e)}")
             
+            # En caso de error, generar un número basado en timestamp que sea único
             import time
+            year = timezone.now().year
             timestamp = int(time.time())
-            return f'PRO-{year}-{timestamp}'
+            
+            # Se incluye un prefijo 'E' para indicar que es un número de emergencia
+            numero = f'PRO-{year}-E{timestamp}'
+            logger.warning(f"Generado número de emergencia: {numero}")
+            
+            return numero
     
     def clean(self):
         """
@@ -524,6 +801,67 @@ class ProformaHistorial(TimeStampedModel):
     
     def __str__(self):
         return f"{self.get_accion_display()} - {self.proforma.numero} - {self.created_at}"
+
+
+class SecuenciaProforma(models.Model):
+    """
+    Modelo para gestionar las secuencias numéricas de las proformas
+    garantizando unicidad y evitando race conditions.
+    """
+    anio = models.PositiveSmallIntegerField(
+        verbose_name=_('Año'),
+        unique=True
+    )
+    ultimo_numero = models.PositiveIntegerField(
+        default=999,  # Empezará en 1000
+        verbose_name=_('Último número utilizado')
+    )
+    ultima_actualizacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_('Última actualización')
+    )
+    
+    class Meta:
+        verbose_name = _('Secuencia de Proforma')
+        verbose_name_plural = _('Secuencias de Proformas')
+        indexes = [
+            models.Index(fields=['anio']),
+        ]
+    
+    def __str__(self):
+        return f"Secuencia proformas {self.anio}: último={self.ultimo_numero}"
+    
+    @classmethod
+    def obtener_siguiente_numero(cls, anio=None):
+        """
+        Obtiene el siguiente número de secuencia para el año especificado
+        de manera atómica, evitando race conditions.
+        
+        Args:
+            anio: Año para el que se quiere obtener el número. Si es None, usa el año actual.
+            
+        Returns:
+            str: El número de proforma en formato 'PRO-YYYY-NNNN'
+        """
+        if anio is None:
+            anio = timezone.now().year
+            
+        with transaction.atomic():
+            # Bloquear la tabla para evitar race conditions con select_for_update()
+            secuencia, created = cls.objects.select_for_update().get_or_create(
+                anio=anio,
+                defaults={'ultimo_numero': 999}  # Empezar desde 1000
+            )
+            
+            # Incrementar el contador
+            secuencia.ultimo_numero += 1
+            secuencia.save(update_fields=['ultimo_numero', 'ultima_actualizacion'])
+            
+            # Generar el número de proforma en formato PRO-YYYY-NNNN
+            numero_proforma = f"PRO-{anio}-{secuencia.ultimo_numero:04d}"
+            
+            logger.info(f"Generado número de proforma: {numero_proforma}")
+            return numero_proforma
 
 
 class ConfiguracionProforma(models.Model):

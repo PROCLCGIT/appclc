@@ -10,7 +10,10 @@ Se han implementado las siguientes optimizaciones en el proyecto:
    - Caché mejorado con Redis
    - Sistema de logging avanzado
    - Monitoreo de consultas N+1
-   - Optimización de consultas
+   - Optimización de consultas en el dashboard y listados
+   - Reducción de queries mediante annotate/aggregate
+   - Corrección de problemas N+1 con select_related/prefetch_related
+   - Implementación de bulk operations para creación/actualización masiva
 
 2. **Seguridad**
    - Mejora del sistema JWT
@@ -31,7 +34,17 @@ Se han implementado las siguientes optimizaciones en el proyecto:
 
 ## Implementación
 
-### 1. Configuración Actualizada
+### 1. Optimizaciones en el Módulo de Proformas
+
+Se han implementado optimizaciones significativas en el módulo de proformas:
+
+- **Optimizaciones de Vistas**: Consultas más eficientes en `views_optimized.py`
+- **Serializers Batch**: Operaciones masivas en `serializers_optimized.py`
+- **Signals Eficientes**: Menor procesamiento redundante en `signals_optimized.py`
+
+Para activar estas optimizaciones, consulta `proformas/IMPLEMENTACION_MEJORAS.md`.
+
+### 2. Configuración Actualizada
 
 Se ha creado un archivo `settings_improved.py` con mejoras de configuración para todo el proyecto. Para activar esta configuración:
 
@@ -225,10 +238,29 @@ class ProductViewSet(BaseModelViewSet):
    - Implementar proxy reverso (Nginx) delante de Django
    - Configurar servicios como Gunicorn o uWSGI para producción
 
+## Herramientas de Prueba de Rendimiento
+
+Se ha implementado un comando de gestión para medir el rendimiento de las optimizaciones:
+
+```bash
+# Mostrar opciones disponibles
+python manage.py test_optimizations --list
+
+# Probar el rendimiento del dashboard
+python manage.py test_optimizations --test dashboard
+
+# Probar todos los endpoints optimizados con detalles
+python manage.py test_optimizations --test all --verbose
+```
+
+Esta herramienta muestra claramente las mejoras en número de consultas y tiempo de ejecución.
+
 ## Próximos Pasos Recomendados
 
 1. **Actualización de Django**: Mantener actualizadas dependencias por seguridad
 2. **Implementación de Autenticación Social**: OAuth con proveedores como Google, GitHub
 3. **Monitorización y Alertas**: Integrar con sistemas como Sentry para seguimiento de errores
-4. **Optimización de Base de Datos**: Revisar índices, consultas lentas
+4. **Optimización de Base de Datos**: Implementar índices para las consultas frecuentes
 5. **API Versionada**: Preparar el sistema para soportar versionado de API (v1, v2, etc.)
+6. **Caché de Endpoints**: Implementar caché para endpoints de uso frecuente
+7. **Implementación de Async Views**: Usar Django's async views para operaciones intensivas

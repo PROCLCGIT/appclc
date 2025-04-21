@@ -612,10 +612,173 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
   );
 
   /**
+   * Función auxiliar para obtener la proforma activa
+   * Esta función se coloca fuera del callback principal para evitar
+   * dependencias innecesarias con proformas completo
+   */
+  const getActiveProforma = useCallback(() => {
+    if (!activeProformaId) return null;
+    return proformas.find(p => p.id === activeProformaId);
+  }, [activeProformaId, proformas]);
+
+  /**
+   * Exporta la proforma en otros formatos (Excel, CSV, etc.)
+   */
+  const exportOtherFormatsRaw = useCallback(async (currentProforma, format) => {
+    try {
+      if (!currentProforma) {
+        toast.error("No hay una proforma activa para exportar");
+        return;
+      }
+      
+      // Verificar que la proforma ha sido guardada para formatos que lo requieren
+      const requiresSaved = ['excel_detalle', 'csv', 'pdf'];
+      if (requiresSaved.includes(format) && !currentProforma.savedId) {
+        // Usar el diálogo para confirmar el guardado
+        if (showWarningDialog) {
+          const confirmed = await new Promise(resolve => {
+            showWarningDialog(
+              "Se requiere guardar la proforma",
+              `Para exportar a ${format.toUpperCase()}, primero debe guardar la proforma.`,
+              "¿Desea guardar la proforma ahora?",
+              null,
+              () => resolve(true),
+              () => resolve(false)
+            );
+          });
+          
+          if (confirmed) {
+            const proformaId = await saveProforma(currentProforma);
+            if (!proformaId) {
+              toast.error(`No se pudo guardar la proforma para exportar a ${format.toUpperCase()}.`);
+              return;
+            }
+            // Recargar la proforma actualizada para obtener el savedId
+            await loadProforma(proformaId);
+          } else {
+            return;
+          }
+        } else {
+          // Si no hay diálogo disponible, usar el confirm estándar
+          const shouldSave = window.confirm(`Para exportar a ${format.toUpperCase()}, primero debe guardar la proforma. ¿Desea guardar la proforma ahora?`);
+          if (shouldSave) {
+            const proformaId = await saveProforma(currentProforma);
+            if (!proformaId) {
+              toast.error(`No se pudo guardar la proforma para exportar a ${format.toUpperCase()}.`);
+              return;
+            }
+            // Recargar la proforma actualizada para obtener el savedId
+            await loadProforma(proformaId);
+          } else {
+            return;
+          }
+        }
+      }
+      
+      // Mostrar indicador de carga
+      const formatDisplay = format.replace('_', ' ').toUpperCase();
+      const loadingToast = toast.loading(`Generando ${formatDisplay}...`, {
+        description: "Espere mientras se procesa el documento"
+      });
+      
+      try {
+        // Usar la API de proformas que ya tiene configurada la autenticación
+        const proformaId = currentProforma.savedId;
+        console.log(`Exportando proforma ID: ${proformaId} a ${format} usando ProformaService`);
+        
+        // Importar la clase de servicio para usar su método de exportación
+        const { ProformaService } = await import('@/services/classes/ProformaService');
+        const proformaService = new ProformaService();
+        
+        // Obtener la URL para la descarga según el formato seleccionado
+        let downloadUrl = '';
+        let exportResult = null;
+        
+        // Seleccionar método según formato
+        switch (format) {
+          case 'pdf':
+            exportResult = await proformaService.exportPdf(proformaId);
+            break;
+          case 'excel_detalle':
+            exportResult = await proformaService.exportExcelDetail(proformaId);
+            break;
+          case 'csv':
+            exportResult = await proformaService.exportCsv(proformaId);
+            break;
+          case 'excel':
+            exportResult = await proformaService.exportExcelList();
+            break;
+          case 'estadisticas':
+            exportResult = await proformaService.exportStatisticalReport();
+            break;
+          default:
+            throw new Error(`Formato de exportación no soportado: ${format}`);
+        }
+        
+        // Crear URL y descargar/abrir el archivo
+        if (exportResult) {
+          // Para PDF en modo visualización, abrirlo en lugar de descargarlo
+          if (format === 'pdf' && format.viewMode) {
+            // Obtener URL con token
+            const apiBase = window._baseApiUrl || 'http://localhost:8000/api/v1/';
+            downloadUrl = `${apiBase.replace(/\/+$/, '')}/proformas/proformas/${proformaId}/exportar_pdf/?inline=true`;
+            
+            // Abrir en nueva ventana
+            window.open(downloadUrl, '_blank');
+          } else {
+            // Para otros formatos, descargar directamente
+            const contentType = format === 'pdf' ? 'application/pdf' : 
+                               format === 'csv' ? 'text/csv' :
+                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                               
+            const blob = new Blob([exportResult], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `proforma_${currentProforma.quote?.number || proformaId}_${format}.${format === 'pdf' ? 'pdf' : format === 'csv' ? 'csv' : 'xlsx'}`;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpiar
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(link);
+            }, 100);
+          }
+          
+          toast.dismiss(loadingToast);
+          toast.success(`${formatDisplay} generado correctamente`, {
+            description: `Proforma #${currentProforma.quote?.number || proformaId}`
+          });
+        } else {
+          throw new Error(`No se pudo generar el archivo ${format}`);
+        }
+      } catch (error) {
+        console.error(`Error al exportar a ${format}:`, error);
+        toast.dismiss(loadingToast);
+        toast.error(`Error al generar el archivo ${formatDisplay}`, {
+          description: error.message || "Error durante la exportación"
+        });
+      }
+    } catch (error) {
+      console.error(`Error general en exportar formato ${format}:`, error);
+      toast.error("Ocurrió un error inesperado al exportar");
+    }
+  }, [saveProforma, loadProforma, showWarningDialog]);
+  
+  /**
+   * Versión con debounce de exportOtherFormats
+   */
+  const exportOtherFormats = useMemo(
+    () => debounce(exportOtherFormatsRaw, 600),
+    [exportOtherFormatsRaw]
+  );
+
+  /**
    * Maneja la acción principal solicitada por el usuario (con debounce)
    */
-  const handleActionRaw = useCallback(async (action) => {
-    console.log(`Acción: ${action}`);
+  const handleActionRaw = useCallback(async (action, params = {}) => {
+    console.log(`Acción: ${action}`, params);
 
     // Nueva proforma es un caso especial que no requiere verificación
     if (action === "new") {
@@ -632,38 +795,71 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
     }
 
     // Para todas las demás acciones, verificar que existe una proforma activa
-    const activeProforma = proformas.find(p => p.id === activeProformaId);
-    if (!activeProforma) {
+    const activeProforma = getActiveProforma();
+    if (!activeProforma && !['dashboard', 'reports', 'batch_export'].includes(action)) {
       toast.error("No hay una proforma activa para realizar esta acción");
       return;
     }
     
-    if (action === "save") {
-      await saveProforma(activeProforma);
-    }
-    else if (action === "export") {
-      exportProforma(activeProforma);
-    }
-    else if (action === "print") {
-      printProforma();
-    }
-    else if (action === "generate") {
-      await generateProforma(activeProforma);
-    }
-    else if (action === "configure") {
-      configureProforma();
-    }
-    else if (action === "share") {
-      toast.info("Función de compartir proforma estará disponible próximamente");
+    // Manejo de acciones según el tipo
+    switch (action) {
+      case "save":
+        await saveProforma(activeProforma);
+        break;
+        
+      case "export":
+        // Si se proporciona un formato específico, usar el exportador específico
+        if (params.format) {
+          if (params.format === 'pdf' && !params.viewMode) {
+            exportProforma(activeProforma); // El exportador PDF original si es descarga
+          } else {
+            exportOtherFormats(activeProforma, params.format);
+          }
+        } else {
+          exportProforma(activeProforma); // Por defecto exportar a PDF
+        }
+        break;
+        
+      case "print":
+        printProforma();
+        break;
+        
+      case "generate":
+      case "send":
+        await generateProforma(activeProforma);
+        break;
+        
+      case "configure":
+        configureProforma();
+        break;
+        
+      case "share":
+        toast.info("Función de compartir proforma estará disponible próximamente");
+        break;
+        
+      case "dashboard":
+        toast.info("Accediendo al dashboard de proformas...");
+        break;
+        
+      case "reports":
+        toast.info("Generando reportes de proformas...");
+        break;
+        
+      case "batch_export":
+        toast.info("Exportación masiva de proformas en desarrollo");
+        break;
+        
+      default:
+        toast.warning(`Acción desconocida: ${action}`);
     }
   }, [
-    activeProformaId, 
+    getActiveProforma, 
     addNewProforma,
     lastNewProformaTime, 
-    proformas, 
     setLastNewProformaTime,
     saveProforma,
     exportProforma,
+    exportOtherFormats,
     printProforma,
     generateProforma,
     configureProforma

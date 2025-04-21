@@ -248,15 +248,45 @@ export class ProformaService extends ActionService {
    * Retrieves dashboard metrics for proformas
    * @param {string} startDate - Start date in YYYY-MM-DD format
    * @param {string} endDate - End date in YYYY-MM-DD format
+   * @param {Object} additionalParams - Additional filter parameters
    * @returns {Promise<Object>} - Dashboard metrics
    */
-  async getDashboard(startDate, endDate) {
+  async getDashboard(startDate, endDate, additionalParams = {}) {
     try {
-      const response = await api.get('proformas/dashboard/', {
-        params: { start_date: startDate, end_date: endDate }
+      console.log(`ProformaService.getDashboard: Consultando dashboard con fechas ${startDate} a ${endDate}`);
+      const params = {
+        ...additionalParams
+      };
+      
+      // Solo añadir los parámetros si tienen valores válidos
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+      
+      // Realizar la petición
+      const response = await api.get(`${this.endpoint}dashboard/`, {
+        params
       });
-      return response.data;
+      
+      console.log('ProformaService.getDashboard: Respuesta recibida con', 
+                 Object.keys(response.data).length, 'secciones');
+      
+      // Transformar los datos para mejor compatibilidad con el frontend
+      const responseData = response.data;
+      
+      // Asegurar que tenemos la estructura esperada para totalStats
+      if (!responseData.totalStats && responseData.total_proformas !== undefined) {
+        responseData.totalStats = {
+          totalProformas: responseData.total_proformas || 0,
+          proformasAprobadas: responseData.por_estado?.aprobada?.count || 0,
+          tasaConversion: responseData.total_proformas ? 
+            Math.round((responseData.por_estado?.aprobada?.count || 0) / responseData.total_proformas * 100) : 0,
+          montoTotal: responseData.total_monto || 0
+        };
+      }
+      
+      return responseData;
     } catch (error) {
+      console.error('Error en getDashboard:', error);
       throw this.handleError(error);
     }
   }
@@ -265,10 +295,11 @@ export class ProformaService extends ActionService {
    * Alias for getDashboard for compatibility with existing code
    * @param {string} startDate - Start date in YYYY-MM-DD format
    * @param {string} endDate - End date in YYYY-MM-DD format
+   * @param {Object} additionalParams - Additional filter parameters
    * @returns {Promise<Object>} - Dashboard metrics
    */
-  async obtenerDashboard(startDate, endDate) {
-    return this.getDashboard(startDate, endDate);
+  async obtenerDashboard(startDate, endDate, additionalParams = {}) {
+    return this.getDashboard(startDate, endDate, additionalParams);
   }
   
   /**
@@ -287,6 +318,113 @@ export class ProformaService extends ActionService {
    */
   async exportPdf(id) {
     return this.exportService.exportPdf(id);
+  }
+  
+  /**
+   * Exports a proforma as Excel (detailed format)
+   * @param {number|string} id - The proforma ID
+   * @returns {Promise<Blob>} - The Excel file
+   */
+  async exportExcelDetail(id) {
+    try {
+      const response = await api.get(`${this.endpoint}${id}/exportar_excel_detalle/`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  /**
+   * Exports proformas list as Excel with optional filters
+   * @param {Object} params - Filter parameters (estado, cliente_id, fecha_inicio, fecha_fin)
+   * @returns {Promise<Blob>} - The Excel file
+   */
+  async exportExcelList(params = {}) {
+    try {
+      const response = await api.get(`${this.endpoint}exportar_excel/`, {
+        params,
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  /**
+   * Exports statistical report as Excel with optional filters
+   * @param {Object} params - Filter parameters (estado, cliente_id, fecha_inicio, fecha_fin, vendedor_id, incluir_ventas)
+   * @returns {Promise<Blob>} - The Excel file containing statistical report
+   */
+  async exportStatisticalReport(params = {}) {
+    try {
+      const response = await api.get(`${this.endpoint}reporte_estadisticas/`, {
+        params,
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+  
+  /**
+   * Downloads a file from a URL
+   * @param {string} url - The URL to download from
+   * @returns {Promise<void>} - A promise that resolves when the download begins
+   */
+  async downloadFile(url) {
+    try {
+      // Obtener el token JWT para autenticación
+      const token = localStorage.getItem('access_token');
+      
+      // Configurar headers con autenticación
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Solicitar el archivo con responseType 'blob'
+      const response = await api.get(url, {
+        headers,
+        responseType: 'blob'
+      });
+      
+      // Obtener el nombre del archivo de los headers de respuesta
+      let filename = 'download.xlsx';
+      const disposition = response.headers['content-disposition'];
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      
+      // Crear URL para el blob
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type']
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      // Crear un link temporal para descargar el archivo
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      return true;
+    } catch (error) {
+      console.error("Error al descargar archivo:", error);
+      throw this.handleError(error);
+    }
   }
 }
 

@@ -20,8 +20,13 @@ def verificar_vencimiento_proforma(sender, instance, **kwargs):
     try:
         # Verificar si la proforma está en estado enviada y ha vencido
         if instance.estado == 'enviada' and instance.fecha_vencimiento < timezone.now().date():
+            # Usar transición de estado interna sin mandar notificaciones
+            estado_anterior = instance.estado
             instance.estado = 'vencida'
             logger.info(f"Proforma #{instance.numero} marcada automáticamente como vencida")
+            
+            # Registramos el evento para el historial (se hará en post_save)
+            instance._vencimiento_automatico = True
     except Exception as e:
         logger.error(f"Error al verificar vencimiento de Proforma #{getattr(instance, 'id', 'nueva')}: {str(e)}")
 
@@ -56,7 +61,7 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
                 estado_anterior = instance.estado
             
             # Determinar tipo de acción basado en cambio de estado
-            if update_fields and 'estado' in update_fields and estado_anterior != instance.estado:
+            if (update_fields and 'estado' in update_fields and estado_anterior != instance.estado) or hasattr(instance, '_vencimiento_automatico'):
                 # Mapear acciones según el estado nuevo
                 if instance.estado == 'enviada':
                     accion = 'envio'
@@ -70,9 +75,15 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
                     accion = 'conversion'
                 else:
                     accion = 'modificacion'
-                
+                    
+                # Determinar mensajes y estados
                 estado_nuevo = instance.estado
-                notas = f"Estado cambiado de {estado_anterior} a {estado_nuevo}"
+                
+                # Si proviene de vencimiento automático, usar esa nota
+                if hasattr(instance, '_vencimiento_automatico'):
+                    notas = "Vencimiento automático por fecha"
+                else:
+                    notas = f"Estado cambiado de {estado_anterior} a {estado_nuevo}"
             else:
                 # Si no hay cambio de estado o se actualiza otro campo, es modificación general
                 accion = 'modificacion'

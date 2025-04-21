@@ -500,51 +500,83 @@ export const ProformaProvider = ({ children }) => {
   const loadSavedProformasAction = useCallback(loadSavedProformas, [loadSavedProformas]);
   const updateConfigWrapper = useCallback(updateConfig, [updateConfig]);
 
-  // Crear objeto de acciones memoizado con todas las funciones estables
-  const actions = useMemo(() => ({
+  // Agrupar acciones relacionadas en objetos memoizados separados
+  // para reducir el número total de dependencias
+  
+  // Acciones de proforma básicas
+  const proformaActions = useMemo(() => ({
     setProformas,
     setActiveProformaId: setActiveProformaIdAction,
     updateProforma: updateProformaAction,
     addNewProforma: addNewProformaAction,
     closeProforma: closeProformaAction,
     setLoading: setLoadingAction,
-    setClient: setClientAction,
-    setItems: setItemsAction,
-    addItem: addItemAction,
-    updateItem: updateItemAction,
-    removeItem: removeItemAction,
-    setConfig: setConfigAction,
-    setPreviewMode: setPreviewModeAction,
-    setSearchState: setSearchStateAction,
-    updateSearchState: updateSearchStateAction,
-    saveProforma: saveProformaAction,
-    changeProformaState: changeProformaStateAction,
-    duplicateProforma: duplicateProformaAction,
-    loadProforma: loadProformaAction,
-    loadSavedProformas: loadSavedProformasAction,
-    updateConfig: updateConfigWrapper,
   }), [
     setProformas,
     setActiveProformaIdAction,
     updateProformaAction,
     addNewProformaAction,
     closeProformaAction,
-    setLoadingAction,
+    setLoadingAction
+  ]);
+  
+  // Acciones de gestión de cliente e items
+  const itemsActions = useMemo(() => ({
+    setClient: setClientAction,
+    setItems: setItemsAction,
+    addItem: addItemAction,
+    updateItem: updateItemAction,
+    removeItem: removeItemAction,
+  }), [
     setClientAction,
     setItemsAction,
     addItemAction,
     updateItemAction,
-    removeItemAction,
+    removeItemAction
+  ]);
+  
+  // Acciones de configuración y UI
+  const uiActions = useMemo(() => ({
+    setConfig: setConfigAction,
+    setPreviewMode: setPreviewModeAction,
+    setSearchState: setSearchStateAction,
+    updateSearchState: updateSearchStateAction,
+    updateConfig: updateConfigWrapper,
+  }), [
     setConfigAction,
     setPreviewModeAction,
     setSearchStateAction,
     updateSearchStateAction,
+    updateConfigWrapper
+  ]);
+  
+  // Acciones de persistencia y API
+  const apiActions = useMemo(() => ({
+    saveProforma: saveProformaAction,
+    changeProformaState: changeProformaStateAction,
+    duplicateProforma: duplicateProformaAction,
+    loadProforma: loadProformaAction,
+    loadSavedProformas: loadSavedProformasAction,
+  }), [
     saveProformaAction,
     changeProformaStateAction,
     duplicateProformaAction,
     loadProformaAction,
-    loadSavedProformasAction,
-    updateConfigWrapper
+    loadSavedProformasAction
+  ]);
+  
+  // Combinar todos los grupos de acciones en un solo objeto memoizado
+  // con menos dependencias
+  const actions = useMemo(() => ({
+    ...proformaActions,
+    ...itemsActions,
+    ...uiActions,
+    ...apiActions
+  }), [
+    proformaActions,
+    itemsActions,
+    uiActions,
+    apiActions
   ]);
 
   // Crear valor del contexto con state y actions estables

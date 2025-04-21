@@ -10,6 +10,9 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
+# Importar el switcher de URLs optimizadas
+from proformas.url_switcher import include_proformas_urls
+
 # Configuración de Swagger/OpenAPI
 schema_view = get_schema_view(
     openapi.Info(
@@ -46,7 +49,7 @@ urlpatterns = [
     path('api/auth/', include('pandora.urls_auth')),
     path('api/core/', include('pandora.urls')),
     path('api/products/', include('products.urls')),
-    path('api/proformas/', include('proformas.urls')),
+    path('api/proformas/', include(include_proformas_urls())),
     path('api/blegal/', include('blegal.urls')),
     path('api/brief/', include('brief.urls')),
     path('api/docmanager/', include('docmanager.urls')),

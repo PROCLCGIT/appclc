@@ -24,6 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Loader2 } from "lucide-react"; // Para el indicador de carga
 import { generateQuoteNumber } from "../utils/proformaUtils"; // si lo llegas a necesitar
 import { format } from "date-fns";
+import ItemsTable from "./ItemsTable"; // Importamos el componente de tabla de ítems
 // ... importa lo que necesites
 
 export default function ProformaTemplate({
@@ -42,6 +43,7 @@ export default function ProformaTemplate({
   addItem,
   updateItem,
   removeItem,
+  reorderItems, // Nueva función para reordenar ítems
   // Funciones de formateo
   formatCurrency,
   // Lógica de búsqueda
@@ -246,13 +248,13 @@ export default function ProformaTemplate({
                     </svg>
                   </Button>
                   
-                  {/* Botón para ver historial del cliente */}
+                  {/* Botón para ver información del cliente */}
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="h-8 w-8 p-0 rounded-full text-amber-600 hover:text-amber-800 hover:bg-amber-50"
-                    onClick={() => console.log("Ver historial del cliente")}
-                    title="Ver historial del cliente"
+                    className="h-8 w-8 p-0 rounded-full text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    onClick={() => console.log("Ver información del cliente")}
+                    title="Ver información del cliente"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -261,7 +263,7 @@ export default function ProformaTemplate({
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </Button>
                 </div>
@@ -1191,282 +1193,20 @@ export default function ProformaTemplate({
         </Card>
       )}
       
-      {/* Sección de Productos/Servicios (Tabla de ítems) */}
-      <Card className="shadow-sm">
-        <CardHeader className="pt-3 pb-2 bg-blue-50">
-          <CardTitle className="text-lg flex flex-col md:flex-row md:items-start md:justify-between w-full gap-3">
-            <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" 
-                />
-              </svg>
-              Productos y Servicios
-            </div>
-
-            {!previewMode && (
-              <div className="flex flex-col md:flex-row items-start gap-2">
-                <div className="relative w-full md:w-auto">
-                  <Input
-                    type="text"
-                    placeholder="Buscar en la tabla..."
-                    className="h-8 pr-8 w-full md:w-[220px]"
-                    onChange={(e) => console.log("Buscando en la tabla:", e.target.value)}
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex items-center gap-1 h-8 px-2"
-                    onClick={() => console.log("Ordenar elementos")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" 
-                      />
-                    </svg>
-                    <span>Ordenar</span>
-                  </Button>
-
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex items-center gap-1 h-8 px-2"
-                    onClick={() => console.log("Filtrar elementos")}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" 
-                      />
-                    </svg>
-                    <span>Filtrar</span>
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="pt-4">
-          {/* Tabla de Items */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  {config.showItemCodes && (
-                    <TableHead className="w-[80px]">Código</TableHead>
-                  )}
-                  <TableHead className="w-[300px]">Descripción</TableHead>
-                  <TableHead className="w-[80px]">Unidad</TableHead>
-                  <TableHead className="w-[80px] text-right">Cantidad</TableHead>
-                  <TableHead className="w-[100px] text-right">Precio Unit.</TableHead>
-                  <TableHead className="w-[120px] text-right">Total</TableHead>
-                  {!previewMode && <TableHead className="w-[50px]"></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    {config.showItemCodes && (
-                      <TableCell>
-                        {previewMode ? (
-                          item.code
-                        ) : (
-                          <Input
-                            value={item.code}
-                            onChange={(e) => updateItem(item.id, "code", e.target.value)}
-                            className="h-8 w-full"
-                          />
-                        )}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      {previewMode ? (
-                        item.description
-                      ) : (
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                          className="h-8 w-full"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {previewMode ? (
-                        item.unit
-                      ) : (
-                        <Select
-                          value={item.unit}
-                          onValueChange={(value) => updateItem(item.id, "unit", value)}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Unidad" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Unidad">Unidad</SelectItem>
-                            <SelectItem value="Kit">Kit</SelectItem>
-                            <SelectItem value="Caja">Caja</SelectItem>
-                            <SelectItem value="Servicio">Servicio</SelectItem>
-                            <SelectItem value="Hora">Hora</SelectItem>
-                            <SelectItem value="Metro">Metro</SelectItem>
-                            <SelectItem value="Litro">Litro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {previewMode ? (
-                        item.quantity
-                      ) : (
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateItem(item.id, "quantity", parseFloat(e.target.value) || 0)
-                          }
-                          className="h-8 w-full text-right"
-                          min="0"
-                          step="1"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {previewMode ? (
-                        formatCurrency(item.unitPrice)
-                      ) : (
-                        <Input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) =>
-                            updateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)
-                          }
-                          className="h-8 w-full text-right"
-                          min="0"
-                          step="0.01"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.total)}
-                    </TableCell>
-                    {!previewMode && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3 6h18"></path>
-                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2"></path>
-                            <path d="M10 11v6"></path>
-                            <path d="M14 11v6"></path>
-                          </svg>
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {!previewMode && (
-            <div className="mt-4 border-t pt-4">
-              <div className="mt-4 flex justify-between items-center mb-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addItem}
-                  className="flex items-center"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                  Agregar ítem en blanco
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-600"
-                  onClick={() => console.log("Ver todos los productos")}
-                >
-                  Ver catálogo completo →
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Sección de Productos/Servicios (Tabla de ítems con drag-and-drop) */}
+      <ItemsTable
+        items={items}
+        updateItem={(id, field, value) => updateItem(id, field, value)}
+        removeItem={removeItem}
+        addItem={addItem}
+        reorderItems={reorderItems}
+        formatCurrency={formatCurrency}
+        previewMode={previewMode}
+        config={{
+          ...config,
+          showItemCodes: config.showItemCodes || true
+        }}
+      />
 
       {/* Notas y Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Keyboard } from 'lucide-react';
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 
 /**
  * Componente para la cabecera de la página de proformas
@@ -15,7 +17,23 @@ export default function ProformaHeader({
 }) {
   return (
     <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-bold">Proformas</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Proformas</h1>
+        <KeyboardShortcutsHelp
+          trigger={
+            <Button
+              id="keyboard-shortcuts-help-trigger"
+              variant="ghost"
+              size="sm"
+              className="h-8 flex items-center text-gray-500 hover:text-gray-700"
+              aria-label="Ver atajos de teclado"
+            >
+              <Keyboard className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Atajos de teclado</span>
+            </Button>
+          }
+        />
+      </div>
       <div className="flex gap-2">
         <Button 
           variant="outline" 

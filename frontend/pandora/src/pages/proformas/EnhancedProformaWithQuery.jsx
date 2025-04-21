@@ -6,6 +6,11 @@ import { useSearchParams } from "react-router-dom";
 // Componentes UI
 import { Card, CardContent } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
+
+// Utilidad de atajos de teclado
+import { useKeyboardShortcuts, COMMON_SHORTCUTS } from "./utils/keyboardShortcuts";
+import KeyboardShortcutsHelp from "./components/KeyboardShortcutsHelp";
 
 // Componentes personalizados
 import ProformaTabs from "./components/ProformaTabs";
@@ -13,6 +18,7 @@ import ProformaTemplate from "./components/ProformaTemplate";
 import ProformaHeader from "./components/ProformaHeader";
 import ProformaActions from "./components/ProformaActions";
 import ProformaDialogs from "./components/ProformaDialogs";
+import ProformaContent from "./components/ProformaContent";
 
 // Contexto y hooks con React Query
 import {
@@ -87,7 +93,7 @@ const EnhancedProformaContent = () => {
     clientes, 
     loadingClientes, 
     loadClientes,
-    // searchCliente // No usado
+    searchCliente // Usamos esta función para la búsqueda manual
   } = useClientSearchQuery();
 
   const { 
@@ -112,6 +118,51 @@ const EnhancedProformaContent = () => {
     loadClientes,
     loadInitialProducts,
     errorHandler, // Pasar errorHandler si es necesario
+  });
+  
+  // Configura los atajos de teclado globales de la aplicación
+  const globalShortcuts = [
+    {
+      ...COMMON_SHORTCUTS.SAVE,
+      action: () => {
+        if (activeProformaId) {
+          handleAction("save");
+          toast.success("Proforma guardada con atajo de teclado");
+        }
+      }
+    },
+    {
+      ...COMMON_SHORTCUTS.NEW,
+      action: () => {
+        handleAction("new");
+        toast.success("Nueva proforma creada con atajo de teclado");
+      }
+    },
+    {
+      ...COMMON_SHORTCUTS.PREVIEW,
+      action: () => {
+        setPreviewMode(!previewMode);
+        toast.success(previewMode 
+          ? "Modo edición activado con atajo de teclado" 
+          : "Vista previa activada con atajo de teclado"
+        );
+      }
+    },
+    {
+      ...COMMON_SHORTCUTS.HELP,
+      action: () => {
+        // Abrir el panel de ayuda de atajos de teclado
+        // Se implementará a través del ref del componente KeyboardShortcutsHelp
+        document.getElementById('keyboard-shortcuts-help-trigger')?.click();
+      }
+    }
+  ];
+  
+  // Registra los atajos de teclado
+  useKeyboardShortcuts(globalShortcuts, {
+    scope: 'global',
+    enabled: true,
+    dependencies: [activeProformaId, previewMode]
   });
 
   // Inicializar hooks para diálogos
@@ -178,8 +229,13 @@ const EnhancedProformaContent = () => {
   });
 
   // Inicializar hooks para gestión de items y clientes
-  const { addItem, updateItem, removeItem, addProductFromSearch } =
-    useItemsHandlers({
+  const { 
+    addItem, 
+    updateItem, 
+    removeItem, 
+    addProductFromSearch,
+    reorderItems // Obtener la nueva función para reordenar ítems
+  } = useItemsHandlers({
       activeProformaId,
       proformas,
       updateProforma,
@@ -272,8 +328,50 @@ const EnhancedProformaContent = () => {
     };
   }, [contentError]); // Volver a adjuntar si contentError cambia (aunque podría no ser necesario)
 
+  // Componentes separados para reducir dependencias en memoización
+
+  // Memoizar la función para actualizar una proforma
+  const handleUpdateProforma = useCallback((proformaId, updates) => {
+    updateProforma(proformaId, updates);
+  }, [updateProforma]);
+
+  // Memoizar la función para actualizar el estado de búsqueda
+  const handleSearchStateUpdate = useCallback((show) => {
+    updateSearchState({ showSearchResults: show });
+  }, [updateSearchState]);
+
+  // Memoizar la función para crear nueva proforma
+  const handleAddNewProforma = useCallback(() => {
+    handleAction("new");
+  }, [handleAction]);
+
+  // Las props para el componente ProformaContent están ya preparadas
+  const proformaContentProps = {
+    previewMode,
+    updateProforma: handleUpdateProforma,
+    company,
+    config,
+    openClientSearch,
+    addItem,
+    updateItem,
+    removeItem,
+    reorderItems,
+    searchTerm,
+    setSearchTerm,
+    searchSource,
+    setSearchSource,
+    searchState,
+    updateSearchState: handleSearchStateUpdate,
+    searchResults,
+    addProductFromSearch,
+    searchProducts,
+    viewType,
+    setViewType,
+    loadingProducts,
+    formatCurrency
+  };
+
   // Memoizar las pestañas para evitar re-renders innecesarios
-  // Asegurarse que useMemo esté fuera de cualquier lógica condicional
   const proformaTabs = useMemo(
     () => (
       <ProformaTabs
@@ -281,56 +379,15 @@ const EnhancedProformaContent = () => {
         activeProformaId={activeProformaId}
         setActiveProformaId={setActiveProformaId}
         closeProforma={closeProforma}
-        addNewProforma={() => handleAction("new")} // Usar handleAction para consistencia si aplica
+        addNewProforma={handleAddNewProforma}
       >
         {proformas.map((proforma) => (
           <TabsContent key={proforma.id} value={proforma.id.toString()}>
             <Card className="border rounded-lg shadow-sm overflow-hidden transition-all">
-              <CardContent className="p-0">
-                <div
-                  className={`p-6 ${previewMode ? "bg-gray-50 bg-opacity-50" : ""}`}
-                >
-                  <ProformaTemplate
-                    previewMode={previewMode}
-                    // Pasar datos específicos de la proforma actual
-                    quote={proforma.quote} 
-                    setQuote={(newQuote) =>
-                      updateProforma(proforma.id, { quote: newQuote })
-                    }
-                    client={proforma.client} // Pasar cliente de la proforma actual
-                    setClient={(newClient) => // Esto parece asignar el cliente a la proforma, no globalmente
-                      updateProforma(proforma.id, { client: newClient })
-                    } 
-                    items={proforma.items || []} // Pasar items de la proforma actual
-                    setItems={(newItems) => // Esto actualiza items de la proforma específica
-                      updateProforma(proforma.id, { items: newItems })
-                    }
-                    company={company}
-                    config={config || {}}
-                    handleClientSearch={openClientSearch} // Abre el diálogo de búsqueda global
-                    // Funciones de manejo de items (actúan sobre la proforma activa via hooks)
-                    addItem={addItem} 
-                    updateItem={updateItem}
-                    removeItem={removeItem}
-                    // Props de búsqueda de productos
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    searchSource={searchSource}
-                    setSearchSource={setSearchSource}
-                    showSearchResults={searchState.showSearchResults} // Usar estado del contexto
-                    setShowSearchResults={(show) =>
-                      updateSearchState({ showSearchResults: show })
-                    }
-                    searchResults={searchResults}
-                    addProductFromSearch={addProductFromSearch} // Añade a la proforma activa
-                    searchProducts={searchProducts}
-                    viewType={viewType}
-                    setViewType={setViewType}
-                    loadingProducts={loadingProducts}
-                    formatCurrency={formatCurrency}
-                  />
-                </div>
-              </CardContent>
+              <ProformaContent 
+                proforma={proforma}
+                {...proformaContentProps} 
+              />
             </Card>
           </TabsContent>
         ))}
@@ -339,31 +396,9 @@ const EnhancedProformaContent = () => {
     [
       proformas,
       activeProformaId,
-      previewMode,
-      company,
-      config,
-      searchTerm,
-      setSearchTerm,
-      searchSource,
-      setSearchSource,
-      searchState.showSearchResults,
-      searchResults,
-      loadingProducts,
-      viewType,
-      setViewType,
-      openClientSearch,
-      addItem,
-      updateItem,
-      removeItem,
-      addProductFromSearch,
-      searchProducts,
-      formatCurrency,
-      handleAction,
-      // Funciones desestructuradas de actions
       setActiveProformaId, 
       closeProforma,
-      updateProforma,
-      updateSearchState
+      handleAddNewProforma
     ]
   );
 
@@ -434,7 +469,8 @@ const EnhancedProformaContent = () => {
         handleClientSelection={handleClientSelection}
         clientes={clientes}
         loadingClientes={loadingClientes}
-        searchClientes={loadClientes} // Renombrar prop si es necesario
+        searchClientes={searchCliente} // Usar la función de búsqueda
+        onRequestLoadClientes={loadClientes} // Pasar la función loadClientes para cargar inicialmente
         // Diálogo de proformas guardadas
         showProformasDialog={showProformasDialog}
         closeProformasDialog={closeProformasDialog}

@@ -1,6 +1,6 @@
 // src/pages/proformas/components/ProformaDialogs.jsx
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ export default function ProformaDialogs({
   handleClientSelection,
   clientes,
   loadingClientes,
+  searchClientes, // Función para buscar clientes
+  onRequestLoadClientes, // Función para cargar clientes inicialmente
   
   // Diálogo de proformas guardadas
   showProformasDialog,
@@ -43,6 +45,18 @@ export default function ProformaDialogs({
   handleAction,
   onLoadProformas
 }) {
+  // Verificar que los datos se pasan correctamente
+  useEffect(() => {
+    if (showClientSearch) {
+      console.log('ProformaDialogs - Diálogo de clientes abierto:', {
+        clientesRecibidos: clientes?.length || 0,
+        isLoading: loadingClientes,
+        showClientSearch,
+        hayFuncionCarga: typeof onRequestLoadClientes === 'function'
+      });
+    }
+  }, [showClientSearch, clientes, loadingClientes, onRequestLoadClientes]);
+  
   return (
     <>
       {/* Diálogo de búsqueda de clientes */}
@@ -50,8 +64,24 @@ export default function ProformaDialogs({
         isOpen={showClientSearch}
         onClose={closeClientSearch}
         onSelectClient={handleClientSelection}
-        clientes={clientes}
+        clientes={clientes || []}
         loadingClientes={loadingClientes}
+        onRequestLoadClientes={(forceRefresh = false) => {
+          console.log('ProformaDialogs: Solicitando carga manual de clientes... forceRefresh:', forceRefresh);
+          
+          // Usar onRequestLoadClientes prop de EnhancedProformaWithQuery si está disponible
+          if (typeof onRequestLoadClientes === 'function') {
+            console.log('Usando función onRequestLoadClientes pasada desde el componente principal');
+            return onRequestLoadClientes(forceRefresh);
+          } 
+          // Fallback a searchClientes si no hay onRequestLoadClientes
+          else if (typeof searchClientes === 'function') {
+            console.log('Fallback: Usando searchClientes como alternativa');
+            return searchClientes("");
+          } else {
+            console.warn('No hay función disponible para cargar clientes');
+          }
+        }}
       />
       
       {/* Diálogo de proformas guardadas */}

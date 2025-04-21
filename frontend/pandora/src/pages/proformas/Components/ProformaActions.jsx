@@ -1,36 +1,138 @@
 // src/pages/proformas/components/ProformaActions.jsx
 
-import React from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 /**
  * Componente para mostrar los botones de acción de una proforma
  * Agrupa todos los botones para facilitar la gestión y mejorar legibilidad
+ * Incluye opciones de exportación mejoradas con dropdown
  */
 export default function ProformaActions({ handleAction }) {
+  const [isExporting, setIsExporting] = useState(false);
+  
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true);
+      await handleAction("export", { format });
+      setIsExporting(false);
+    } catch (error) {
+      setIsExporting(false);
+      toast.error(`Error al exportar: ${error.message || "Error desconocido"}`);
+    }
+  };
+  
   return (
     <div className="mt-8 border-t pt-6 pb-2 flex justify-end gap-3">
-      <Button 
-        variant="outline" 
-        size="sm"
-        onClick={() => handleAction("export")}
-      >
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-4 w-4" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
-          />
-        </svg>
-        Exportar PDF
-      </Button>
+      {/* Dropdown de exportación con múltiples opciones */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExporting}
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-4 w-4 mr-1" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+              />
+            </svg>
+            Exportar
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 ml-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Exportar Proforma</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={() => handleExport("pdf")}>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" 
+                />
+              </svg>
+              <span>PDF</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("excel_detalle")}>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                />
+              </svg>
+              <span>Excel Detallado</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport("csv")}>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" 
+                />
+              </svg>
+              <span>CSV</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      {/* Botón de imprimir */}
       <Button 
         variant="outline" 
         size="sm"
@@ -52,6 +154,8 @@ export default function ProformaActions({ handleAction }) {
         </svg>
         Imprimir
       </Button>
+      
+      {/* Botón de compartir */}
       <Button 
         variant="outline" 
         size="sm"
@@ -73,6 +177,8 @@ export default function ProformaActions({ handleAction }) {
         </svg>
         Compartir
       </Button>
+      
+      {/* Botón de configurar */}
       <Button 
         variant="outline" 
         size="sm"
@@ -100,6 +206,8 @@ export default function ProformaActions({ handleAction }) {
         </svg>
         Configurar
       </Button>
+      
+      {/* Botón de generar */}
       <Button 
         variant="outline" 
         size="sm"
@@ -121,6 +229,8 @@ export default function ProformaActions({ handleAction }) {
         </svg>
         Generar
       </Button>
+      
+      {/* Botón de guardar */}
       <Button 
         className="bg-blue-600 hover:bg-blue-700" 
         size="sm"

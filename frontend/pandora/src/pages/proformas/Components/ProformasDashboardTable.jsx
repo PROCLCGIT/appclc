@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { RefreshCw, MoreHorizontal, CheckCircle2, Clock8, FileText, XCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { proformasService } from "@/services/api";
 import { formatDate } from "@/lib/utils";
+import PropTypes from 'prop-types';
 
 // Formatear valores monetarios
 const formatCurrency = (value) => {
@@ -55,199 +55,57 @@ const getStatusIcon = (status) => {
   }
 };
 
-const ProformasDashboardTable = () => {
+/**
+ * Componente de tabla para mostrar proformas en el dashboard
+ * Recibe datos como props en lugar de solicitarlos directamente
+ */
+const ProformasDashboardTable = ({ proformas = [], loading = false, onRefresh }) => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [proformas, setProformas] = useState([]);
-  const [error, setError] = useState(null);
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
-  useEffect(() => {
-    loadProformas();
-  }, []);
-
-  const loadProformas = useCallback(async (showToast = true) => {
-    setLoading(true);
-    setError(null);
-    
-    // Si se solicita mostrar toast, usamos un timeout para evitar parpadeos
-    let loadToastId;
-    if (showToast) {
-      // Solo mostrar el toast de carga si tarda más de 600ms
-      const toastTimer = setTimeout(() => {
-        loadToastId = toast.loading("Cargando proformas recientes...");
-      }, 600);
+  // Función para duplicar una proforma
+  const handleDuplicate = (proforma) => {
+    const id = proforma.id;
+    if (id) {
+      toast.info(`Duplicando proforma ${proforma.numero}...`);
       
-      // Limpiar el timer si la carga termina rápido
-      return () => clearTimeout(toastTimer);
-    }
-    
-    try {
-      // Opciones para la petición API con cache inteligente
-      const options = {
-        params: {
-          ordering: '-created_at', // Ordenar por fecha de creación descendente
-          page_size: 10  // Solicitar 10 para tener más para elegir
-        },
-        _useCache: true,         // Usar cache si está disponible
-        _cacheTTL: 5 * 60 * 1000 // 5 minutos de TTL para la cache
-      };
-      
-      // Realizar la petición al API
-      const response = await proformasService.getAll(options);
-      console.log("Proformas cargadas:", response);
-      
-      // Limpiar el toast de carga si existe
-      if (loadToastId) {
-        toast.dismiss(loadToastId);
-      }
-      
-      // Procesar los datos con mejor manejo de estructuras
-      let proformasData = [];
-      
-      // Manejar diferentes formatos de respuesta del API
-      if (response) {
-        if (response.results && Array.isArray(response.results)) {
-          proformasData = response.results;
-        } else if (Array.isArray(response)) {
-          proformasData = response;
-        } else if (typeof response === 'object') {
-          // Si es un objeto pero no tiene el formato esperado, intentar extraer datos
-          const possibleArrays = Object.values(response).filter(val => Array.isArray(val));
-          if (possibleArrays.length > 0) {
-            // Usar el array más grande que encontremos
-            proformasData = possibleArrays.reduce((acc, arr) => 
-              arr.length > acc.length ? arr : acc, []);
-          }
-        }
-      }
-      
-      // Verificar si tenemos datos válidos
-      if (!proformasData || proformasData.length === 0) {
-        console.log("No se encontraron proformas en la respuesta");
-        setProformas([]);
-        setLastRefresh(Date.now());
-        return;
-      }
-      
-      // Filtrar para asegurar que solo tenemos proformas válidas
-      const validProformas = proformasData.filter(p => 
-        p && p.id && (p.numero || p.nombre) && p.estado);
-      
-      // Ordenar por fecha de creación descendente (más recientes primero)
-      validProformas.sort((a, b) => {
-        // Primero intentar ordenar por fecha de creación
-        const dateA = new Date(a.created_at || a.fecha_emision || 0);
-        const dateB = new Date(b.created_at || b.fecha_emision || 0);
-        return dateB - dateA;
+      // Usamos ProformaService desde el contexto de React Query
+      import('@/services/classes/ProformaService').then(({ ProformaService }) => {
+        const service = new ProformaService();
+        service.duplicateProforma(id)
+          .then(() => {
+            toast.success("Proforma duplicada correctamente");
+            if (onRefresh) onRefresh(); // Llamar a la función de recarga proporcionada por el padre
+          })
+          .catch(error => {
+            console.error("Error al duplicar:", error);
+            toast.error("Error al duplicar la proforma");
+          });
       });
-      
-      // Limitar a las 5 más recientes y transformar a formato UI
-      const recientes = validProformas
-        .slice(0, 5)
-        .map(p => {
-          // Preparar los datos en el formato que espera el componente
-          const proformaId = typeof p.id === 'number' || typeof p.id === 'string' ? p.id : p.numero;
-          
-          // Extraer nombre del cliente con manejo de diferentes estructuras
-          let clienteNombre = "Cliente sin nombre";
-          let clienteInitials = "CN";
-          
-          if (p.cliente_detail && p.cliente_detail.nombre) {
-            clienteNombre = p.cliente_detail.nombre;
-          } else if (p.cliente_nombre) {
-            clienteNombre = p.cliente_nombre;
-          } else if (p.cliente && typeof p.cliente === 'object') {
-            clienteNombre = p.cliente.nombre || p.cliente.name || "Cliente sin nombre";
-          }
-          
-          // Generar iniciales para avatar
-          if (clienteNombre && clienteNombre !== "Cliente sin nombre") {
-            clienteInitials = clienteNombre
-              .split(' ')
-              .slice(0, 2)
-              .map(n => n[0])
-              .join('')
-              .toUpperCase();
-          }
-          
-          // Extraer información del vendedor
-          let vendedor = "N/A";
-          if (p.created_by) {
-            if (p.created_by.first_name && p.created_by.last_name) {
-              vendedor = `${p.created_by.first_name} ${p.created_by.last_name}`;
-            } else if (p.created_by.username) {
-              vendedor = p.created_by.username;
-            } else if (typeof p.created_by === 'string') {
-              vendedor = p.created_by;
-            }
-          } else if (p.created_by_username) {
-            vendedor = p.created_by_username;
-          }
-          
-          // Crear objeto con formato unificado
-          return {
-            id: proformaId,
-            numero: p.numero || `PRO-${new Date().getFullYear()}-XXXX`,
-            cliente: clienteNombre,
-            clienteAvatar: clienteInitials,
-            fecha: formatDate(p.fecha_emision),
-            expira: formatDate(p.fecha_vencimiento),
-            monto: parseFloat(p.total || 0),
-            estado: p.estado,
-            estadoLabel: p.estado_display || p.estado,
-            vendedor: vendedor
-          };
+    }
+  };
+
+  // Función para cambiar el estado de una proforma
+  const handleChangeStatus = (proforma, newStatus) => {
+    const id = proforma.id;
+    if (id) {
+      if (window.confirm(`¿Está seguro de que quiere cambiar el estado de la proforma ${proforma.numero} a ${newStatus}?`)) {
+        toast.info(`Cambiando estado de proforma ${proforma.numero}...`);
+        
+        import('@/services/classes/ProformaService').then(({ ProformaService }) => {
+          const service = new ProformaService();
+          service.executeAction(id, 'cambiar_estado', { estado: newStatus })
+            .then(() => {
+              toast.success(`Proforma ${newStatus} correctamente`);
+              if (onRefresh) onRefresh();
+            })
+            .catch(error => {
+              console.error("Error al cambiar estado:", error);
+              toast.error(`Error al cambiar el estado de la proforma a ${newStatus}`);
+            });
         });
-      
-      // Actualizar el estado con los datos procesados
-      setProformas(recientes);
-      setLastRefresh(Date.now());
-      
-    } catch (error) {
-      console.error("Error al cargar proformas:", error);
-      
-      // Limpiar toast de carga si existe
-      if (loadToastId) {
-        toast.dismiss(loadToastId);
       }
-      
-      // Mostrar error al usuario solo si solicitamos mostrar toast
-      if (showToast) {
-        toast.error("No se pudieron cargar las proformas recientes");
-      }
-      
-      // Guardar el error para mostrarlo en la UI
-      setError({
-        message: "No se pudieron cargar las proformas",
-        details: error.message || "Error de conexión con el servidor"
-      });
-      
-      // Mantener las proformas anteriores si existen
-      if (proformas.length === 0) {
-        setProformas([]);
-      }
-    } finally {
-      setLoading(false);
     }
-  }, [proformas.length]);
-
-  // Función de recarga con protección contra clics rápidos
-  const refreshData = useCallback(() => {
-    const now = Date.now();
-    // Evitar recargas múltiples en menos de 2 segundos
-    if (now - lastRefresh < 2000) {
-      toast.info("Espere unos segundos antes de recargar nuevamente");
-      return;
-    }
-    
-    toast.info("Actualizando proformas...", { id: "refresh-toast" });
-    loadProformas(false).then(() => {
-      toast.success("Proformas actualizadas", { id: "refresh-toast" });
-    }).catch(() => {
-      toast.error("Error al actualizar", { id: "refresh-toast" });
-    });
-  }, [lastRefresh, loadProformas]);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -278,25 +136,6 @@ const ProformasDashboardTable = () => {
                 </div>
               </TableCell>
             </TableRow>
-          ) : error ? (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center py-8">
-                <div className="flex flex-col items-center justify-center space-y-3 p-4 bg-red-50 rounded-lg">
-                  <XCircle className="h-10 w-10 text-red-500" />
-                  <p className="text-red-600 font-medium">{error.message}</p>
-                  <p className="text-red-500 text-sm">{error.details}</p>
-                  <div className="flex space-x-3 mt-2">
-                    <Button onClick={refreshData} variant="outline">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reintentar
-                    </Button>
-                    <Button onClick={() => navigate('/enhancedproforma?new=true')}>
-                      Nueva Proforma
-                    </Button>
-                  </div>
-                </div>
-              </TableCell>
-            </TableRow>
           ) : proformas.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center py-8">
@@ -308,7 +147,7 @@ const ProformasDashboardTable = () => {
                     <Button onClick={() => navigate('/enhancedproforma?new=true')} variant="default">
                       Nueva Proforma
                     </Button>
-                    <Button onClick={refreshData} variant="outline">
+                    <Button onClick={onRefresh} variant="outline">
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Actualizar
                     </Button>
@@ -361,21 +200,7 @@ const ProformasDashboardTable = () => {
                       <DropdownMenuItem onClick={() => navigate(`/enhancedproforma?id=${proforma.id}`)}>
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        const id = proforma.id;
-                        if (id) {
-                          toast.info(`Duplicando proforma ${proforma.numero}...`);
-                          proformasService.duplicar(id)
-                            .then(() => {
-                              toast.success("Proforma duplicada correctamente");
-                              refreshData(); // Recargar datos
-                            })
-                            .catch(error => {
-                              console.error("Error al duplicar:", error);
-                              toast.error("Error al duplicar la proforma");
-                            });
-                        }
-                      }}>
+                      <DropdownMenuItem onClick={() => handleDuplicate(proforma)}>
                         Duplicar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -389,23 +214,7 @@ const ProformasDashboardTable = () => {
                         Descargar PDF
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-600" onClick={() => {
-                        const id = proforma.id;
-                        if (id) {
-                          if (window.confirm(`¿Está seguro de que quiere cancelar la proforma ${proforma.numero}?`)) {
-                            toast.info(`Cancelando proforma ${proforma.numero}...`);
-                            proformasService.cambiarEstado(id, 'cancelada')
-                              .then(() => {
-                                toast.success("Proforma cancelada");
-                                refreshData(); // Recargar datos
-                              })
-                              .catch(error => {
-                                console.error("Error al cancelar:", error);
-                                toast.error("Error al cancelar la proforma");
-                              });
-                          }
-                        }
-                      }}>
+                      <DropdownMenuItem className="text-red-600" onClick={() => handleChangeStatus(proforma, 'cancelada')}>
                         Cancelar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -418,6 +227,13 @@ const ProformasDashboardTable = () => {
       </Table>
     </div>
   );
+};
+
+// Definir las PropTypes para el componente
+ProformasDashboardTable.propTypes = {
+  proformas: PropTypes.array,
+  loading: PropTypes.bool,
+  onRefresh: PropTypes.func
 };
 
 export default ProformasDashboardTable;
