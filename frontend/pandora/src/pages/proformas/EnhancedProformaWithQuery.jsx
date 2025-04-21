@@ -293,14 +293,29 @@ const EnhancedProformaContent = () => {
   // Actualizar estado de búsqueda en el contexto global
   useEffect(() => {
     console.log('Efecto updateSearchState', searchTerm, searchSource, viewType);
-    // Solo actualizar searchState en contexto cuando cambien criterios principales
-    updateSearchState({
+    
+    // Crear el nuevo estado
+    const newSearchState = {
       searchTerm,
       searchSource,
       viewType,
       showSearchResults: searchTerm.length >= 2,
-    });
-  }, [searchTerm, searchSource, viewType, updateSearchState]);
+    };
+    
+    // Comparar con el estado anterior para evitar actualizaciones innecesarias
+    const prevSearchState = searchState || {};
+    const hasChanged = 
+      prevSearchState.searchTerm !== newSearchState.searchTerm ||
+      prevSearchState.searchSource !== newSearchState.searchSource ||
+      prevSearchState.viewType !== newSearchState.viewType ||
+      prevSearchState.showSearchResults !== newSearchState.showSearchResults;
+    
+    // Solo actualizar el estado si realmente cambió algo
+    if (hasChanged) {
+      console.log('SearchState ha cambiado, actualizando contexto');
+      updateSearchState(newSearchState);
+    }
+  }, [searchTerm, searchSource, viewType, updateSearchState, searchState]);
 
   // Manejador de errores para capturar errores asíncronos o de eventos
   useEffect(() => {
