@@ -1,81 +1,55 @@
 // src/components/auth/Login.jsx
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import useAuthStore from '@/store/authStore';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthContext } from '@/contexts/AuthProvider';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, error, isAuthenticated, loading, clearError } = useAuthStore();
+  const location = useLocation();
+  const { login, authError, isAuthLoading, clearAuthError } = useAuthContext();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
 
+  // Recuperar la ruta de redirección si existe
+  const from = location.state?.from || '/';
+
   useEffect(() => {
-    console.log('Login component mounted');
-    
-    // Limpiar errores anteriores
-    clearError();
-    
-    // NO borramos tokens aquí - eso puede causar ciclos infinitos
-    // Al no borrar automáticamente los tokens, permitimos que AuthLayout
-    // decida si son válidos o no
+    // Limpiar errores anteriores al montar/desmontar
+    clearAuthError();
     
     return () => {
-      console.log('Login component unmounting');
-      clearError();
+      clearAuthError();
     };
-  }, [clearError]);
+  }, [clearAuthError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Limpiar errores previos
-    clearError();
+    clearAuthError();
     
-    // Validar campos
+    // Validaciones básicas de formulario
     if (!formData.username.trim()) {
-      console.log('Error: Nombre de usuario vacío');
-      useAuthStore.setState({ error: 'Por favor ingrese su nombre de usuario' });
+      // No usamos el estado global para errores de validación local
       return;
     }
     
     if (!formData.password) {
-      console.log('Error: Contraseña vacía');
-      useAuthStore.setState({ error: 'Por favor ingrese su contraseña' });
       return;
     }
     
-    console.log('Intentando iniciar sesión...');
+    // Añadir log para depuración
+    console.log('Intentando login con:', { username: formData.username.trim() });
     
-    try {
-      // Intentar login
-      console.log('Login.jsx: Iniciando proceso de login...');
-      const success = await login({
-        username: formData.username.trim(),
-        password: formData.password
-      });
-
-      console.log('Login.jsx: Resultado del login:', { success });
-
-      if (success) {
-        console.log('Login.jsx: Login exitoso, redirigiendo...');
-        // Esperamos un momento para que los tokens se guarden correctamente
-        setTimeout(() => {
-          navigate('/');
-        }, 300);
-      } else {
-        console.log('Login.jsx: Login fallido');
-        // El error ya debe estar en el estado global (authStore)
-      }
-    } catch (error) {
-      console.error('Error inesperado durante el login:', error);
-      useAuthStore.setState({ 
-        error: 'Ocurrió un error inesperado. Por favor intente nuevamente.'
-      });
-    }
+    // Intentar login - el hook useAuth se encarga de la redirección
+    login({
+      username: formData.username.trim(),
+      password: formData.password
+    });
   };
 
   const handleChange = (e) => {
@@ -87,14 +61,35 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* ... header content ... */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div 
+        className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg"
+        style={{
+          opacity: 1,
+          transform: 'translateY(0px)',
+          transition: 'opacity 300ms, transform 300ms'
+        }}
+      >
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            Bienvenido a AppCLC
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Ingresa tus credenciales para acceder al sistema
+          </p>
+        </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">
-              {error}
+          {authError && (
+            <div 
+              className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-4"
+              style={{
+                opacity: 1,
+                height: 'auto',
+                transition: 'opacity 200ms, height 200ms'
+              }}
+            >
+              {authError}
             </div>
           )}
 
@@ -159,15 +154,19 @@ const Login = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={isAuthLoading}
             className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg
                      shadow-sm text-sm font-medium text-white 
-                     ${loading 
+                     ${isAuthLoading 
                        ? 'bg-blue-400 cursor-not-allowed' 
                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'}
                      transition duration-200`}
+            style={{
+              transform: isAuthLoading ? 'scale(1)' : 'scale(1)',
+              transition: 'transform 200ms'
+            }}
           >
-            {loading ? (
+            {isAuthLoading ? (
               <div className="flex items-center">
                 <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
                 Iniciando sesión...

@@ -1,8 +1,17 @@
+"""
+Serializers optimizados para el módulo de proformas.
+
+Este módulo contiene versiones optimizadas de los serializers para proformas,
+implementando carga masiva de ítems y eliminando la lógica de historial que ahora
+está en las señales.
+"""
 from rest_framework import serializers
 from django.utils import timezone
 from decimal import Decimal
+from django.db import transaction
 
 from .models import Proforma, ProformaItem, ProformaHistorial, ConfiguracionProforma
+from .services import ProformaService
 from pandora.serializers_models import ClientesSerializer, EmpresaClcSerializer
 from pandora.models import Clientes, EmpresaClc
 from products.serializers import ProductoOfertadoSerializer, ProductoDisponibleSerializer
@@ -79,7 +88,20 @@ class ProformaItemSerializer(serializers.ModelSerializer):
                 last_item = ProformaItem.objects.filter(proforma=proforma).order_by('-orden').first()
                 validated_data['orden'] = (last_item.orden + 1) if last_item else 1
         
-        return super().create(validated_data)
+        # Usar el service para crear el ítem y actualizar la proforma
+        proforma = validated_data.get('proforma')
+        
+        # Si estamos en modo bulk create, no queremos que se recalculen los totales aún
+        if hasattr(self.context.get('request', {}), '_bulk_operation'):
+            # Crear el ítem pero desactivar el recálculo
+            item = ProformaItem(**validated_data)
+            item._totales_actualizados = True  # Marcar para evitar recálculo por signal
+            item.save()
+            return item
+        else:
+            # Crear el ítem normalmente con el servicio
+            item = ProformaItem(**validated_data)
+            return ProformaService.save_proforma_item(item)
     
     def update(self, instance, validated_data):
         # Recalcular el total si cambian los valores relevantes
@@ -92,7 +114,19 @@ class ProformaItemSerializer(serializers.ModelSerializer):
             descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
             validated_data['total'] = subtotal - descuento
         
-        return super().update(instance, validated_data)
+        # Si estamos en modo bulk update, no queremos que se recalculen los totales aún
+        if hasattr(self.context.get('request', {}), '_bulk_operation'):
+            # Actualizar el ítem pero desactivar el recálculo
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance._totales_actualizados = True  # Marcar para evitar recálculo por signal
+            instance.save()
+            return instance
+        else:
+            # Actualizar normalmente
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            return ProformaService.save_proforma_item(instance)
 
 
 class ProformaHistorialSerializer(serializers.ModelSerializer):
@@ -111,7 +145,7 @@ class ProformaHistorialSerializer(serializers.ModelSerializer):
 
 
 class ProformaSerializer(serializers.ModelSerializer):
-    """Serializer principal para proformas"""
+    """Serializer principal para proformas con optimizaciones de rendimiento"""
     
     # Campos anidados para relaciones
     items = ProformaItemSerializer(many=True, read_only=True)
@@ -131,16 +165,6 @@ class ProformaSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_username = serializers.CharField(source='updated_by.username', read_only=True)
     
-    # Campos para indicar transiciones disponibles
-    puede_enviar = serializers.SerializerMethodField(read_only=True)
-    puede_aprobar = serializers.SerializerMethodField(read_only=True)
-    puede_rechazar = serializers.SerializerMethodField(read_only=True)
-    puede_convertir = serializers.SerializerMethodField(read_only=True)
-    puede_volver_a_borrador = serializers.SerializerMethodField(read_only=True)
-    
-    # Flag para manejar notificaciones
-    enviar_notificaciones = serializers.BooleanField(write_only=True, required=False, default=True)
-    
     class Meta:
         model = Proforma
         fields = [
@@ -149,30 +173,9 @@ class ProformaSerializer(serializers.ModelSerializer):
             'tiempo_entrega', 'subtotal', 'porcentaje_impuesto', 'impuesto', 'total',
             'notas', 'estado', 'estado_display', 'created_by', 'created_by_username',
             'updated_by', 'updated_by_username', 'created_at', 'updated_at', 'items',
-            'historial', 'items_data', 'puede_enviar', 'puede_aprobar', 'puede_rechazar',
-            'puede_convertir', 'puede_volver_a_borrador', 'enviar_notificaciones'
+            'historial', 'items_data'
         ]
         read_only_fields = ['subtotal', 'impuesto', 'total', 'created_at', 'updated_at']
-    
-    def get_puede_enviar(self, obj):
-        """Determina si la proforma puede ser enviada"""
-        return obj.estado == 'borrador'
-    
-    def get_puede_aprobar(self, obj):
-        """Determina si la proforma puede ser aprobada"""
-        return obj.estado == 'enviada'
-    
-    def get_puede_rechazar(self, obj):
-        """Determina si la proforma puede ser rechazada"""
-        return obj.estado == 'enviada'
-    
-    def get_puede_convertir(self, obj):
-        """Determina si la proforma puede ser convertida a orden"""
-        return obj.estado == 'aprobada'
-    
-    def get_puede_volver_a_borrador(self, obj):
-        """Determina si la proforma puede volver a estado borrador"""
-        return obj.estado in ['enviada', 'rechazada']
     
     def validate(self, data):
         """Validaciones adicionales para proformas"""
@@ -201,100 +204,197 @@ class ProformaSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Método personalizado para crear una proforma con sus ítems"""
+        """Método optimizado para crear una proforma con sus ítems usando bulk create"""
         # Extraer los datos de ítems si están presentes
         items_data = validated_data.pop('items_data', [])
         
-        # Si no se proporciona un número de proforma, generar uno
-        if 'numero' not in validated_data or not validated_data['numero']:
-            validated_data['numero'] = Proforma().generar_numero()
+        # Crear proforma usando el servicio para generar número automáticamente
+        # y asegurar que las señales manejen el historial
+        proforma = ProformaService.save_proforma(Proforma(**validated_data))
         
-        # Crear proforma
-        proforma = super().create(validated_data)
-        
-        # Crear ítems si hay datos
+        # Crear ítems si hay datos, usando bulk_create para mejor rendimiento
         if items_data:
-            for item_data in items_data:
-                item_data['proforma'] = proforma.pk
-                item_serializer = ProformaItemSerializer(data=item_data)
-                if item_serializer.is_valid(raise_exception=True):
-                    item_serializer.save()
-        
-        # Registrar en historial
-        ProformaHistorial.objects.create(
-            proforma=proforma,
-            accion='creacion',
-            estado_nuevo=proforma.estado,
-            created_by=validated_data.get('created_by')
-        )
-        
-        # Recalcular totales
-        proforma.calcular_montos()
-        proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
+            # Marcar el contexto como operación masiva
+            if self.context.get('request'):
+                self.context['request']._bulk_operation = True
+            
+            # Preparar ítems para crear en lote
+            item_instances = []
+            for idx, item_data in enumerate(items_data):
+                # Preparar datos del ítem
+                item_data['proforma'] = proforma
+                
+                # Establecer orden si no se proporciona
+                if 'orden' not in item_data or item_data['orden'] == 0:
+                    item_data['orden'] = idx + 1
+                
+                # Calcular total
+                cantidad = item_data.get('cantidad', 1)
+                precio_unitario = item_data.get('precio_unitario', 0)
+                porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
+                
+                subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+                descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
+                item_data['total'] = subtotal - descuento
+                
+                # Crear instancia de ítem
+                item = ProformaItem(**item_data)
+                item_instances.append(item)
+            
+            # Crear ítems en lote
+            if item_instances:
+                ProformaItem.objects.bulk_create(item_instances)
+                
+                # Actualizar los totales de la proforma
+                ProformaService.calculate_amounts(proforma, save=True)
         
         return proforma
     
     def update(self, instance, validated_data):
-        """Método personalizado para actualizar una proforma"""
+        """Método optimizado para actualizar una proforma"""
         # Extraer y manejar los datos de ítems si están presentes
         items_data = validated_data.pop('items_data', [])
         
         # Almacenar estado anterior para el historial
         estado_anterior = instance.estado
-        estado_nuevo = validated_data.get('estado', estado_anterior)
         
-        # Actualizar proforma
-        proforma = super().update(instance, validated_data)
+        # Actualizar proforma usando el servicio
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Actualizar con el servicio, la lógica de historial está ahora en señales
+        proforma = ProformaService.save_proforma(
+            instance, 
+            validate=True, 
+            calculate_amounts=False  # Calcularemos después de procesar ítems
+        )
         
         # Manejar ítems si hay datos nuevos
         if items_data:
-            # Opción 1: Reemplazar todos los ítems existentes
-            if any(item.get('replace_all', False) for item in items_data):
-                # Eliminar ítems existentes
-                instance.items.all().delete()
-                
-                # Crear nuevos ítems
-                for item_data in items_data:
-                    # Eliminar la bandera replace_all si existe
-                    item_data.pop('replace_all', None)
-                    item_data['proforma'] = proforma.pk
-                    item_serializer = ProformaItemSerializer(data=item_data)
-                    if item_serializer.is_valid(raise_exception=True):
-                        item_serializer.save()
+            # Marcar el contexto como operación masiva
+            if self.context.get('request'):
+                self.context['request']._bulk_operation = True
             
-            # Opción 2: Actualizar ítems existentes y agregar nuevos
-            else:
-                for item_data in items_data:
-                    item_id = item_data.pop('id', None)
-                    if item_id:
-                        # Actualizar ítem existente
-                        try:
-                            item = ProformaItem.objects.get(pk=item_id, proforma=proforma)
-                            item_serializer = ProformaItemSerializer(item, data=item_data, partial=True)
-                            if item_serializer.is_valid(raise_exception=True):
-                                item_serializer.save()
-                        except ProformaItem.DoesNotExist:
-                            pass
-                    else:
-                        # Crear nuevo ítem
-                        item_data['proforma'] = proforma.pk
-                        item_serializer = ProformaItemSerializer(data=item_data)
-                        if item_serializer.is_valid(raise_exception=True):
-                            item_serializer.save()
-        
-        # Registrar en historial si cambió el estado
-        if estado_anterior != estado_nuevo:
-            ProformaHistorial.objects.create(
-                proforma=proforma,
-                accion='modificacion' if estado_nuevo == estado_anterior else 'envio' if estado_nuevo == 'enviada' else 'aprobacion' if estado_nuevo == 'aprobada' else 'rechazo' if estado_nuevo == 'rechazada' else 'conversion' if estado_nuevo == 'convertida' else 'vencimiento',
-                estado_anterior=estado_anterior,
-                estado_nuevo=estado_nuevo,
-                created_by=validated_data.get('updated_by')
-            )
-        
-        # Recalcular totales
-        proforma.calcular_montos()
-        proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
+            with transaction.atomic():
+                # Opción 1: Reemplazar todos los ítems existentes
+                if any(item.get('replace_all', False) for item in items_data):
+                    # Eliminar ítems existentes
+                    instance.items.all().delete()
+                    
+                    # Preparar nuevos ítems para bulk create
+                    new_items = []
+                    for idx, item_data in enumerate(items_data):
+                        # Eliminar la bandera replace_all si existe
+                        item_data.pop('replace_all', None)
+                        
+                        # Preparar datos
+                        item_data['proforma'] = proforma
+                        
+                        # Establecer orden si no se proporciona
+                        if 'orden' not in item_data or item_data['orden'] == 0:
+                            item_data['orden'] = idx + 1
+                        
+                        # Calcular total
+                        cantidad = item_data.get('cantidad', 1)
+                        precio_unitario = item_data.get('precio_unitario', 0)
+                        porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
+                        
+                        subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+                        descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
+                        item_data['total'] = subtotal - descuento
+                        
+                        # Crear instancia
+                        item = ProformaItem(**item_data)
+                        new_items.append(item)
+                    
+                    # Crear ítems en lote
+                    if new_items:
+                        ProformaItem.objects.bulk_create(new_items)
+                
+                # Opción 2: Actualizar ítems existentes y agregar nuevos
+                else:
+                    # Separar ítems a actualizar y a crear
+                    items_to_update = []
+                    new_items_data = []
+                    
+                    for item_data in items_data:
+                        item_id = item_data.pop('id', None)
+                        if item_id:
+                            # Agregar a la lista de actualizaciones
+                            items_to_update.append((item_id, item_data))
+                        else:
+                            # Agregar a la lista de creaciones
+                            new_items_data.append(item_data)
+                    
+                    # Actualizar ítems existentes en lote
+                    if items_to_update:
+                        # Obtener todos los ítems a actualizar en una sola consulta
+                        item_ids = [id for id, _ in items_to_update]
+                        items_dict = {item.id: item for item in 
+                                     ProformaItem.objects.filter(id__in=item_ids, proforma=proforma)}
+                        
+                        updated_items = []
+                        for item_id, item_data in items_to_update:
+                            if item_id in items_dict:
+                                item = items_dict[item_id]
+                                
+                                # Actualizar campos
+                                for attr, value in item_data.items():
+                                    setattr(item, attr, value)
+                                
+                                # Recalcular total si es necesario
+                                if 'cantidad' in item_data or 'precio_unitario' in item_data or 'porcentaje_descuento' in item_data:
+                                    cantidad = item.cantidad
+                                    precio_unitario = item.precio_unitario
+                                    porcentaje_descuento = item.porcentaje_descuento
+                                    
+                                    subtotal = cantidad * precio_unitario
+                                    descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
+                                    item.total = subtotal - descuento
+                                
+                                updated_items.append(item)
+                        
+                        # Actualizar en lote
+                        if updated_items:
+                            ProformaItem.objects.bulk_update(
+                                updated_items, 
+                                ['tipo_item', 'producto_ofertado', 'producto_disponible', 
+                                 'codigo', 'descripcion', 'unidad', 'cantidad', 
+                                 'precio_unitario', 'porcentaje_descuento', 'total', 'orden']
+                            )
+                    
+                    # Crear nuevos ítems en lote
+                    if new_items_data:
+                        new_items = []
+                        for idx, item_data in enumerate(new_items_data):
+                            # Preparar datos
+                            item_data['proforma'] = proforma
+                            
+                            # Establecer orden si no se proporciona
+                            if 'orden' not in item_data or item_data['orden'] == 0:
+                                # Obtener el último orden actual
+                                last_order = ProformaItem.objects.filter(proforma=proforma).order_by('-orden').values_list('orden', flat=True).first() or 0
+                                item_data['orden'] = last_order + idx + 1
+                            
+                            # Calcular total
+                            cantidad = item_data.get('cantidad', 1)
+                            precio_unitario = item_data.get('precio_unitario', 0)
+                            porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
+                            
+                            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+                            descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
+                            item_data['total'] = subtotal - descuento
+                            
+                            # Crear instancia
+                            item = ProformaItem(**item_data)
+                            new_items.append(item)
+                        
+                        # Crear ítems en lote
+                        if new_items:
+                            ProformaItem.objects.bulk_create(new_items)
+                
+                # Recalcular totales después de todas las operaciones
+                ProformaService.calculate_amounts(proforma, save=True)
         
         return proforma
 

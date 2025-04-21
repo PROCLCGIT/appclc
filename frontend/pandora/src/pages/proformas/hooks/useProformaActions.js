@@ -441,7 +441,8 @@ Total: ${formatCurrency ? formatCurrency(currentQuote.total) : currentQuote.tota
           try {
             console.log("Intentando con método alternativo usando axios directamente");
             
-            const apiBase = window._baseApiUrl || 'http://localhost:8000/api/v1/';
+            const apiBase = window._baseApiUrl || 'http://localhost:8000/api/';
+            // Remove any trailing slashes from apiBase, then add the endpoint path
             let pdfUrl = `${apiBase.replace(/\/+$/, '')}/proformas/proformas/${proformaId}/exportar_pdf/`;
             
             // Usar axios (que ya tiene el token configurado) para obtener el archivo

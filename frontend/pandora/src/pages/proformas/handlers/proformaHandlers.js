@@ -310,8 +310,9 @@ export const useProformaHandlers = ({
     }
     
     // Obtenemos la URL base del backend
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-    const pdfUrl = `${apiBase}/proformas/proformas/${currentProforma.savedId}/exportar_pdf/`;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+    // Remove any trailing slashes from apiBase, then add the endpoint path
+    const pdfUrl = `${apiBase.replace(/\/+$/, '')}/proformas/proformas/${currentProforma.savedId}/exportar_pdf/`;
     
     // Mostrar diálogo para elegir entre abrir o descargar
     const action = window.confirm("¿Desea descargar el PDF o abrirlo en una nueva pestaña?\n\nAceptar: Descargar PDF\nCancelar: Abrir en pestaña");

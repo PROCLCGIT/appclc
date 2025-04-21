@@ -10,8 +10,8 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-# Importar el switcher de URLs optimizadas
-from proformas.url_switcher import include_proformas_urls
+# Importar las URLs de proformas
+from proformas.urls import include_proformas_urls
 
 # Configuración de Swagger/OpenAPI
 schema_view = get_schema_view(

@@ -29,24 +29,7 @@ export default function useClientSearchQuery() {
     showErrors: false, // Manejaremos los errores aquí
   });
 
-  // Efecto para el debounce de la búsqueda
-  useEffect(() => {
-    const timerId = setTimeout(() => {
-      if (searchTerm && searchTerm.length >= 2) {
-        setDebouncedSearchTerm(searchTerm);
-      }
-    }, 300);
-
-    return () => clearTimeout(timerId);
-  }, [searchTerm]);
-
-  // Efecto para ejecutar la búsqueda cuando cambia el término de búsqueda con debounce
-  useEffect(() => {
-    if (debouncedSearchTerm) {
-      performSearch(debouncedSearchTerm);
-    }
-  }, [debouncedSearchTerm, performSearch]);
-
+  // IMPORTANTE: Definir performSearch ANTES de los useEffect que lo utilizan
   // Función para realizar la búsqueda
   const performSearch = useCallback(
     async (term) => {
@@ -79,6 +62,24 @@ export default function useClientSearchQuery() {
     },
     [searchClientes, errorHandler, notify]
   );
+
+  // Efecto para el debounce de la búsqueda
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      if (searchTerm && searchTerm.length >= 2) {
+        setDebouncedSearchTerm(searchTerm);
+      }
+    }, 300);
+
+    return () => clearTimeout(timerId);
+  }, [searchTerm]);
+
+  // Efecto para ejecutar la búsqueda cuando cambia el término de búsqueda con debounce
+  useEffect(() => {
+    if (debouncedSearchTerm) {
+      performSearch(debouncedSearchTerm);
+    }
+  }, [debouncedSearchTerm, performSearch]);
 
   // Función para iniciar una búsqueda manual
   const searchCliente = useCallback(
@@ -147,10 +148,10 @@ export default function useClientSearchQuery() {
         
         // Crear un array con todas las rutas posibles a intentar
         const endpoints = [
-          '/api/core/clientes/',
-          '/api/clientes/',
-          '/madvance/clientes/',
-          '/clientes/'
+          'core/clientes/',
+          'clientes/',
+          'madvance/clientes/',
+          'pandora/clientes/'
         ];
         
         // Configuración de solicitud unificada
@@ -248,7 +249,7 @@ export default function useClientSearchQuery() {
       
       // 2. Verificar conexión general con un endpoint sencillo
       try {
-        const testResponse = await api.get('/api/', {
+        const testResponse = await api.get('/', {
           _bypassCache: true,
           _highPriority: true,
           timeout: 5000
@@ -260,10 +261,10 @@ export default function useClientSearchQuery() {
       
       // 3. Probar endpoints específicos para clientes con diferentes rutas
       const routesToTry = [
-        '/api/core/clientes/',
-        '/api/clientes/',
-        '/madvance/clientes/',
-        '/clientes/'
+        'core/clientes/',
+        'clientes/',
+        'madvance/clientes/',
+        'pandora/clientes/'
       ];
       
       for (const route of routesToTry) {

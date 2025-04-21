@@ -29,7 +29,7 @@ import { useProformaDashboardQuery } from '@/hooks/queries/useProformasQuery';
 import { cn } from '@/lib/utils';
 import useDelayedFlag from '@/hooks/useDelayedFlag';
 import { SkeletonDashboard } from '@/components/SkeletonList';
-import { proformaService } from '@/services/api';
+import { proformasService } from '@/services/api';
 
 // Colores para los gráficos
 const CHART_COLORS = {

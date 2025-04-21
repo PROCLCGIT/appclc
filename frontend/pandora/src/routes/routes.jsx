@@ -3,10 +3,14 @@ import { Suspense, lazy } from 'react';
 import PropTypes from 'prop-types';
 import ErrorBoundary from '@/components/error/ErrorBoundary';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { AuthProvider } from '@/contexts/AuthProvider';
 
 // LayOuts
 import AuthLayout from '@/components/layout/AuthLayout';
 import MainLayout from '@/components/layout/MainLayout';
+import Login from '@/components/auth/Login';
+import ErrorPage from '@/components/error/ErrorPage';
+
 const DashboardPage = lazy(() => import('@/pages/Dashboard'));
 
 // User
@@ -57,20 +61,15 @@ const AddBriefPage = lazy(() => import('@/pages/brief/AddBriefPage'));
 const BriefDetailsPage = lazy(() => import('@/pages/brief/BriefDetailsPage'));
 const EditBriefPage = lazy(() => import('@/pages/brief/EditBriefPage'));
 
-
 // Invenrario
 const InventarioPage = lazy(() => import('@/pages/inventario/InventorioPage'));
 const Brief = lazy(() => import('@/pages/inventario/brief'));
 const WizardForm = lazy(() => import('@/pages/inventario/wizardform'));
 
-
 // Docmanager 
 const GestorDocumentalPage = lazy(() => import('@/pages/docmanager/GestorDocumentalPage'));
 
-
 // Páginas básicas que no necesitan carga diferida
-import Login from '@/components/auth/Login';
-import ErrorPage from '@/components/error/ErrorPage';
 import ConstructionPage from '@/pages/Varias/ConstructionPage';
 
 // Legal Base
@@ -81,7 +80,6 @@ const EmpresaInfo3 = lazy(() => import('@/pages/legalbase/EmpresaInfo3'));
 // Módulo de importaciones
 const MsprefImportPage = lazy(() => import('@/pages/import/MsprefImportPage'));
 const ProductosOfertadosImportPage = lazy(() => import('@/pages/import/ProductosOfertadosImportPage'));
-
 
 // Testing
 const Testing1 = lazy(() => import('@/pages/test/Modelos/Testing1'));
@@ -123,7 +121,6 @@ const OP03 = lazy(() => import('@/pages/test/Opcionesia/03'));
 const OP04 = lazy(() => import('@/pages/inventario/wizardform'));
 const OP05 = lazy(() => import('@/pages/test/Opcionesia/05'));
 
-
 // Componente de envoltura para manejo de carga y errores
 const PageWrapper = ({ component: Component }) => (
   <ErrorBoundary>
@@ -142,19 +139,23 @@ PageWrapper.propTypes = {
 };
 
 // Configuración de rutas
-export const router = createBrowserRouter([
+export const routes = createBrowserRouter([
   {
     path: '/login',
-    element: <Login />,
+    element: (
+      <AuthProvider>
+        <Login />
+      </AuthProvider>
+    ),
   },
   {
     path: '/',
     element: (
-      <ErrorBoundary>
+      <AuthProvider>
         <AuthLayout>
           <MainLayout />
         </AuthLayout>
-      </ErrorBoundary>
+      </AuthProvider>
     ),
     errorElement: <ErrorPage />,
     children: [
@@ -285,3 +286,5 @@ export const router = createBrowserRouter([
     element: <Navigate to="/error" replace />,
   },
 ]);
+
+export default routes;

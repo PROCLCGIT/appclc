@@ -37,19 +37,19 @@ export function useClientesQuery(options = {}) {
       try {
         // Intentando primero con la ruta correcta
         try {
-          console.log('Intentando obtener clientes de /api/core/clientes/');
-          const response = await api.get('/api/core/clientes/', { 
+          console.log('Intentando obtener clientes de core/clientes/');
+          const response = await api.get('core/clientes/', { 
             params: filters,
             _bypassCache: true,
             _highPriority: true
           });
-          console.log('✅ Éxito al obtener clientes de /api/core/clientes/', response.data);
+          console.log('✅ Éxito al obtener clientes de core/clientes/', response.data);
           return response.data;
         } catch (apiError) {
-          console.warn('❌ Error al obtener clientes de /api/core/clientes/, intentando ruta alternativa:', apiError.message);
+          console.warn('❌ Error al obtener clientes de core/clientes/, intentando ruta alternativa:', apiError.message);
           
           // Fallback a la ruta antigua
-          const fallbackResponse = await api.get('/madvance/clientes/', { 
+          const fallbackResponse = await api.get('madvance/clientes/', { 
             params: filters,
             _bypassCache: true,
             _highPriority: true
@@ -79,8 +79,17 @@ export function useClientesQuery(options = {}) {
   const createMutation = useMutation({
     mutationFn: async (nuevoCliente) => {
       try {
-        const response = await api.post('/madvance/clientes/', nuevoCliente);
-        return response.data;
+        try {
+          // Try first with core endpoint
+          const response = await api.post('core/clientes/', nuevoCliente);
+          return response.data;
+        } catch (apiError) {
+          console.warn('Error creating client with core/clientes/', apiError.message);
+          
+          // Fall back to madvance endpoint
+          const response = await api.post('madvance/clientes/', nuevoCliente);
+          return response.data;
+        }
       } catch (error) {
         if (showErrors) {
           errorHandler.handleError(error, 'crear cliente');
@@ -98,8 +107,17 @@ export function useClientesQuery(options = {}) {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       try {
-        const response = await api.put(`/madvance/clientes/${id}/`, data);
-        return response.data;
+        try {
+          // Try first with core endpoint
+          const response = await api.put(`core/clientes/${id}/`, data);
+          return response.data;
+        } catch (apiError) {
+          console.warn(`Error updating client with core/clientes/${id}/`, apiError.message);
+          
+          // Fall back to madvance endpoint
+          const response = await api.put(`madvance/clientes/${id}/`, data);
+          return response.data;
+        }
       } catch (error) {
         if (showErrors) {
           errorHandler.handleError(error, 'actualizar cliente');
@@ -162,36 +180,36 @@ export function useClientesQuery(options = {}) {
           
           try {
             // Primero intentamos con la API que parece correcta según la configuración del backend
-            console.log('Intentando buscar clientes en /api/core/clientes/');
-            const response = await api.get('/api/core/clientes/', { 
+            console.log('Intentando buscar clientes en core/clientes/');
+            const response = await api.get('core/clientes/', { 
               params,
               _bypassCache: true,
               _highPriority: true,
               _disableRetry: false,
               timeout: 15000 // Aumentar timeout a 15 segundos
             });
-            console.log('✅ Éxito al buscar clientes en /api/core/clientes/:', response.data);
+            console.log('✅ Éxito al buscar clientes en core/clientes/:', response.data);
             return response.data;
           } catch (apiError) {
-            console.warn('❌ Error al buscar clientes en /api/core/clientes/:', apiError.message);
+            console.warn('❌ Error al buscar clientes en core/clientes/:', apiError.message);
             
             // Si falla, intentamos con la ruta original
-            console.log('Intentando con la ruta anterior /madvance/clientes/...');
+            console.log('Intentando con la ruta anterior madvance/clientes/...');
             try {
-              const retryResponse = await api.get('/madvance/clientes/', { 
+              const retryResponse = await api.get('madvance/clientes/', { 
                 params,
                 _bypassCache: true,
                 _highPriority: true,
                 timeout: 15000
               });
-              console.log('✅ Éxito al buscar clientes en /madvance/clientes/:', retryResponse.data);
+              console.log('✅ Éxito al buscar clientes en madvance/clientes/:', retryResponse.data);
               return retryResponse.data;
             } catch (retryError) {
               console.error('❌ Error en la ruta alternativa:', retryError.message);
               
-              // Último intento: usar la URL relativa '/clientes/'
-              console.log('Intentando con la ruta básica /clientes/...');
-              const lastAttemptResponse = await api.get('/clientes/', { params });
+              // Último intento: usar la URL relativa 'clientes/'
+              console.log('Intentando con la ruta básica clientes/...');
+              const lastAttemptResponse = await api.get('clientes/', { params });
               console.log('✅ Éxito al buscar clientes en /clientes/:', lastAttemptResponse.data);
               return lastAttemptResponse.data;
             }
@@ -282,8 +300,17 @@ export function useClienteDetailQuery(id, options = {}) {
     queryKey: clienteKeys.detail(id),
     queryFn: async () => {
       try {
-        const response = await api.get(`/madvance/clientes/${id}/`);
-        return response.data;
+        // Try first with core endpoint
+        try {
+          const response = await api.get(`core/clientes/${id}/`);
+          return response.data;
+        } catch (apiError) {
+          console.warn(`Error getting client from core/clientes/${id}/`, apiError.message);
+          
+          // Fall back to madvance endpoint
+          const response = await api.get(`madvance/clientes/${id}/`);
+          return response.data;
+        }
       } catch (error) {
         if (showErrors) {
           errorHandler.handleError(error, `obtener detalle de cliente #${id}`);

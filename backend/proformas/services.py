@@ -2,20 +2,51 @@
 Servicios para gestionar la lógica de negocio de las proformas.
 
 Este módulo contiene servicios que encapsulan la lógica de negocio relacionada con
-proformas, separando esta lógica de los modelos para mejorar la mantenibilidad.
+proformas, separando esta lógica de los modelos para mejorar la mantenibilidad
+y optimizando las operaciones de cálculo para mejor rendimiento.
 """
 import time
 import logging
 from decimal import Decimal
 from django.utils import timezone
-from django.db import transaction
-from django.db.models import Sum
+from django.db import transaction, connection
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Case, When, Value
 
 logger = logging.getLogger(__name__)
 
 class ProformaService:
     """
     Servicio para gestionar operaciones y lógica de negocio de las proformas.
+    Incluye optimizaciones para cálculos de montos y operaciones en lote.
+    """
+    
+    # Constantes para queries directas SQL
+    SQL_UPDATE_TOTALS = """
+    UPDATE proformas_proforma p
+    SET subtotal = COALESCE(t.suma_total, 0),
+        impuesto = COALESCE(t.suma_total, 0) * (p.porcentaje_impuesto / 100.0),
+        total = COALESCE(t.suma_total, 0) + (COALESCE(t.suma_total, 0) * (p.porcentaje_impuesto / 100.0))
+    FROM (
+        SELECT proforma_id, SUM(total) as suma_total
+        FROM proformas_proformaitem
+        WHERE proforma_id = %s
+        GROUP BY proforma_id
+    ) AS t
+    WHERE p.id = t.proforma_id AND p.id = %s
+    """
+    
+    SQL_UPDATE_TOTALS_BATCH = """
+    UPDATE proformas_proforma p
+    SET subtotal = COALESCE(t.suma_total, 0),
+        impuesto = COALESCE(t.suma_total, 0) * (p.porcentaje_impuesto / 100.0),
+        total = COALESCE(t.suma_total, 0) + (COALESCE(t.suma_total, 0) * (p.porcentaje_impuesto / 100.0))
+    FROM (
+        SELECT proforma_id, SUM(total) as suma_total
+        FROM proformas_proformaitem
+        WHERE proforma_id IN %s
+        GROUP BY proforma_id
+    ) AS t
+    WHERE p.id = t.proforma_id AND p.id IN %s
     """
     
     @staticmethod
@@ -71,63 +102,6 @@ class ProformaService:
             logger.warning(f"Generado número de emergencia: {numero}")
             
             return numero
-    
-    @staticmethod
-    def calculate_amounts(proforma, save=False):
-        """
-        Calcula los montos (subtotal, impuesto, total) de una proforma
-        basándose en sus ítems.
-        
-        Args:
-            proforma: Instancia del modelo Proforma
-            save: Si es True, guarda los cambios en la proforma
-            
-        Returns:
-            tuple: (subtotal, impuesto, total) calculados
-        """
-        if not proforma.pk:
-            # Si la proforma no está guardada, no puede tener ítems
-            proforma.subtotal = Decimal('0')
-            proforma.impuesto = Decimal('0')
-            proforma.total = Decimal('0')
-            return (proforma.subtotal, proforma.impuesto, proforma.total)
-            
-        try:
-            # Método optimizado usando agregación de base de datos
-            items_sum = proforma.items.aggregate(subtotal_sum=Sum('total'))
-            proforma.subtotal = items_sum['subtotal_sum'] or Decimal('0')
-            proforma.impuesto = proforma.subtotal * (proforma.porcentaje_impuesto / Decimal('100.0'))
-            proforma.total = proforma.subtotal + proforma.impuesto
-            
-            # Guardar los cambios si se solicita
-            if save and proforma.pk:
-                # Usar update_fields para optimizar la actualización
-                proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
-                
-            return (proforma.subtotal, proforma.impuesto, proforma.total)
-                
-        except Exception as e:
-            # Método de respaldo para garantizar funcionamiento en caso de error
-            logger.warning(f"Error en método optimizado de calcular_montos: {e}. Usando método de respaldo.")
-            
-            try:
-                # Obtener ítems manualmente
-                items = proforma.items.all()
-                proforma.subtotal = sum(item.total for item in items)
-                proforma.impuesto = proforma.subtotal * (proforma.porcentaje_impuesto / Decimal('100.0'))
-                proforma.total = proforma.subtotal + proforma.impuesto
-                
-                # Guardar los cambios si se solicita
-                if save and proforma.pk:
-                    # Usar update_fields para optimizar la actualización
-                    proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
-                    
-                return (proforma.subtotal, proforma.impuesto, proforma.total)
-                
-            except Exception as inner_e:
-                # Si todo falla, loggear y mantener los valores actuales
-                logger.error(f"Error crítico calculando montos: {inner_e}")
-                return (proforma.subtotal, proforma.impuesto, proforma.total)
     
     @staticmethod
     def calculate_item_total(item):
@@ -196,7 +170,118 @@ class ProformaService:
         except Exception as e:
             logger.error(f"Error completando datos de ítem: {e}")
             return False
-    
+
+    @staticmethod
+    def calculate_amounts(proforma, save=False):
+        """
+        Calcula los montos (subtotal, impuesto, total) de una proforma
+        basándose en sus ítems. Versión optimizada que usa una sola consulta SQL.
+        
+        Args:
+            proforma: Instancia del modelo Proforma
+            save: Si es True, guarda los cambios en la proforma
+            
+        Returns:
+            tuple: (subtotal, impuesto, total) calculados
+        """
+        if not proforma.pk:
+            # Si la proforma no está guardada, no puede tener ítems
+            proforma.subtotal = Decimal('0')
+            proforma.impuesto = Decimal('0')
+            proforma.total = Decimal('0')
+            return (proforma.subtotal, proforma.impuesto, proforma.total)
+        
+        try:
+            # Usar una consulta SQL directa para actualizar los totales
+            # Esto es más eficiente que hacer una agregación seguida de un update
+            if save:
+                with connection.cursor() as cursor:
+                    cursor.execute(ProformaService.SQL_UPDATE_TOTALS, [proforma.pk, proforma.pk])
+                    # Refrescar valores desde la base de datos
+                    proforma.refresh_from_db(fields=['subtotal', 'impuesto', 'total'])
+                    logger.debug(f"Totales actualizados para proforma {proforma.numero} usando SQL directo")
+                return (proforma.subtotal, proforma.impuesto, proforma.total)
+            else:
+                # Si no guardamos, usamos agregación para obtener los valores calculados
+                from .models import ProformaItem
+                items_sum = ProformaItem.objects.filter(proforma=proforma).aggregate(subtotal_sum=Sum('total'))
+                subtotal = items_sum['subtotal_sum'] or Decimal('0')
+                impuesto = subtotal * (proforma.porcentaje_impuesto / Decimal('100.0'))
+                total = subtotal + impuesto
+                
+                # Actualizar la instancia pero no guardar
+                proforma.subtotal = subtotal
+                proforma.impuesto = impuesto
+                proforma.total = total
+                
+                return (subtotal, impuesto, total)
+        except Exception as e:
+            logger.error(f"Error en cálculo optimizado de montos: {e}. Usando método de respaldo.")
+            
+            try:
+                # Método de respaldo usando Python puro
+                from .models import ProformaItem
+                items = ProformaItem.objects.filter(proforma=proforma)
+                subtotal = sum(item.total for item in items)
+                impuesto = subtotal * (proforma.porcentaje_impuesto / Decimal('100.0'))
+                total = subtotal + impuesto
+                
+                # Actualizar la instancia
+                proforma.subtotal = subtotal
+                proforma.impuesto = impuesto
+                proforma.total = total
+                
+                # Guardar si se solicita
+                if save:
+                    proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
+                
+                return (subtotal, impuesto, total)
+            except Exception as inner_e:
+                logger.error(f"Error crítico en el cálculo de montos: {inner_e}")
+                return (proforma.subtotal, proforma.impuesto, proforma.total)
+
+    @staticmethod
+    def calculate_amounts_batch(proforma_ids):
+        """
+        Calcula los montos de múltiples proformas en un solo proceso por lotes.
+        Altamente eficiente para operaciones de actualización masiva.
+        
+        Args:
+            proforma_ids: Lista de IDs de proformas a actualizar
+            
+        Returns:
+            int: Número de proformas actualizadas
+        """
+        if not proforma_ids:
+            return 0
+            
+        try:
+            # Usar la consulta SQL de lote para actualizar múltiples proformas de una vez
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    ProformaService.SQL_UPDATE_TOTALS_BATCH, 
+                    [tuple(proforma_ids), tuple(proforma_ids)]
+                )
+                return len(proforma_ids)
+        except Exception as e:
+            logger.error(f"Error en actualización por lotes de proformas {proforma_ids}: {e}")
+            
+            # Método de respaldo: actualizar una por una
+            try:
+                from .models import Proforma
+                count = 0
+                for proforma_id in proforma_ids:
+                    try:
+                        proforma = Proforma.objects.get(pk=proforma_id)
+                        ProformaService.calculate_amounts(proforma, save=True)
+                        count += 1
+                    except Exception as inner_e:
+                        logger.error(f"Error actualizando proforma {proforma_id}: {inner_e}")
+                return count
+            except Exception as global_e:
+                logger.error(f"Error crítico en actualización por lotes: {global_e}")
+                return 0
+
     @staticmethod
     def save_proforma(proforma, validate=True, calculate_amounts=True, update_history=True):
         """
@@ -228,13 +313,17 @@ class ProformaService:
             if not proforma.numero or proforma.numero.strip() == '':
                 proforma.numero = ProformaService.generate_number(proforma)
                 
-            # 3. Calcular montos si se solicita
-            if calculate_amounts:
-                ProformaService.calculate_amounts(proforma)
-                
-            # 4. Guardar la proforma
-            proforma.save()
+            # 3. Guardar primero para asegurar que existe el ID
+            if is_creation or not calculate_amounts:
+                proforma.save()
             
+            # 4. Calcular montos si se solicita (usando SQL optimizado)
+            if calculate_amounts and proforma.pk:
+                ProformaService.calculate_amounts(proforma, save=True)
+            elif not calculate_amounts:
+                # Si no calculamos montos, debemos guardar
+                proforma.save()
+                
             # 5. Actualizar historial si se solicita
             if update_history:
                 from .models import ProformaHistorial
@@ -274,6 +363,54 @@ class ProformaService:
             return proforma
     
     @staticmethod
+    def save_proforma_items_batch(items, validate=True, calculate_once=True):
+        """
+        Guarda múltiples ítems de proforma en lote y actualiza los totales una sola vez.
+        
+        Args:
+            items: Lista de instancias de ProformaItem
+            validate: Si es True, realiza validaciones antes de guardar
+            calculate_once: Si es True, calcula los totales una sola vez al final
+            
+        Returns:
+            tuple: (items_guardados, proformas_actualizadas)
+        """
+        if not items:
+            return (0, 0)
+            
+        proforma_ids = set()
+        saved_count = 0
+        
+        with transaction.atomic():
+            # Guardar ítems uno por uno
+            for item in items:
+                try:
+                    # 1. Validar si se solicita
+                    if validate:
+                        item.full_clean()
+                    
+                    # 2. Completar datos y calcular total
+                    ProformaService.complete_item_data(item)
+                    item.total = ProformaService.calculate_item_total(item)
+                    
+                    # 3. Guardar ítem
+                    item.save()
+                    saved_count += 1
+                    
+                    # 4. Registrar ID de proforma para actualización posterior
+                    if item.proforma_id:
+                        proforma_ids.add(item.proforma_id)
+                except Exception as e:
+                    logger.error(f"Error guardando ítem {getattr(item, 'id', 'nuevo')}: {e}")
+            
+            # Actualizar totales de proformas afectadas en una sola operación
+            if calculate_once and proforma_ids:
+                updated_proformas = ProformaService.calculate_amounts_batch(list(proforma_ids))
+                logger.info(f"Actualizados totales de {updated_proformas} proformas en lote")
+                
+            return (saved_count, len(proforma_ids))
+
+    @staticmethod
     def save_proforma_item(item, validate=True, calculate_amounts=True):
         """
         Guarda un ítem de proforma y actualiza la proforma asociada.
@@ -303,8 +440,8 @@ class ProformaService:
             # 4. Guardar el ítem
             item.save()
                 
-            # 5. Actualizar montos de la proforma si se solicita
-            if calculate_amounts and item.proforma:
+            # 5. Actualizar montos de la proforma si se solicita (usando SQL optimizado)
+            if calculate_amounts and item.proforma_id:
                 ProformaService.calculate_amounts(item.proforma, save=True)
                 
             return item
@@ -323,14 +460,15 @@ class ProformaService:
         """
         try:
             proforma = item.proforma
+            proforma_id = proforma.id if proforma else None
             item_id = item.id
             
             with transaction.atomic():
                 # Eliminar el ítem
                 item.delete()
                 
-                # Recalcular montos de la proforma si se solicita
-                if recalculate and proforma:
+                # Recalcular montos de la proforma si se solicita (usando SQL optimizado)
+                if recalculate and proforma_id:
                     ProformaService.calculate_amounts(proforma, save=True)
                     
             logger.info(f"Ítem {item_id} eliminado correctamente")
@@ -339,6 +477,47 @@ class ProformaService:
         except Exception as e:
             logger.error(f"Error eliminando ítem: {e}")
             return False
+            
+    @staticmethod
+    def delete_proforma_items_batch(items, recalculate_once=True):
+        """
+        Elimina múltiples ítems de proforma en lote y actualiza los totales una sola vez.
+        
+        Args:
+            items: Lista de instancias de ProformaItem
+            recalculate_once: Si es True, calcula los totales una sola vez al final
+            
+        Returns:
+            tuple: (items_eliminados, proformas_actualizadas)
+        """
+        if not items:
+            return (0, 0)
+            
+        proforma_ids = set()
+        deleted_count = 0
+        
+        with transaction.atomic():
+            # Identificar proformas afectadas e IDs de ítems
+            for item in items:
+                if item.proforma_id:
+                    proforma_ids.add(item.proforma_id)
+            
+            # Eliminar ítems de una vez
+            from django.db.models import QuerySet
+            if isinstance(items, QuerySet):
+                deleted_count = items.delete()[0]
+            else:
+                from .models import ProformaItem
+                item_ids = [item.id for item in items if item.id]
+                if item_ids:
+                    deleted_count = ProformaItem.objects.filter(id__in=item_ids).delete()[0]
+            
+            # Actualizar totales de proformas afectadas en una sola operación
+            if recalculate_once and proforma_ids:
+                updated_proformas = ProformaService.calculate_amounts_batch(list(proforma_ids))
+                logger.info(f"Actualizados totales de {updated_proformas} proformas en lote tras eliminar ítems")
+                
+            return (deleted_count, len(proforma_ids))
             
     @staticmethod
     def change_proforma_state(proforma, new_state, user=None, update_history=True):

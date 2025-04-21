@@ -20,13 +20,15 @@ export const useRelacionesBlue = () => {
 
   // URL base para las API de pandora (probaremos diferentes variantes)
   const baseUrls = [
-    // Primero probamos con la ruta exacta que vemos en los logs
-    '/api/v1/pandora/relacionesblue',
+    // First try with relative paths that will work with axios instance's baseURL
+    'pandora/relacionesblue',
+    'v1/pandora/relacionesblue',
+    'pandora',
+    '',
+    // Then try with full paths as fallback
     `${API_BASE_URL}/pandora/relacionesblue`,
     `${API_BASE_URL}/pandora`,
-    API_BASE_URL,
-    'http://localhost:8000/api/v1/pandora',
-    'http://localhost:8000/api/pandora'
+    API_BASE_URL
   ];
 
   // Obtener todas las relaciones - versión simplificada
@@ -124,7 +126,11 @@ export const useRelacionesBlue = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_BASE_URL}/pandora${API_PATHS.RELACIONES_BLUE}/?cliente=${clienteId}`);
+      // Use our configured api instance instead of direct axios to benefit from interceptors and error handling
+      const response = await api.get(`pandora${API_PATHS.RELACIONES_BLUE}`, {
+        params: { cliente: clienteId },
+        _highPriority: true
+      });
       // Aseguramos que la respuesta sea un array
       return Array.isArray(response.data) ? response.data : 
              (response.data && response.data.results ? response.data.results : []);
@@ -142,7 +148,11 @@ export const useRelacionesBlue = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_BASE_URL}/pandora${API_PATHS.RELACIONES_BLUE}/?contacto=${contactoId}`);
+      // Use our configured api instance instead of direct axios to benefit from interceptors and error handling
+      const response = await api.get(`pandora${API_PATHS.RELACIONES_BLUE}`, {
+        params: { contacto: contactoId },
+        _highPriority: true
+      });
       // Aseguramos que la respuesta sea un array
       return Array.isArray(response.data) ? response.data : 
              (response.data && response.data.results ? response.data.results : []);
@@ -224,7 +234,8 @@ export const useRelacionesBlue = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.put(`${API_BASE_URL}/pandora${API_PATHS.RELACIONES_BLUE}/${id}/`, relacionData);
+      // Use our configured api instance instead of direct axios
+      const response = await api.put(`pandora${API_PATHS.RELACIONES_BLUE}/${id}/`, relacionData);
       // Actualizar el estado después de editar
       await getRelaciones();
       return response.data;
@@ -242,7 +253,8 @@ export const useRelacionesBlue = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await axios.delete(`${API_BASE_URL}/pandora${API_PATHS.RELACIONES_BLUE}/${id}/`);
+      // Use our configured api instance instead of direct axios
+      await api.delete(`pandora${API_PATHS.RELACIONES_BLUE}/${id}/`);
       // Actualizar el estado después de eliminar
       await getRelaciones();
       return true;
