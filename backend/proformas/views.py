@@ -581,21 +581,62 @@ class ProformaViewSet(viewsets.ModelViewSet):
             
             queryset = self.get_queryset()
             
-            # Aplicar filtros si existen
+            # Validar formato de fechas y aplicar filtros
             if start_date:
-                queryset = queryset.filter(fecha_emision__gte=start_date)
+                try:
+                    # Validar formato de fecha (YYYY-MM-DD)
+                    datetime.strptime(start_date, '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__gte=start_date)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en formato de fecha inicio: {start_date}, error: {str(e)}")
+                    # No aplicar filtro de fecha inválida
+                    pass
+                    
             if end_date:
-                queryset = queryset.filter(fecha_emision__lte=end_date)
+                try:
+                    # Validar formato de fecha (YYYY-MM-DD)
+                    datetime.strptime(end_date, '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__lte=end_date)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en formato de fecha fin: {end_date}, error: {str(e)}")
+                    # No aplicar filtro de fecha inválida
+                    pass
+                    
             if estado_filter:
-                # Permitir filtrar por múltiples estados
-                estados = [estado.strip() for estado in estado_filter.split(',')]
-                queryset = queryset.filter(estado__in=estados)
+                try:
+                    # Permitir filtrar por múltiples estados
+                    estados = [estado.strip() for estado in estado_filter.split(',')]
+                    queryset = queryset.filter(estado__in=estados)
+                except Exception as e:
+                    logger.error(f"Error al procesar filtro de estados: {str(e)}")
+                    # No aplicar filtro si hay error
+                    pass
+                    
             if cliente_id:
-                queryset = queryset.filter(cliente_id=cliente_id)
+                try:
+                    queryset = queryset.filter(cliente_id=cliente_id)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en ID de cliente: {cliente_id}, error: {str(e)}")
+                    # No aplicar filtro de cliente inválido
+                    pass
+                    
             if min_total:
-                queryset = queryset.filter(total__gte=min_total)
+                try:
+                    min_total_value = float(min_total)
+                    queryset = queryset.filter(total__gte=min_total_value)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en valor mínimo total: {min_total}, error: {str(e)}")
+                    # No aplicar filtro de total mínimo inválido
+                    pass
+                    
             if max_total:
-                queryset = queryset.filter(total__lte=max_total)
+                try:
+                    max_total_value = float(max_total)
+                    queryset = queryset.filter(total__lte=max_total_value)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en valor máximo total: {max_total}, error: {str(e)}")
+                    # No aplicar filtro de total máximo inválido
+                    pass
             
             # Registrar información de filtrado
             logger.info(
@@ -607,13 +648,21 @@ class ProformaViewSet(viewsets.ModelViewSet):
             # Estadísticas por estado
             estado_stats = {}
             for estado, label in Proforma.ESTADO_CHOICES:
-                count = queryset.filter(estado=estado).count()
-                total = queryset.filter(estado=estado).values_list('total', flat=True)
-                estado_stats[estado] = {
-                    'count': count,
-                    'total': sum(total) if total else 0,
-                    'label': label
-                }
+                try:
+                    count = queryset.filter(estado=estado).count()
+                    total = queryset.filter(estado=estado).values_list('total', flat=True)
+                    estado_stats[estado] = {
+                        'count': count,
+                        'total': float(sum(total) if total else 0),
+                        'label': label
+                    }
+                except Exception as e:
+                    logger.error(f"Error al procesar estadísticas para estado {estado}: {str(e)}")
+                    estado_stats[estado] = {
+                        'count': 0,
+                        'total': 0.0,
+                        'label': label
+                    }
             
             # Estadísticas por cliente (top 5)
             cliente_stats = []
@@ -624,12 +673,17 @@ class ProformaViewSet(viewsets.ModelViewSet):
                 ).order_by('-total')[:5]
                 
                 for cliente in top_clientes:
-                    cliente_stats.append({
-                        'id': cliente['cliente__id'],
-                        'nombre': cliente['cliente__nombre'],
-                        'count': cliente['count'],
-                        'total': cliente['total'] or 0
-                    })
+                    try:
+                        cliente_stats.append({
+                            'id': cliente['cliente__id'],
+                            'nombre': cliente['cliente__nombre'] or 'Cliente sin nombre',
+                            'count': cliente['count'],
+                            'total': float(cliente['total'] or 0)
+                        })
+                    except Exception as e:
+                        logger.error(f"Error al procesar cliente en estadísticas: {cliente}, error: {str(e)}")
+                        # Saltar este cliente pero continuar procesando
+                        continue
             except Exception as e:
                 logger.error(f"Error al procesar estadísticas por cliente: {str(e)}")
                 # Proporcionar datos vacíos en caso de error
@@ -648,12 +702,18 @@ class ProformaViewSet(viewsets.ModelViewSet):
                 ).order_by('mes')
                 
                 for mes in por_mes:
-                    if mes['mes']:
+                    try:
+                        if mes['mes'] is None:
+                            continue
                         mes_stats.append({
                             'mes': mes['mes'].strftime('%Y-%m'),
                             'count': mes['count'],
-                            'total': mes['total'] or 0
+                            'total': float(mes['total'] or 0)
                         })
+                    except (AttributeError, TypeError, ValueError) as e:
+                        logger.error(f"Error al procesar registro de mes: {mes}, error: {str(e)}")
+                        # Saltar este registro pero continuar procesando
+                        continue
             except Exception as e:
                 logger.error(f"Error al procesar estadísticas por mes: {str(e)}")
                 # Proporcionar datos vacíos en caso de error
@@ -669,27 +729,41 @@ class ProformaViewSet(viewsets.ModelViewSet):
                         # Obtener nombres para el estado
                         estado_label = dict(Proforma.ESTADO_CHOICES).get(proforma.estado, proforma.estado)
                         
-                        # Formatear fechas
-                        fecha_emision = proforma.fecha_emision.strftime('%d/%m/%Y') if proforma.fecha_emision else ''
-                        fecha_vencimiento = proforma.fecha_vencimiento.strftime('%d/%m/%Y') if proforma.fecha_vencimiento else ''
+                        # Formatear fechas - con manejo de excepciones
+                        try:
+                            fecha_emision = proforma.fecha_emision.strftime('%d/%m/%Y') if proforma.fecha_emision else ''
+                        except Exception:
+                            fecha_emision = ''
+                            
+                        try:
+                            fecha_vencimiento = proforma.fecha_vencimiento.strftime('%d/%m/%Y') if proforma.fecha_vencimiento else ''
+                        except Exception:
+                            fecha_vencimiento = ''
                         
-                        # Iniciales del cliente para el avatar
-                        cliente_nombre = proforma.cliente.nombre if proforma.cliente else 'N/A'
-                        cliente_avatar = ''.join([word[0] for word in cliente_nombre.split()[:2]]) if cliente_nombre != 'N/A' else 'NA'
+                        # Iniciales del cliente para el avatar - con manejo de excepciones
+                        try:
+                            cliente_nombre = proforma.cliente.nombre if proforma.cliente else 'N/A'
+                            cliente_avatar = ''.join([word[0] for word in cliente_nombre.split()[:2]]) if cliente_nombre != 'N/A' else 'NA'
+                        except Exception:
+                            cliente_nombre = 'N/A'
+                            cliente_avatar = 'NA'
                         
-                        # Vendedor (usuario que creó la proforma)
-                        vendedor = f"{proforma.created_by.first_name} {proforma.created_by.last_name}" if proforma.created_by else 'N/A'
-                        if vendedor.strip() == '':
-                            vendedor = proforma.created_by.username if proforma.created_by else 'N/A'
+                        # Vendedor (usuario que creó la proforma) - con manejo de excepciones
+                        try:
+                            vendedor = f"{proforma.created_by.first_name} {proforma.created_by.last_name}" if proforma.created_by else 'N/A'
+                            if vendedor.strip() == '':
+                                vendedor = proforma.created_by.username if proforma.created_by else 'N/A'
+                        except Exception:
+                            vendedor = 'N/A'
                         
                         proformas_recientes.append({
-                            'id': proforma.numero,  # Usamos 'numero' como ID para la interfaz
-                            'numero': proforma.numero,
+                            'id': str(proforma.numero) if proforma.numero else str(proforma.id),  # Asegurar que sea string
+                            'numero': str(proforma.numero) if proforma.numero else str(proforma.id),
                             'cliente': cliente_nombre,
                             'clienteAvatar': cliente_avatar,
                             'fecha': fecha_emision,
                             'expira': fecha_vencimiento,
-                            'monto': float(proforma.total),
+                            'monto': float(proforma.total) if proforma.total is not None else 0.0,
                             'estado': estado_label,
                             'vendedor': vendedor
                         })
@@ -701,11 +775,20 @@ class ProformaViewSet(viewsets.ModelViewSet):
                 # Proporcionar datos vacíos en caso de error
                 proformas_recientes = []
             
-            # Devolver estadísticas y proformas recientes
-            # Crear datos de respuesta
+            # Crear datos de respuesta con manejo de excepciones más robusto
             try:
-                total_count = queryset.count()
-                total_aprobadas = queryset.filter(estado='aprobada').count()
+                # Operaciones con manejo de excepciones individual
+                try:
+                    total_count = queryset.count()
+                except Exception:
+                    logger.error("Error al contar total de proformas, usando 0")
+                    total_count = 0
+                
+                try:
+                    total_aprobadas = queryset.filter(estado='aprobada').count()
+                except Exception:
+                    logger.error("Error al contar proformas aprobadas, usando 0")
+                    total_aprobadas = 0
                 
                 try:
                     total_monto = float(sum(queryset.values_list('total', flat=True)))
@@ -761,7 +844,7 @@ class ProformaViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error en dashboard: {str(e)}")
             return Response(
-                {"error": "Error al generar el dashboard"},
+                {"error": "Error al generar el dashboard", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -850,144 +933,250 @@ class OptimizedProformaViewSet(viewsets.ModelViewSet):
             # Base queryset con filtros
             queryset = self.get_queryset()
             
-            # Aplicar filtros si existen
+            # Validar formato de fechas y aplicar filtros
             if start_date:
-                queryset = queryset.filter(fecha_emision__gte=start_date)
+                try:
+                    # Validar formato de fecha (YYYY-MM-DD)
+                    datetime.strptime(start_date, '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__gte=start_date)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en formato de fecha inicio: {start_date}, error: {str(e)}")
+                    # No aplicar filtro de fecha inválida
+                    pass
+                    
             if end_date:
-                queryset = queryset.filter(fecha_emision__lte=end_date)
+                try:
+                    # Validar formato de fecha (YYYY-MM-DD)
+                    datetime.strptime(end_date, '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__lte=end_date)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en formato de fecha fin: {end_date}, error: {str(e)}")
+                    # No aplicar filtro de fecha inválida
+                    pass
+                    
             if estado_filter:
-                # Permitir filtrar por múltiples estados
-                estados = [estado.strip() for estado in estado_filter.split(',')]
-                queryset = queryset.filter(estado__in=estados)
+                try:
+                    # Permitir filtrar por múltiples estados
+                    estados = [estado.strip() for estado in estado_filter.split(',')]
+                    queryset = queryset.filter(estado__in=estados)
+                except Exception as e:
+                    logger.error(f"Error al procesar filtro de estados: {str(e)}")
+                    # No aplicar filtro si hay error
+                    pass
+                    
             if cliente_id:
-                queryset = queryset.filter(cliente_id=cliente_id)
+                try:
+                    queryset = queryset.filter(cliente_id=cliente_id)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en ID de cliente: {cliente_id}, error: {str(e)}")
+                    # No aplicar filtro de cliente inválido
+                    pass
+                    
             if min_total:
-                queryset = queryset.filter(total__gte=min_total)
+                try:
+                    min_total_value = float(min_total)
+                    queryset = queryset.filter(total__gte=min_total_value)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en valor mínimo total: {min_total}, error: {str(e)}")
+                    # No aplicar filtro de total mínimo inválido
+                    pass
+                    
             if max_total:
-                queryset = queryset.filter(total__lte=max_total)
+                try:
+                    max_total_value = float(max_total)
+                    queryset = queryset.filter(total__lte=max_total_value)
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error en valor máximo total: {max_total}, error: {str(e)}")
+                    # No aplicar filtro de total máximo inválido
+                    pass
             
             # Registrar información de filtrado
             logger.info(
-                f"Dashboard filtrado: fechas={start_date}~{end_date}, "
+                f"Dashboard optimizado filtrado: fechas={start_date}~{end_date}, "
                 f"estado={estado_filter}, cliente={cliente_id}, "
-                f"total={min_total}~{max_total}"
+                f"total={min_total}~{max_total}, resultados={queryset.count()}"
             )
 
             # 1. OPTIMIZACIÓN: Estadísticas por estado en una sola consulta
-            estado_stats = {}
-            estado_annotate = {}
-            
-            # Crear anotaciones dinámicas para cada estado
-            for estado, label in Proforma.ESTADO_CHOICES:
-                # Crear una anotación para contar cada estado
-                estado_annotate[f'count_{estado}'] = Count(
-                    Case(
-                        When(estado=estado, then=1),
-                        default=None
+            try:
+                estado_stats = {}
+                estado_annotate = {}
+                
+                # Crear anotaciones dinámicas para cada estado
+                for estado, label in Proforma.ESTADO_CHOICES:
+                    # Crear una anotación para contar cada estado
+                    estado_annotate[f'count_{estado}'] = Count(
+                        Case(
+                            When(estado=estado, then=1),
+                            default=None
+                        )
                     )
-                )
-                # Crear una anotación para sumar el total de cada estado
-                estado_annotate[f'total_{estado}'] = Sum(
-                    Case(
-                        When(estado=estado, then=F('total')),
-                        default=0
+                    # Crear una anotación para sumar el total de cada estado
+                    estado_annotate[f'total_{estado}'] = Sum(
+                        Case(
+                            When(estado=estado, then=F('total')),
+                            default=0
+                        )
                     )
-                )
-            
-            # Realizar una sola consulta para obtener todas las estadísticas por estado
-            estado_aggregate = queryset.aggregate(**estado_annotate)
-            
-            # Formatear los resultados
-            for estado, label in Proforma.ESTADO_CHOICES:
-                estado_stats[estado] = {
-                    'count': estado_aggregate.get(f'count_{estado}', 0) or 0,
-                    'total': float(estado_aggregate.get(f'total_{estado}', 0) or 0),
-                    'label': label
-                }
+                
+                # Realizar una sola consulta para obtener todas las estadísticas por estado
+                estado_aggregate = queryset.aggregate(**estado_annotate)
+                
+                # Formatear los resultados
+                for estado, label in Proforma.ESTADO_CHOICES:
+                    estado_stats[estado] = {
+                        'count': estado_aggregate.get(f'count_{estado}', 0) or 0,
+                        'total': float(estado_aggregate.get(f'total_{estado}', 0) or 0),
+                        'label': label
+                    }
+            except Exception as e:
+                logger.error(f"Error al procesar estadísticas por estado: {str(e)}")
+                # Crear estructura vacía en caso de error
+                estado_stats = {}
+                for estado, label in Proforma.ESTADO_CHOICES:
+                    estado_stats[estado] = {'count': 0, 'total': 0.0, 'label': label}
             
             # 2. OPTIMIZACIÓN: Estadísticas por cliente (top 5) en una sola consulta
-            cliente_stats = list(queryset.values(
-                'cliente__id', 'cliente__nombre'
-            ).annotate(
-                count=Count('id'),
-                total=Sum('total')
-            ).order_by('-total')[:5])
-            
-            # Formatear los resultados
-            cliente_stats = [{
-                'id': cliente['cliente__id'],
-                'nombre': cliente['cliente__nombre'],
-                'count': cliente['count'],
-                'total': float(cliente['total'] or 0)
-            } for cliente in cliente_stats]
+            try:
+                cliente_stats_raw = list(queryset.values(
+                    'cliente__id', 'cliente__nombre'
+                ).annotate(
+                    count=Count('id'),
+                    total=Sum('total')
+                ).order_by('-total')[:5])
+                
+                # Formatear los resultados con manejo de excepciones
+                cliente_stats = []
+                for cliente in cliente_stats_raw:
+                    try:
+                        cliente_stats.append({
+                            'id': cliente['cliente__id'],
+                            'nombre': cliente['cliente__nombre'] or 'Cliente sin nombre',
+                            'count': cliente['count'],
+                            'total': float(cliente['total'] or 0)
+                        })
+                    except Exception as e:
+                        logger.error(f"Error al procesar cliente en estadísticas: {cliente}, error: {str(e)}")
+                        # Continuar con el siguiente cliente
+                        continue
+            except Exception as e:
+                logger.error(f"Error al procesar estadísticas por cliente: {str(e)}")
+                # Proporcionar datos vacíos en caso de error
+                cliente_stats = []
             
             # 3. OPTIMIZACIÓN: Estadísticas por mes en una sola consulta
-            mes_stats = list(queryset.annotate(
-                mes=TruncMonth('fecha_emision')
-            ).values('mes').annotate(
-                count=Count('id'),
-                total=Sum('total')
-            ).order_by('mes'))
-            
-            # Formatear los resultados
-            mes_stats = [{
-                'mes': mes['mes'].strftime('%Y-%m') if mes['mes'] else '',
-                'count': mes['count'],
-                'total': float(mes['total'] or 0)
-            } for mes in mes_stats if mes['mes']]
+            try:
+                mes_stats_raw = list(queryset.annotate(
+                    mes=TruncMonth('fecha_emision')
+                ).values('mes').annotate(
+                    count=Count('id'),
+                    total=Sum('total')
+                ).order_by('mes'))
+                
+                # Formatear los resultados con mejor manejo de errores
+                mes_stats = []
+                for mes in mes_stats_raw:
+                    try:
+                        if mes['mes'] is None:
+                            continue
+                        mes_stats.append({
+                            'mes': mes['mes'].strftime('%Y-%m'),
+                            'count': mes['count'],
+                            'total': float(mes['total'] or 0)
+                        })
+                    except (AttributeError, TypeError, ValueError) as e:
+                        logger.error(f"Error al procesar registro de mes: {mes}, error: {str(e)}")
+                        # Saltar este registro pero continuar con el resto
+                        continue
+            except Exception as e:
+                logger.error(f"Error al procesar estadísticas por mes: {str(e)}")
+                # Proporcionar datos vacíos en caso de error
+                mes_stats = []
             
             # 4. OPTIMIZACIÓN: Proformas recientes con prefetch_related y select_related
-            recientes_qs = Proforma.objects.select_related(
-                'cliente', 'created_by'
-            ).order_by('-created_at')[:5]
-            
-            # Formatear las proformas recientes
-            proformas_recientes = []
-            for proforma in recientes_qs:
-                try:
-                    # Obtener nombres para el estado
-                    estado_label = dict(Proforma.ESTADO_CHOICES).get(proforma.estado, proforma.estado)
-                    
-                    # Formatear fechas
-                    fecha_emision = proforma.fecha_emision.strftime('%d/%m/%Y') if proforma.fecha_emision else ''
-                    fecha_vencimiento = proforma.fecha_vencimiento.strftime('%d/%m/%Y') if proforma.fecha_vencimiento else ''
-                    
-                    # Iniciales del cliente para el avatar
-                    cliente_nombre = proforma.cliente.nombre if proforma.cliente else 'N/A'
-                    cliente_avatar = ''.join([word[0] for word in cliente_nombre.split()[:2]]) if cliente_nombre != 'N/A' else 'NA'
-                    
-                    # Vendedor (usuario que creó la proforma)
-                    vendedor = f"{proforma.created_by.first_name} {proforma.created_by.last_name}" if proforma.created_by else 'N/A'
-                    if vendedor.strip() == '':
-                        vendedor = proforma.created_by.username if proforma.created_by else 'N/A'
-                    
-                    proformas_recientes.append({
-                        'id': proforma.numero,  # Usamos 'numero' como ID para la interfaz
-                        'numero': proforma.numero,
-                        'cliente': cliente_nombre,
-                        'clienteAvatar': cliente_avatar,
-                        'fecha': fecha_emision,
-                        'expira': fecha_vencimiento,
-                        'monto': float(proforma.total),
-                        'estado': estado_label,
-                        'vendedor': vendedor
-                    })
-                except Exception as e:
-                    logger.error(f"Error al procesar proforma {proforma.id}: {str(e)}")
+            try:
+                recientes_qs = Proforma.objects.select_related(
+                    'cliente', 'created_by'
+                ).order_by('-created_at')[:5]
+                
+                # Formatear las proformas recientes con mejor manejo de errores
+                proformas_recientes = []
+                for proforma in recientes_qs:
+                    try:
+                        # Obtener nombres para el estado
+                        estado_label = dict(Proforma.ESTADO_CHOICES).get(proforma.estado, proforma.estado)
+                        
+                        # Formatear fechas - con manejo de excepciones
+                        try:
+                            fecha_emision = proforma.fecha_emision.strftime('%d/%m/%Y') if proforma.fecha_emision else ''
+                        except Exception:
+                            fecha_emision = ''
+                            
+                        try:
+                            fecha_vencimiento = proforma.fecha_vencimiento.strftime('%d/%m/%Y') if proforma.fecha_vencimiento else ''
+                        except Exception:
+                            fecha_vencimiento = ''
+                        
+                        # Iniciales del cliente para el avatar - con manejo de excepciones
+                        try:
+                            cliente_nombre = proforma.cliente.nombre if proforma.cliente else 'N/A'
+                            cliente_avatar = ''.join([word[0] for word in cliente_nombre.split()[:2]]) if cliente_nombre != 'N/A' else 'NA'
+                        except Exception:
+                            cliente_nombre = 'N/A'
+                            cliente_avatar = 'NA'
+                        
+                        # Vendedor (usuario que creó la proforma) - con manejo de excepciones
+                        try:
+                            vendedor = f"{proforma.created_by.first_name} {proforma.created_by.last_name}" if proforma.created_by else 'N/A'
+                            if vendedor.strip() == '':
+                                vendedor = proforma.created_by.username if proforma.created_by else 'N/A'
+                        except Exception:
+                            vendedor = 'N/A'
+                        
+                        proformas_recientes.append({
+                            'id': str(proforma.numero) if proforma.numero else str(proforma.id),  # Asegurar que sea string
+                            'numero': str(proforma.numero) if proforma.numero else str(proforma.id),
+                            'cliente': cliente_nombre,
+                            'clienteAvatar': cliente_avatar,
+                            'fecha': fecha_emision,
+                            'expira': fecha_vencimiento,
+                            'monto': float(proforma.total) if proforma.total is not None else 0.0,
+                            'estado': estado_label,
+                            'vendedor': vendedor
+                        })
+                    except Exception as e:
+                        logger.error(f"Error al procesar proforma {proforma.id}: {str(e)}")
+                        # Continuar con la siguiente proforma
+                        continue
+            except Exception as e:
+                logger.error(f"Error al obtener proformas recientes: {str(e)}")
+                # Proporcionar datos vacíos en caso de error
+                proformas_recientes = []
             
             # 5. OPTIMIZACIÓN: Totales consolidados en una sola consulta
-            totals = queryset.aggregate(
-                total_count=Count('id'),
-                total_aprobadas=Count(Case(When(estado='aprobada', then=1))),
-                total_monto=Sum('total') or 0
-            )
-            
-            total_count = totals['total_count']
-            total_aprobadas = totals['total_aprobadas']
-            total_monto = float(totals['total_monto'])
-            
-            # Calcular tasa de conversión
-            tasa_conversion = round((total_aprobadas / total_count) * 100, 1) if total_count > 0 else 0
+            try:
+                totals = queryset.aggregate(
+                    total_count=Count('id'),
+                    total_aprobadas=Count(Case(When(estado='aprobada', then=1))),
+                    total_monto=Sum('total') or 0
+                )
+                
+                total_count = totals['total_count']
+                total_aprobadas = totals['total_aprobadas']
+                total_monto = float(totals['total_monto'] or 0)
+                
+                # Calcular tasa de conversión con manejo de excepciones
+                try:
+                    tasa_conversion = round((total_aprobadas / total_count) * 100, 1) if total_count > 0 else 0
+                except (ZeroDivisionError, TypeError):
+                    tasa_conversion = 0.0
+            except Exception as e:
+                logger.error(f"Error al calcular totales: {str(e)}")
+                # Proporcionar valores predeterminados en caso de error
+                total_count = 0
+                total_aprobadas = 0
+                total_monto = 0.0
+                tasa_conversion = 0.0
             
             # Preparar respuesta final
             response_data = {
@@ -1010,7 +1199,7 @@ class OptimizedProformaViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error en dashboard optimizado: {str(e)}")
             return Response(
-                {"error": "Error al generar el dashboard"},
+                {"error": "Error al generar el dashboard", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -1134,15 +1323,40 @@ def stats_dashboard(request):
         # Base queryset
         queryset = Proforma.objects.all()
         
-        # Aplicar filtros
+        # Aplicar filtros con validación
         if fecha_desde:
-            queryset = queryset.filter(fecha_emision__gte=fecha_desde)
+            try:
+                # Validar formato de fecha (YYYY-MM-DD)
+                datetime.strptime(fecha_desde, '%Y-%m-%d')
+                queryset = queryset.filter(fecha_emision__gte=fecha_desde)
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error en formato de fecha inicio: {fecha_desde}, error: {str(e)}")
+                # No aplicar filtro de fecha inválida
+                pass
+                
         if fecha_hasta:
-            queryset = queryset.filter(fecha_emision__lte=fecha_hasta)
+            try:
+                # Validar formato de fecha (YYYY-MM-DD)
+                datetime.strptime(fecha_hasta, '%Y-%m-%d')
+                queryset = queryset.filter(fecha_emision__lte=fecha_hasta)
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error en formato de fecha fin: {fecha_hasta}, error: {str(e)}")
+                # No aplicar filtro de fecha inválida
+                pass
+                
         if empresa_id:
-            queryset = queryset.filter(empresa_id=empresa_id)
+            try:
+                empresa_id_int = int(empresa_id)
+                queryset = queryset.filter(empresa_id=empresa_id_int)
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error en formato de ID de empresa: {empresa_id}, error: {str(e)}")
+                # No aplicar filtro de empresa inválida
+                pass
         
         # Función para truncar fecha según periodo
+        trunc_func = None
+        date_format = '%Y-%m'
+        
         if periodo == 'day':
             trunc_func = TruncDay('fecha_emision')
             date_format = '%Y-%m-%d'
@@ -1154,97 +1368,146 @@ def stats_dashboard(request):
             date_format = '%Y-%m'
         
         # Agrupar y contar por periodo y estado
-        stats = queryset.annotate(
-            periodo=trunc_func
-        ).values('periodo', 'estado').annotate(
-            count=Count('id'),
-            total=Sum('total')
-        ).order_by('periodo', 'estado')
+        try:
+            stats = queryset.annotate(
+                periodo=trunc_func
+            ).values('periodo', 'estado').annotate(
+                count=Count('id'),
+                total=Sum('total')
+            ).order_by('periodo', 'estado')
+        except Exception as e:
+            logger.error(f"Error al agrupar estadísticas: {str(e)}")
+            # Proporcionar datos vacíos en caso de error
+            return Response(
+                {"error": f"Error al agrupar estadísticas: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
-        # Preparar datos para respuesta
+        # Preparar datos para respuesta con manejo de excepciones
         periodos = {}
-        for stat in stats:
-            fecha = stat['periodo']
-            if fecha:
-                fecha_str = fecha.strftime(date_format)
-                if fecha_str not in periodos:
-                    periodos[fecha_str] = {
-                        'fecha': fecha_str,
-                        'total': 0,
-                        'count': 0,
-                        'estados': {}
+        try:
+            for stat in stats:
+                try:
+                    fecha = stat['periodo']
+                    if fecha is None:
+                        continue
+                        
+                    try:
+                        fecha_str = fecha.strftime(date_format)
+                    except (AttributeError, ValueError, TypeError) as e:
+                        logger.error(f"Error al formatear fecha: {fecha}, error: {str(e)}")
+                        continue
+                        
+                    if fecha_str not in periodos:
+                        periodos[fecha_str] = {
+                            'fecha': fecha_str,
+                            'total': 0,
+                            'count': 0,
+                            'estados': {}
+                        }
+                    
+                    # Actualizar conteos por estado
+                    estado = stat['estado']
+                    if estado is None:
+                        estado = 'sin_estado'
+                        
+                    periodos[fecha_str]['estados'][estado] = {
+                        'count': stat['count'],
+                        'total': float(stat['total'] or 0)
                     }
-                
-                # Actualizar conteos por estado
-                estado = stat['estado']
-                periodos[fecha_str]['estados'][estado] = {
-                    'count': stat['count'],
-                    'total': float(stat['total'] or 0)
-                }
-                
-                # Actualizar totales del periodo
-                periodos[fecha_str]['total'] += float(stat['total'] or 0)
-                periodos[fecha_str]['count'] += stat['count']
+                    
+                    # Actualizar totales del periodo
+                    periodos[fecha_str]['total'] += float(stat['total'] or 0)
+                    periodos[fecha_str]['count'] += stat['count']
+                except Exception as e:
+                    logger.error(f"Error al procesar estadística: {stat}, error: {str(e)}")
+                    # Continuar con el siguiente registro
+                    continue
+        except Exception as e:
+            logger.error(f"Error al preparar datos de periodos: {str(e)}")
+            periodos = {}
         
         # Convertir a lista ordenada para la respuesta
         result = []
-        for fecha_str in sorted(periodos.keys()):
-            periodo_data = periodos[fecha_str]
-            
-            # Calcular estadísticas adicionales
-            proformas_enviadas = periodo_data['estados'].get('enviada', {}).get('count', 0)
-            proformas_aprobadas = periodo_data['estados'].get('aprobada', {}).get('count', 0)
-            
-            total_periodo = periodo_data['count']
-            if total_periodo > 0:
-                tasa_aprobacion = (proformas_aprobadas / total_periodo) * 100
-            else:
-                tasa_aprobacion = 0
-                
-            # Si hay enviadas, calcular tasa de conversión
-            if proformas_enviadas > 0:
-                tasa_conversion = (proformas_aprobadas / proformas_enviadas) * 100
-            else:
-                tasa_conversion = 0
-            
-            # Añadir estadísticas adicionales
-            periodo_data['tasa_aprobacion'] = round(tasa_aprobacion, 2)
-            periodo_data['tasa_conversion'] = round(tasa_conversion, 2)
-            
-            result.append(periodo_data)
+        try:
+            for fecha_str in sorted(periodos.keys()):
+                try:
+                    periodo_data = periodos[fecha_str]
+                    
+                    # Calcular estadísticas adicionales con manejo de excepciones
+                    proformas_enviadas = periodo_data['estados'].get('enviada', {}).get('count', 0)
+                    proformas_aprobadas = periodo_data['estados'].get('aprobada', {}).get('count', 0)
+                    
+                    total_periodo = periodo_data['count']
+                    
+                    # Calcular tasas con manejo de división por cero
+                    try:
+                        tasa_aprobacion = (proformas_aprobadas / total_periodo) * 100 if total_periodo > 0 else 0
+                    except (ZeroDivisionError, TypeError):
+                        tasa_aprobacion = 0
+                        
+                    try:
+                        tasa_conversion = (proformas_aprobadas / proformas_enviadas) * 100 if proformas_enviadas > 0 else 0
+                    except (ZeroDivisionError, TypeError):
+                        tasa_conversion = 0
+                    
+                    # Añadir estadísticas adicionales
+                    periodo_data['tasa_aprobacion'] = round(tasa_aprobacion, 2)
+                    periodo_data['tasa_conversion'] = round(tasa_conversion, 2)
+                    
+                    result.append(periodo_data)
+                except Exception as e:
+                    logger.error(f"Error al procesar periodo {fecha_str}: {str(e)}")
+                    # Continuar con el siguiente periodo
+                    continue
+        except Exception as e:
+            logger.error(f"Error al ordenar y procesar periodos: {str(e)}")
+            result = []
         
         # Devolver en formato solicitado
         if formato == 'csv':
-            # Crear un archivo CSV en memoria
-            output = io.StringIO()
-            writer = csv.writer(output)
-            
-            # Escribir cabecera
-            writer.writerow([
-                'Fecha', 'Total Proformas', 'Monto Total', 
-                'Borradores', 'Enviadas', 'Aprobadas', 'Rechazadas',
-                'Tasa Aprobación', 'Tasa Conversión'
-            ])
-            
-            # Escribir filas
-            for periodo in result:
+            try:
+                # Crear un archivo CSV en memoria
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                # Escribir cabecera
                 writer.writerow([
-                    periodo['fecha'],
-                    periodo['count'],
-                    f"{periodo['total']:.2f}",
-                    periodo['estados'].get('borrador', {}).get('count', 0),
-                    periodo['estados'].get('enviada', {}).get('count', 0),
-                    periodo['estados'].get('aprobada', {}).get('count', 0),
-                    periodo['estados'].get('rechazada', {}).get('count', 0),
-                    f"{periodo['tasa_aprobacion']:.2f}%",
-                    f"{periodo['tasa_conversion']:.2f}%"
+                    'Fecha', 'Total Proformas', 'Monto Total', 
+                    'Borradores', 'Enviadas', 'Aprobadas', 'Rechazadas',
+                    'Tasa Aprobación', 'Tasa Conversión'
                 ])
-            
-            # Devolver respuesta CSV
-            output.seek(0)
-            response = HttpResponse(output.read(), content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename=stats_{periodo}_{fecha_desde}_{fecha_hasta}.csv'
-            return response
+                
+                # Escribir filas con manejo de excepciones
+                for periodo in result:
+                    try:
+                        writer.writerow([
+                            periodo['fecha'],
+                            periodo['count'],
+                            f"{periodo['total']:.2f}",
+                            periodo['estados'].get('borrador', {}).get('count', 0),
+                            periodo['estados'].get('enviada', {}).get('count', 0),
+                            periodo['estados'].get('aprobada', {}).get('count', 0),
+                            periodo['estados'].get('rechazada', {}).get('count', 0),
+                            f"{periodo['tasa_aprobacion']:.2f}%",
+                            f"{periodo['tasa_conversion']:.2f}%"
+                        ])
+                    except Exception as e:
+                        logger.error(f"Error al escribir fila CSV: {periodo}, error: {str(e)}")
+                        # Continuar con el siguiente periodo
+                        continue
+                
+                # Devolver respuesta CSV
+                output.seek(0)
+                response = HttpResponse(output.read(), content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename=stats_{periodo}_{fecha_desde}_{fecha_hasta}.csv'
+                return response
+            except Exception as e:
+                logger.error(f"Error al generar CSV: {str(e)}")
+                return Response(
+                    {"error": f"Error al generar CSV: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         else:
             # Devolver respuesta JSON
             return Response({
@@ -1257,6 +1520,6 @@ def stats_dashboard(request):
     except Exception as e:
         logger.exception(f"Error en stats_dashboard: {str(e)}")
         return Response(
-            {"error": f"Error al generar estadísticas: {str(e)}"},
+            {"error": f"Error al generar estadísticas: {str(e)}", "detail": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

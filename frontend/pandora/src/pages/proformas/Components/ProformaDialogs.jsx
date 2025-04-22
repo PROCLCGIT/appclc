@@ -10,8 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import ClientSearchDialog from "./ClientSearchDialog";
 import ProformasDialog from "./ProformasDialog";
+import { useErrorHandler } from "@/pages/proformas/hooks/useErrorHandler.jsx";
 
 /**
  * Componente que agrupa todos los diálogos/modales usados en el módulo de proformas
@@ -43,8 +45,14 @@ export default function ProformaDialogs({
   proformas,
   activeProformaId,
   handleAction,
-  onLoadProformas
+  onLoadProformas,
+  
+  // Error handling
+  errorHandler: propErrorHandler
 }) {
+  // Usar el errorHandler pasado por props o inicializar uno nuevo
+  const defaultErrorHandler = useErrorHandler();
+  const errorHandler = propErrorHandler || defaultErrorHandler;
   // Verificar que los datos se pasan correctamente
   useEffect(() => {
     if (showClientSearch) {
@@ -66,20 +74,37 @@ export default function ProformaDialogs({
         onSelectClient={handleClientSelection}
         clientes={clientes || []}
         loadingClientes={loadingClientes}
-        onRequestLoadClientes={(forceRefresh = false) => {
-          console.log('ProformaDialogs: Solicitando carga manual de clientes... forceRefresh:', forceRefresh);
+        onRequestLoadClientes={(forceRefresh = false, searchQuery = "") => {
+          console.log('ProformaDialogs: Solicitando carga manual de clientes... forceRefresh:', forceRefresh, 'searchQuery:', searchQuery);
           
-          // Usar onRequestLoadClientes prop de EnhancedProformaWithQuery si está disponible
-          if (typeof onRequestLoadClientes === 'function') {
-            console.log('Usando función onRequestLoadClientes pasada desde el componente principal');
-            return onRequestLoadClientes(forceRefresh);
-          } 
-          // Fallback a searchClientes si no hay onRequestLoadClientes
-          else if (typeof searchClientes === 'function') {
-            console.log('Fallback: Usando searchClientes como alternativa');
-            return searchClientes("");
-          } else {
-            console.warn('No hay función disponible para cargar clientes');
+          try {
+            // Usar onRequestLoadClientes prop si está disponible
+            if (typeof onRequestLoadClientes === 'function') {
+              console.log('Usando función onRequestLoadClientes pasada desde el componente principal');
+              return onRequestLoadClientes(forceRefresh);
+            } 
+            // Fallback a searchClientes si no hay onRequestLoadClientes
+            else if (typeof searchClientes === 'function') {
+              console.log('Fallback: Usando searchClientes como alternativa');
+              return searchClientes(searchQuery);
+            } else {
+              const error = new Error('No hay función disponible para cargar clientes');
+              console.warn(error);
+              errorHandler.handleError(error, 'cargar clientes', { 
+                suppressToast: false,
+                customMessages: {
+                  unknown: {
+                    message: 'No se pudieron cargar los clientes',
+                    description: 'No se encontró un método apropiado para cargar clientes'
+                  }
+                }
+              });
+              return Promise.resolve([]);
+            }
+          } catch (error) {
+            errorHandler.handleError(error, 'cargar clientes');
+            toast.error('Error al cargar clientes');
+            return Promise.resolve([]);
           }
         }}
       />

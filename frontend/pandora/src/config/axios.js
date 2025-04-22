@@ -33,6 +33,16 @@ const api = axios.create({
 // 1) Interceptor REQUEST: agrega Bearer token, controla concurrencia y maneja caché
 api.interceptors.request.use(
   async (config) => {
+    // Log completo de la petición para debugging
+    const fullUrl = `${config.baseURL}${config.url}`;
+    console.log(`🚀 API Request: ${config.method.toUpperCase()} ${fullUrl}`, {
+      params: config.params,
+      headers: config.headers,
+      timeout: config.timeout,
+      highPriority: config._highPriority,
+      bypassCache: config._bypassCache
+    });
+    
     // Verificar si podemos usar caché para esta solicitud
     if (config.method === 'get' && !config._bypassCache) {
       const cacheKey = apiCache.createKey(config);
@@ -171,8 +181,16 @@ api.interceptors.response.use(
     // Log para monitoreo de tiempos de respuesta
     if (response.config._requestTime) {
       const duration = Date.now() - response.config._requestTime;
+      const fullUrl = `${response.config.baseURL}${response.config.url}`;
+      
       if (duration > 1000) {
-        console.log(`Petición a ${response.config.url} completada en ${duration}ms (lenta)`);
+        console.log(`⏱️ Petición LENTA a ${fullUrl} completada en ${duration}ms`);
+      } else {
+        console.log(`✅ Respuesta exitosa de ${response.config.method.toUpperCase()} ${fullUrl} (${duration}ms)`, {
+          status: response.status,
+          dataSize: JSON.stringify(response.data).length,
+          contentType: response.headers['content-type']
+        });
       }
     }
     
@@ -279,7 +297,12 @@ api.interceptors.response.use(
       error.message = 'Demasiadas solicitudes en poco tiempo. Por favor, espere unos minutos e intente nuevamente.';
     } else if (error.response?.status === 404) {
       // Para errores 404, no tiene sentido reintentar
-      console.log('Recurso no encontrado (404):', error.config.url);
+      const fullUrl = `${error.config.baseURL || ''}${error.config.url}`;
+      console.log(`❌ Error 404 (Recurso no encontrado): ${error.config.method.toUpperCase()} ${fullUrl}`, {
+        params: error.config.params,
+        data: error.config.data,
+        headers: error.config.headers
+      });
     } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       // Para errores de timeout, incrementar contador de rate limiting también
       // ya que a menudo los timeouts son un síntoma de sobrecarga del servidor

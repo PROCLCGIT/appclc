@@ -1,546 +1,648 @@
-// src/pages/proformas/DashboardProformas.jsx
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+// src/pages/proformas/DashboardProformasWithQuery.jsx
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, ChevronDownIcon, FileIcon, PlusIcon, RefreshCw, XCircle } from 'lucide-react';
 import {
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
-} from "recharts";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+  PieChart,
+  Pie,
+  Legend
+} from 'recharts';
+import format from 'date-fns/format';
+import { es } from 'date-fns/locale';
+import { addMonths, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import ProformasDashboardTable from './components/ProformasDashboardTable';
+import { useProformaDashboardQuery } from '@/hooks/queries/useProformasQuery';
+import { cn } from '@/lib/utils';
+import useDelayedFlag from '@/hooks/useDelayedFlag';
+import { SkeletonDashboard } from '@/components/SkeletonList';
+import { proformasService } from '@/services/api';
 
-// Colores para gráficos
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a05195', '#d45087', '#f95d6a', '#ff7c43', '#ffa600'];
-const ESTADO_COLORS = {
-  'borrador': '#6c757d',   // Gris
-  'enviada': '#007bff',    // Azul
-  'aprobada': '#28a745',   // Verde
-  'rechazada': '#dc3545',  // Rojo
-  'vencida': '#ffc107',    // Amarillo
-  'convertida': '#17a2b8'  // Cian
+// Colores para los gráficos
+const CHART_COLORS = {
+  aprobada: '#10b981', // Verde
+  enviada: '#3b82f6', // Azul
+  borrador: '#6b7280', // Gris
+  rechazada: '#ef4444', // Rojo
+  vencida: '#f59e0b', // Naranja
+  convertida: '#8b5cf6' // Púrpura
 };
 
-const DashboardProformas = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [periodo, setPeriodo] = useState("month");
-  const [fechaInicio, setFechaInicio] = useState(new Date(new Date().setMonth(new Date().getMonth() - 6)));
-  const [fechaFin, setFechaFin] = useState(new Date());
-  const [activeTab, setActiveTab] = useState("overview");
+// Estados de proforma para los filtros
+const ESTADOS_PROFORMA = [
+  { value: 'borrador', label: 'Borrador', color: CHART_COLORS.borrador },
+  { value: 'enviada', label: 'Enviada', color: CHART_COLORS.enviada },
+  { value: 'aprobada', label: 'Aprobada', color: CHART_COLORS.aprobada },
+  { value: 'rechazada', label: 'Rechazada', color: CHART_COLORS.rechazada },
+  { value: 'vencida', label: 'Vencida', color: CHART_COLORS.vencida },
+  { value: 'convertida', label: 'Convertida', color: CHART_COLORS.convertida }
+];
 
-  // Función para formatear números con separador de miles y decimales
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(num);
-  };
+// Componente para seleccionar rango de fechas
+const DateRangeSelector = ({ dateRange, setDateRange }) => {
+  const [isStartOpen, setIsStartOpen] = useState(false);
+  const [isEndOpen, setIsEndOpen] = useState(false);
 
-  // Función para formatear porcentajes
-  const formatPercent = (num) => {
-    return `${num.toFixed(2)}%`;
-  };
-
-  // Cargar datos del dashboard
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Formatear fechas
-      const inicio = fechaInicio ? fechaInicio.toISOString().split('T')[0] : undefined;
-      const fin = fechaFin ? fechaFin.toISOString().split('T')[0] : undefined;
-
-      // Llamar al API
-      const response = await axios.get('/api/v1/proformas/stats-dashboard/', {
-        params: {
-          fecha_inicio: inicio,
-          fecha_fin: fin,
-          periodo
-        }
-      });
-
-      setData(response.data);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching dashboard data:", err);
-      setError("Error al cargar los datos del dashboard. Intente nuevamente.");
-    } finally {
-      setLoading(false);
+  // Presets de rangos de fechas
+  const handlePresetClick = (preset) => {
+    const now = new Date();
+    
+    switch (preset) {
+      case 'este-mes':
+        setDateRange({
+          startDate: startOfMonth(now),
+          endDate: endOfMonth(now)
+        });
+        break;
+      case 'mes-anterior':
+        const lastMonth = subMonths(now, 1);
+        setDateRange({
+          startDate: startOfMonth(lastMonth),
+          endDate: endOfMonth(lastMonth)
+        });
+        break;
+      case 'ultimos-3-meses':
+        setDateRange({
+          startDate: startOfMonth(subMonths(now, 2)),
+          endDate: endOfMonth(now)
+        });
+        break;
+      case 'ultimos-6-meses':
+        setDateRange({
+          startDate: startOfMonth(subMonths(now, 5)),
+          endDate: endOfMonth(now)
+        });
+        break;
+      case 'todo':
+        setDateRange({
+          startDate: null,
+          endDate: null
+        });
+        break;
+      default:
+        break;
     }
   };
 
-  // Cargar datos al montar el componente o cambiar filtros
-  useEffect(() => {
-    fetchData();
-  }, [periodo, fechaInicio, fechaFin]);
-
-  // Manejar cambio de filtros
-  const handleFilterChange = () => {
-    fetchData();
-  };
-
-  // Si está cargando, mostrar indicador
-  if (loading && !data) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="sr-only">Cargando...</span>
-          </div>
-          <p className="mt-2">Cargando estadísticas...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Si hay error, mostrar mensaje
-  if (error) {
-    return (
-      <div className="alert alert-danger" role="alert">
-        {error}
-      </div>
-    );
-  }
-
   return (
-    <div className="container px-4 py-8 mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Dashboard de Proformas</h1>
-        <div className="flex space-x-4">
-          <Select value={periodo} onValueChange={(val) => setPeriodo(val)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Periodo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Diario</SelectItem>
-              <SelectItem value="week">Semanal</SelectItem>
-              <SelectItem value="month">Mensual</SelectItem>
-              <SelectItem value="year">Anual</SelectItem>
-            </SelectContent>
-          </Select>
-          <div>
-            <DatePicker
-              date={fechaInicio}
-              setDate={setFechaInicio}
-              placeholder="Fecha inicio"
-              className="w-[140px]"
-            />
-          </div>
-          <div>
-            <DatePicker
-              date={fechaFin}
-              setDate={setFechaFin}
-              placeholder="Fecha fin"
-              className="w-[140px]"
-            />
-          </div>
-          <Button variant="default" onClick={handleFilterChange}>
-            Aplicar
+    <div className="flex flex-wrap items-center space-x-4 mb-4">
+      <span className="text-sm font-medium">Período:</span>
+      
+      {/* Selector de Fecha Inicio */}
+      <Popover open={isStartOpen} onOpenChange={setIsStartOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-9 px-4"
+          >
+            {dateRange.startDate ? (
+              format(dateRange.startDate, 'dd/MM/yyyy')
+            ) : (
+              <span>Fecha inicial</span>
+            )}
+            <CalendarIcon className="ml-2 h-4 w-4" />
           </Button>
-        </div>
-      </div>
-
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="estados">Por Estado</TabsTrigger>
-          <TabsTrigger value="tiempo">Evolución</TabsTrigger>
-          <TabsTrigger value="clientes">Clientes</TabsTrigger>
-        </TabsList>
-
-        {data && (
-          <>
-            {/* Pestaña de Resumen */}
-            <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md font-medium">Total Proformas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{data.resumen.total_proformas}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Valor total: {formatNumber(data.resumen.monto_total)}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md font-medium">Promedio por Proforma</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{formatNumber(data.resumen.monto_promedio)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md font-medium">Tasa de Aprobación</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{formatPercent(data.resumen.tasa_aprobacion)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      % de proformas enviadas que son aprobadas
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md font-medium">Tasa de Conversión</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{formatPercent(data.resumen.tasa_conversion)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      % de proformas aprobadas que se convierten
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="col-span-1">
-                  <CardHeader>
-                    <CardTitle>Proformas por Estado</CardTitle>
-                    <CardDescription>Distribución por estado</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={data.por_estado}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="cantidad"
-                          nameKey="label"
-                          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                        >
-                          {data.por_estado.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={ESTADO_COLORS[entry.estado] || COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value, name, props) => [value, name]} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card className="col-span-1">
-                  <CardHeader>
-                    <CardTitle>Evolución Mensual</CardTitle>
-                    <CardDescription>Cantidad y monto por mes</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={data.por_tiempo}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="fecha" />
-                        <YAxis yAxisId="left" />
-                        <YAxis yAxisId="right" orientation="right" />
-                        <Tooltip 
-                          formatter={(value, name) => {
-                            if (name === "monto") return formatNumber(value);
-                            return value;
-                          }}
-                        />
-                        <Legend />
-                        <Line
-                          yAxisId="left"
-                          type="monotone"
-                          dataKey="cantidad"
-                          stroke="#8884d8"
-                          activeDot={{ r: 8 }}
-                          name="Cantidad"
-                        />
-                        <Line
-                          yAxisId="right"
-                          type="monotone"
-                          dataKey="monto"
-                          stroke="#82ca9d"
-                          name="Monto"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Pestaña de Estados */}
-            <TabsContent value="estados">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Proformas por Estado</CardTitle>
-                    <CardDescription>Distribución por cantidad</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={data.por_estado}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="label" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="cantidad" name="Cantidad" fill="#8884d8">
-                          {data.por_estado.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={ESTADO_COLORS[entry.estado] || COLORS[index % COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Monto por Estado</CardTitle>
-                    <CardDescription>Distribución por monto total</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={data.por_estado}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="label" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => formatNumber(value)} />
-                        <Legend />
-                        <Bar dataKey="monto" name="Monto" fill="#82ca9d">
-                          {data.por_estado.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={ESTADO_COLORS[entry.estado] || COLORS[index % COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detalles por Estado</CardTitle>
-                  </CardHeader>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">% del Total</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Total</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">% del Monto</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {data.por_estado.map((estado, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{estado.label}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{estado.cantidad}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                              {((estado.cantidad / data.resumen.total_proformas) * 100).toFixed(1)}%
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(estado.monto)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                              {((estado.monto / data.resumen.monto_total) * 100).toFixed(1)}%
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Pestaña de Evolución en el tiempo */}
-            <TabsContent value="tiempo">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evolución Temporal</CardTitle>
-                  <CardDescription>
-                    Cantidad y monto por {periodo === 'day' ? 'día' : periodo === 'week' ? 'semana' : periodo === 'month' ? 'mes' : 'año'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={data.por_tiempo}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" />
-                      <YAxis yAxisId="left" />
-                      <YAxis yAxisId="right" orientation="right" />
-                      <Tooltip 
-                        formatter={(value, name) => {
-                          if (name === "monto") return formatNumber(value);
-                          if (name === "tasa_conversion") return formatPercent(value);
-                          return value;
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="cantidad"
-                        stroke="#8884d8"
-                        activeDot={{ r: 8 }}
-                        name="Cantidad"
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="monto"
-                        stroke="#82ca9d"
-                        name="Monto"
-                      />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="tasa_conversion"
-                        stroke="#ff7c43"
-                        dot={{ r: 6 }}
-                        name="Tasa de Conversión (%)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <div className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detalles de Evolución Temporal</CardTitle>
-                  </CardHeader>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aprobadas</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa Conversión</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {data.por_tiempo.map((item, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.fecha}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{item.cantidad}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(item.monto)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{item.aprobadas}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatPercent(item.tasa_conversion)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Pestaña de Clientes */}
-            <TabsContent value="clientes">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top 10 Clientes</CardTitle>
-                  <CardDescription>Por monto total generado</CardDescription>
-                </CardHeader>
-                <CardContent className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={data.top_clientes}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      layout="vertical"
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="cliente__nombre" width={150} />
-                      <Tooltip formatter={(value) => formatNumber(value)} />
-                      <Legend />
-                      <Bar dataKey="monto" name="Monto Total" fill="#8884d8" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <div className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detalles por Cliente</CardTitle>
-                  </CardHeader>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RUC/ID</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Total</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Promedio</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {data.top_clientes.map((cliente, index) => (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cliente.cliente__nombre}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cliente.cliente__ruc}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{cliente.cantidad}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{formatNumber(cliente.monto)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                              {formatNumber(cliente.monto / cliente.cantidad)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateRange.startDate}
+            onSelect={(date) => {
+              setDateRange(prev => ({ ...prev, startDate: date }));
+              // Use a timeout to prevent state update from causing rerenders
+              setTimeout(() => setIsStartOpen(false), 0);
+            }}
+            initialFocus
+            locale={es}
+          />
+        </PopoverContent>
+      </Popover>
+      
+      <span>a</span>
+      
+      {/* Selector de Fecha Fin */}
+      <Popover open={isEndOpen} onOpenChange={setIsEndOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-9 px-4"
+          >
+            {dateRange.endDate ? (
+              format(dateRange.endDate, 'dd/MM/yyyy')
+            ) : (
+              <span>Fecha final</span>
+            )}
+            <CalendarIcon className="ml-2 h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateRange.endDate}
+            onSelect={(date) => {
+              setDateRange(prev => ({ ...prev, endDate: date }));
+              // Use a timeout to prevent state update from causing rerenders
+              setTimeout(() => setIsEndOpen(false), 0);
+            }}
+            fromDate={dateRange.startDate || undefined}
+            initialFocus
+            locale={es}
+          />
+        </PopoverContent>
+      </Popover>
+      
+      {/* Presets de rangos */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="h-9">
+            Presets
+            <ChevronDownIcon className="ml-2 h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56">
+          <div className="flex flex-col space-y-1">
+            <Button 
+              variant="ghost"
+              className="justify-start text-left"
+              onClick={() => handlePresetClick('este-mes')}
+            >
+              Este mes
+            </Button>
+            <Button 
+              variant="ghost"
+              className="justify-start text-left"
+              onClick={() => handlePresetClick('mes-anterior')}
+            >
+              Mes anterior
+            </Button>
+            <Button 
+              variant="ghost"
+              className="justify-start text-left"
+              onClick={() => handlePresetClick('ultimos-3-meses')}
+            >
+              Últimos 3 meses
+            </Button>
+            <Button 
+              variant="ghost"
+              className="justify-start text-left"
+              onClick={() => handlePresetClick('ultimos-6-meses')}
+            >
+              Últimos 6 meses
+            </Button>
+            <Button 
+              variant="ghost"
+              className="justify-start text-left"
+              onClick={() => handlePresetClick('todo')}
+            >
+              Todo el tiempo
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };
 
-export default DashboardProformas;
+// Componente principal del Dashboard
+const DashboardProformasWithQuery = () => {
+  // Estado para el rango de fechas
+  const [dateRange, setDateRange] = useState({
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date())
+  });
+  
+  // Estado para filtros de estados
+  const [estadosFiltrados, setEstadosFiltrados] = useState(ESTADOS_PROFORMA.map(e => e.value));
+  
+  // Query para obtener datos del dashboard
+  const {
+    data: dashboardData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch
+  } = useProformaDashboardQuery({
+    startDate: dateRange.startDate ? format(dateRange.startDate, 'yyyy-MM-dd') : undefined,
+    endDate: dateRange.endDate ? format(dateRange.endDate, 'yyyy-MM-dd') : undefined
+  });
+  
+  // Usar el hook de delayed flag para evitar el flash de loading
+  const showSkeletons = useDelayedFlag(isLoading || isFetching, 300);
+  
+  // Manejar toggle de estados en filtro
+  const toggleEstadoFiltro = (estado) => {
+    setEstadosFiltrados(prev => {
+      if (prev.includes(estado)) {
+        return prev.filter(e => e !== estado);
+      } else {
+        return [...prev, estado];
+      }
+    });
+  };
+  
+  // Memoizar datos para evitar recálculos innecesarios en cada render
+  const datosPorEstado = useMemo(() => {
+    if (!dashboardData || !dashboardData.por_estado) return [];
+
+    console.log('Calculando datosPorEstado memoizado');
+    
+    return Object.entries(dashboardData.por_estado)
+      .filter(([estado]) => estadosFiltrados.includes(estado))
+      .map(([estado, info]) => ({
+        estado: info.label,
+        estadoKey: estado,
+        cantidad: info.count,
+        monto: parseFloat(info.total) || 0,
+        color: CHART_COLORS[estado] || '#6b7280'
+      }));
+  }, [dashboardData, estadosFiltrados]);
+  
+  // Memoizar datos de mes para evitar recálculos innecesarios
+  const datosPorMes = useMemo(() => {
+    if (!dashboardData || !dashboardData.por_mes) return [];
+    
+    console.log('Calculando datosPorMes memoizado');
+    
+    return dashboardData.por_mes.map(item => ({
+      mes: item.mes,
+      cantidad: item.count,
+      monto: parseFloat(item.total) || 0
+    }));
+  }, [dashboardData]);
+  
+  // Las funciones prepararDatos* han sido reemplazadas por valores memoizados
+  
+  // Formatear montos como moneda
+  const formatMonto = (valor) => {
+    return new Intl.NumberFormat('es-EC', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(valor);
+  };
+  
+  // Custom tooltip para gráficos
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border rounded shadow-md">
+          <p className="font-medium">{label}</p>
+          {payload.map((entry, index) => (
+            <p key={`item-${index}`} style={{ color: entry.color || '#333' }}>
+              {entry.name}: {entry.name === 'Monto' ? formatMonto(entry.value) : entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard de Proformas</h1>
+          <p className="text-muted-foreground">Análisis y métricas de proformas</p>
+        </div>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            disabled={isLoading || isFetching}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", {
+              "animate-spin": isFetching
+            })} />
+            Actualizar
+          </Button>
+          <Link to="/enhancedproforma?new=true">
+            <Button>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Nueva Proforma
+            </Button>
+          </Link>
+        </div>
+      </div>
+      
+      {/* Selector de rango de fechas */}
+      <DateRangeSelector dateRange={dateRange} setDateRange={setDateRange} />
+      
+      {showSkeletons ? (
+        <SkeletonDashboard />
+      ) : isError ? (
+        // Mostrar error si la consulta falló
+        <div className="p-6 bg-red-50 border border-red-200 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold text-red-700 mb-2">Error al cargar datos del dashboard</h3>
+          <p className="text-red-600 mb-4">{error?.message || "Se produjo un error al obtener las estadísticas."}</p>
+          <Button onClick={() => refetch()} variant="outline" className="bg-white">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
+      ) : (
+        <>
+          {/* Tarjetas de métricas principales */}
+          {dashboardData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Proformas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">
+                    {dashboardData.totalStats?.totalProformas || dashboardData.total_proformas || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    En el período seleccionado
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Proformas Aprobadas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">
+                    {dashboardData.totalStats?.proformasAprobadas || dashboardData.por_estado?.aprobada?.count || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tasa de aprobación: {dashboardData.totalStats?.tasaConversion || 
+                    (dashboardData.total_proformas && dashboardData.por_estado?.aprobada ? 
+                     Math.round((dashboardData.por_estado.aprobada.count / dashboardData.total_proformas) * 100) : 0)}%
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Monto Total
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-600">
+                    {formatMonto(dashboardData.totalStats?.montoTotal || dashboardData.total_monto || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Valor total de proformas
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Promedio por Proforma
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">
+                    {formatMonto(
+                      (dashboardData.totalStats?.totalProformas || dashboardData.total_proformas) > 0 
+                        ? ((dashboardData.totalStats?.montoTotal || dashboardData.total_monto) / 
+                           (dashboardData.totalStats?.totalProformas || dashboardData.total_proformas)) 
+                        : 0
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Valor promedio
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          {/* Filtros de estado para gráficos */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="text-sm font-medium mr-2 self-center">Filtrar por estado:</span>
+            {ESTADOS_PROFORMA.map(estado => (
+              <Button
+                key={estado.value}
+                variant={estadosFiltrados.includes(estado.value) ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleEstadoFiltro(estado.value)}
+                style={{
+                  backgroundColor: estadosFiltrados.includes(estado.value) ? estado.color : undefined,
+                  borderColor: !estadosFiltrados.includes(estado.value) ? estado.color : undefined,
+                  color: estadosFiltrados.includes(estado.value) ? 'white' : estado.color
+                }}
+              >
+                {estado.label}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Gráficos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Gráfico por estado */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Proformas por Estado</CardTitle>
+              </CardHeader>
+              <CardContent className="h-80">
+                {isError ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-red-500">Error al cargar los datos</p>
+                  </div>
+                ) : datosPorEstado.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p>No hay datos disponibles</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={datosPorEstado}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="cantidad"
+                        nameKey="estado"
+                        label={({ estado, percent }) => `${estado} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {datosPorEstado.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Gráfico de montos por estado */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Montos por Estado</CardTitle>
+              </CardHeader>
+              <CardContent className="h-80">
+                {isError ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-red-500">Error al cargar los datos</p>
+                  </div>
+                ) : datosPorEstado.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p>No hay datos disponibles</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={datosPorEstado}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="estado" />
+                      <YAxis 
+                        tickFormatter={(value) => `${value.toLocaleString()}`} 
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar 
+                        dataKey="monto" 
+                        name="Monto" 
+                        radius={[4, 4, 0, 0]}
+                      >
+                        {datosPorEstado.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Gráfico por mes */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Tendencia de Proformas por Mes</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              {isError ? (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-red-500">Error al cargar los datos</p>
+                </div>
+              ) : datosPorMes.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <p>No hay datos disponibles</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={datosPorMes}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="mes" 
+                      tickFormatter={(value) => {
+                        const [year, month] = value.split('-');
+                        return `${month}/${year.slice(2)}`;
+                      }}
+                    />
+                    <YAxis yAxisId="left" orientation="left" />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right"
+                      tickFormatter={(value) => `${value.toLocaleString()}`} 
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="cantidad" 
+                      name="Cantidad" 
+                      fill="#3b82f6" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      yAxisId="right"
+                      dataKey="monto" 
+                      name="Monto" 
+                      fill="#10b981" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Tabla de Proformas Recientes */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Proformas Recientes</CardTitle>
+              {!isLoading && dashboardData && (
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RefreshCw className={cn("h-4 w-4 mr-2", {
+                    "animate-spin": isFetching
+                  })} />
+                  Actualizar
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {isError ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-center">
+                    <XCircle className="mx-auto h-12 w-12 text-red-400" />
+                    <h3 className="mt-2 text-sm font-semibold text-red-600">Error al cargar los datos</h3>
+                    <p className="mt-1 text-sm text-red-500">{error?.message || "No se pudieron obtener las proformas recientes"}</p>
+                    <div className="mt-6">
+                      <Button variant="outline" onClick={() => refetch()}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reintentar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : dashboardData?.proformasRecientes?.length === 0 ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-center">
+                    <FileIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-semibold text-gray-900">No hay proformas</h3>
+                    <p className="mt-1 text-sm text-gray-500">Crea una nueva proforma para comenzar</p>
+                    <div className="mt-6">
+                      <Link to="/enhancedproforma?new=true">
+                        <Button>
+                          <PlusIcon className="h-4 w-4 mr-2" />
+                          Nueva Proforma
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <ProformasDashboardTable 
+                  proformas={dashboardData?.proformasRecientes || []} 
+                  loading={isFetching}
+                  onRefresh={() => refetch()}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default DashboardProformasWithQuery;

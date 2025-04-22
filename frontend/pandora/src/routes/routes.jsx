@@ -51,8 +51,8 @@ const VentasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/V
 const ComprasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/ComprasHistoricaProducto'));
 
 // Proformas
-const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProformaWithQuery'));
-const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformasWithQuery'));
+const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProforma'));
+const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformas'));
 const ProformasGuardadas = lazy(() => import('@/pages/proformas/ProformasGuardadas'));
 
 // Brief

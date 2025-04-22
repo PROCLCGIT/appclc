@@ -35,7 +35,7 @@ export function useClientesQuery(options = {}) {
     queryKey: clienteKeys.list(filters),
     queryFn: async () => {
       try {
-        // Intentando primero con la ruta correcta
+        // Intentando primero con la ruta correcta (core/clientes/)
         try {
           console.log('Intentando obtener clientes de core/clientes/');
           const response = await api.get('core/clientes/', { 
@@ -45,20 +45,32 @@ export function useClientesQuery(options = {}) {
           });
           console.log('✅ Éxito al obtener clientes de core/clientes/', response.data);
           return response.data;
-        } catch (apiError) {
-          console.warn('❌ Error al obtener clientes de core/clientes/, intentando ruta alternativa:', apiError.message);
+        } catch (coreError) {
+          console.warn('❌ Error al obtener clientes de core/clientes/, intentando rutas alternativas:', coreError.message);
           
-          // Fallback a la ruta antigua
-          const fallbackResponse = await api.get('madvance/clientes/', { 
-            params: filters,
-            _bypassCache: true,
-            _highPriority: true
-          });
-          console.log('✅ Éxito al obtener clientes de ruta fallback:', fallbackResponse.data);
-          return fallbackResponse.data;
+          // Fallback a otras rutas en orden de probabilidad
+          try {
+            console.log('Intentando obtener clientes de pandora/clientes/');
+            const response = await api.get('pandora/clientes/', { 
+              params: filters,
+              _bypassCache: true,
+              _highPriority: true
+            });
+            console.log('✅ Éxito al obtener clientes de pandora/clientes/', response.data);
+            return response.data;
+          } catch (apiError) {
+            console.warn('❌ Error en pandora/clientes/, intentando madvance/clientes/:', apiError.message);
+            const fallbackResponse = await api.get('madvance/clientes/', { 
+              params: filters,
+              _bypassCache: true,
+              _highPriority: true
+            });
+            console.log('✅ Éxito al obtener clientes de madvance/clientes/:', fallbackResponse.data);
+            return fallbackResponse.data;
+          }
         }
       } catch (error) {
-        console.error('❌ Error en ambas rutas al obtener clientes:', error);
+        console.error('❌ Error en todas las rutas al obtener clientes:', error);
         if (showErrors) {
           errorHandler.handleError(error, 'obtener lista de clientes');
         }
@@ -80,17 +92,29 @@ export function useClientesQuery(options = {}) {
     mutationFn: async (nuevoCliente) => {
       try {
         try {
-          // Try first with core endpoint
+          // Intentar primero con el endpoint core
           const response = await api.post('core/clientes/', nuevoCliente);
+          console.log('✅ Cliente creado exitosamente en core/clientes/');
           return response.data;
-        } catch (apiError) {
-          console.warn('Error creating client with core/clientes/', apiError.message);
+        } catch (coreError) {
+          console.warn('Error al crear cliente en core/clientes/', coreError.message);
           
-          // Fall back to madvance endpoint
-          const response = await api.post('madvance/clientes/', nuevoCliente);
-          return response.data;
+          // Intentar con pandora endpoint
+          try {
+            const apiResponse = await api.post('pandora/clientes/', nuevoCliente);
+            console.log('✅ Cliente creado exitosamente en pandora/clientes/');
+            return apiResponse.data;
+          } catch (apiError) {
+            console.warn('Error al crear cliente en pandora/clientes/', apiError.message);
+            
+            // Último intento con madvance endpoint
+            const madvanceResponse = await api.post('madvance/clientes/', nuevoCliente);
+            console.log('✅ Cliente creado exitosamente en madvance/clientes/');
+            return madvanceResponse.data;
+          }
         }
       } catch (error) {
+        console.error('❌ Error en todos los intentos al crear cliente:', error);
         if (showErrors) {
           errorHandler.handleError(error, 'crear cliente');
         }
@@ -108,17 +132,29 @@ export function useClientesQuery(options = {}) {
     mutationFn: async ({ id, data }) => {
       try {
         try {
-          // Try first with core endpoint
+          // Intentar primero con endpoint core
           const response = await api.put(`core/clientes/${id}/`, data);
+          console.log(`✅ Cliente #${id} actualizado exitosamente en core/clientes/`);
           return response.data;
-        } catch (apiError) {
-          console.warn(`Error updating client with core/clientes/${id}/`, apiError.message);
+        } catch (coreError) {
+          console.warn(`Error al actualizar cliente en core/clientes/${id}/`, coreError.message);
           
-          // Fall back to madvance endpoint
-          const response = await api.put(`madvance/clientes/${id}/`, data);
-          return response.data;
+          // Intentar con pandora endpoint
+          try {
+            const apiResponse = await api.put(`pandora/clientes/${id}/`, data);
+            console.log(`✅ Cliente #${id} actualizado exitosamente en pandora/clientes/`);
+            return apiResponse.data;
+          } catch (apiError) {
+            console.warn(`Error al actualizar cliente en pandora/clientes/${id}/`, apiError.message);
+            
+            // Último intento con madvance endpoint
+            const madvanceResponse = await api.put(`madvance/clientes/${id}/`, data);
+            console.log(`✅ Cliente #${id} actualizado exitosamente en madvance/clientes/`);
+            return madvanceResponse.data;
+          }
         }
       } catch (error) {
+        console.error(`❌ Error en todos los intentos al actualizar cliente #${id}:`, error);
         if (showErrors) {
           errorHandler.handleError(error, 'actualizar cliente');
         }
@@ -136,9 +172,30 @@ export function useClientesQuery(options = {}) {
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
       try {
-        const response = await api.delete(`/madvance/clientes/${id}/`);
-        return response.data;
+        try {
+          // Intentar primero con endpoint core
+          const response = await api.delete(`core/clientes/${id}/`);
+          console.log(`✅ Cliente #${id} eliminado exitosamente en core/clientes/`);
+          return response.data;
+        } catch (coreError) {
+          console.warn(`Error al eliminar cliente en core/clientes/${id}/`, coreError.message);
+          
+          // Intentar con pandora endpoint
+          try {
+            const apiResponse = await api.delete(`pandora/clientes/${id}/`);
+            console.log(`✅ Cliente #${id} eliminado exitosamente en pandora/clientes/`);
+            return apiResponse.data;
+          } catch (apiError) {
+            console.warn(`Error al eliminar cliente en pandora/clientes/${id}/`, apiError.message);
+            
+            // Último intento con madvance endpoint
+            const madvanceResponse = await api.delete(`madvance/clientes/${id}/`);
+            console.log(`✅ Cliente #${id} eliminado exitosamente en madvance/clientes/`);
+            return madvanceResponse.data;
+          }
+        }
       } catch (error) {
+        console.error(`❌ Error en todos los intentos al eliminar cliente #${id}:`, error);
         if (showErrors) {
           errorHandler.handleError(error, 'eliminar cliente');
         }
@@ -179,7 +236,7 @@ export function useClientesQuery(options = {}) {
           }
           
           try {
-            // Primero intentamos con la API que parece correcta según la configuración del backend
+            // Primero intentamos con la API correcta (core/clientes/)
             console.log('Intentando buscar clientes en core/clientes/');
             const response = await api.get('core/clientes/', { 
               params,
@@ -190,28 +247,42 @@ export function useClientesQuery(options = {}) {
             });
             console.log('✅ Éxito al buscar clientes en core/clientes/:', response.data);
             return response.data;
-          } catch (apiError) {
-            console.warn('❌ Error al buscar clientes en core/clientes/:', apiError.message);
+          } catch (coreError) {
+            console.warn('❌ Error al buscar clientes en core/clientes/:', coreError.message);
             
-            // Si falla, intentamos con la ruta original
-            console.log('Intentando con la ruta anterior madvance/clientes/...');
+            // Si falla, intentamos con rutas alternativas
+            console.log('Intentando con la ruta pandora/clientes/...');
             try {
-              const retryResponse = await api.get('madvance/clientes/', { 
+              const apiResponse = await api.get('pandora/clientes/', { 
                 params,
                 _bypassCache: true,
                 _highPriority: true,
                 timeout: 15000
               });
-              console.log('✅ Éxito al buscar clientes en madvance/clientes/:', retryResponse.data);
-              return retryResponse.data;
-            } catch (retryError) {
-              console.error('❌ Error en la ruta alternativa:', retryError.message);
+              console.log('✅ Éxito al buscar clientes en pandora/clientes/:', apiResponse.data);
+              return apiResponse.data;
+            } catch (apiError) {
+              console.warn('❌ Error en pandora/clientes/:', apiError.message);
               
-              // Último intento: usar la URL relativa 'clientes/'
-              console.log('Intentando con la ruta básica clientes/...');
-              const lastAttemptResponse = await api.get('clientes/', { params });
-              console.log('✅ Éxito al buscar clientes en /clientes/:', lastAttemptResponse.data);
-              return lastAttemptResponse.data;
+              // Intentar con madvance/clientes/
+              try {
+                const madvanceResponse = await api.get('madvance/clientes/', { 
+                  params,
+                  _bypassCache: true,
+                  _highPriority: true,
+                  timeout: 15000
+                });
+                console.log('✅ Éxito al buscar clientes en madvance/clientes/:', madvanceResponse.data);
+                return madvanceResponse.data;
+              } catch (madvanceError) {
+                console.error('❌ Error en madvance/clientes/:', madvanceError.message);
+                
+                // Último intento: usar la URL relativa 'clientes/'
+                console.log('Intentando con la ruta básica clientes/...');
+                const lastAttemptResponse = await api.get('clientes/', { params });
+                console.log('✅ Éxito al buscar clientes en /clientes/:', lastAttemptResponse.data);
+                return lastAttemptResponse.data;
+              }
             }
           }
         },
@@ -300,18 +371,30 @@ export function useClienteDetailQuery(id, options = {}) {
     queryKey: clienteKeys.detail(id),
     queryFn: async () => {
       try {
-        // Try first with core endpoint
+        // Intentar primero con endpoint core
         try {
           const response = await api.get(`core/clientes/${id}/`);
+          console.log(`✅ Detalle de cliente #${id} obtenido exitosamente de core/clientes/`);
           return response.data;
-        } catch (apiError) {
-          console.warn(`Error getting client from core/clientes/${id}/`, apiError.message);
+        } catch (coreError) {
+          console.warn(`Error al obtener cliente de core/clientes/${id}/`, coreError.message);
           
-          // Fall back to madvance endpoint
-          const response = await api.get(`madvance/clientes/${id}/`);
-          return response.data;
+          // Intentar con pandora endpoint
+          try {
+            const apiResponse = await api.get(`pandora/clientes/${id}/`);
+            console.log(`✅ Detalle de cliente #${id} obtenido exitosamente de pandora/clientes/`);
+            return apiResponse.data;
+          } catch (apiError) {
+            console.warn(`Error al obtener cliente de pandora/clientes/${id}/`, apiError.message);
+            
+            // Último intento con madvance endpoint
+            const madvanceResponse = await api.get(`madvance/clientes/${id}/`);
+            console.log(`✅ Detalle de cliente #${id} obtenido exitosamente de madvance/clientes/`);
+            return madvanceResponse.data;
+          }
         }
       } catch (error) {
+        console.error(`❌ Error en todos los intentos al obtener detalle de cliente #${id}:`, error);
         if (showErrors) {
           errorHandler.handleError(error, `obtener detalle de cliente #${id}`);
         }

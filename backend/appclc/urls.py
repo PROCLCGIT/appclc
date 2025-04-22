@@ -48,6 +48,7 @@ urlpatterns = [
     # API endpoints
     path('api/auth/', include('pandora.urls_auth')),
     path('api/core/', include('pandora.urls')),
+    path('api/pandora/', include('pandora.urls')),  # Added direct pandora endpoint
     path('api/products/', include('products.urls')),
     path('api/proformas/', include(include_proformas_urls())),
     path('api/blegal/', include('blegal.urls')),

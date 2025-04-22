@@ -1,20 +1,8 @@
 // src/routes/proformas.routes.jsx
-
-import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 
-// Importación diferida (lazy) para mejor rendimiento
-const DashboardProformasWithQuery = lazy(() => import('../pages/proformas/DashboardProformasWithQuery'));
-// Versión original con múltiples hooks
-const EnhancedProformaWithQuery = lazy(() => import('../pages/proformas/EnhancedProformaWithQuery'));
-// Nueva versión optimizada con React Query centralizado
-const OptimizedProformaView = lazy(() => import('../pages/proformas/OptimizedProformaView'));
-const ProformasGuardadas = lazy(() => import('../pages/proformas/ProformasGuardadas'));
-
-// Variable para alternar entre versiones (para testing y migración gradual)
-const USE_OPTIMIZED_VERSION = true; // Cambiar a false para usar la versión anterior
-
-// Rutas para el módulo de proformas
+// We're defining routes as a simple configuration object without lazy imports
+// to avoid circular dependencies during HMR
 const proformasRoutes = [
   {
     path: "",
@@ -22,7 +10,7 @@ const proformasRoutes = [
   },
   {
     path: "dashboard",
-    element: <DashboardProformasWithQuery />,
+    elementPath: '../pages/proformas/DashboardProformas',
     meta: {
       title: "Dashboard de Proformas",
       description: "Visualización y análisis de proformas"
@@ -30,7 +18,7 @@ const proformasRoutes = [
   },
   {
     path: "nueva",
-    element: USE_OPTIMIZED_VERSION ? <OptimizedProformaView /> : <EnhancedProformaWithQuery />,
+    elementPath: '../pages/proformas/OptimizedProformaView',
     meta: {
       title: "Nueva Proforma",
       description: "Crear una nueva proforma"
@@ -38,7 +26,7 @@ const proformasRoutes = [
   },
   {
     path: "editar",
-    element: USE_OPTIMIZED_VERSION ? <OptimizedProformaView /> : <EnhancedProformaWithQuery />,
+    elementPath: '../pages/proformas/OptimizedProformaView',
     meta: {
       title: "Editar Proforma",
       description: "Editar una proforma existente"
@@ -46,7 +34,7 @@ const proformasRoutes = [
   },
   {
     path: "optimizada",
-    element: <OptimizedProformaView />,
+    elementPath: '../pages/proformas/OptimizedProformaView',
     meta: {
       title: "Proforma Optimizada",
       description: "Vista optimizada de proformas con React Query"
@@ -54,7 +42,7 @@ const proformasRoutes = [
   },
   {
     path: "guardadas",
-    element: <ProformasGuardadas />,
+    elementPath: '../pages/proformas/ProformasGuardadas',
     meta: {
       title: "Proformas Guardadas",
       description: "Listado de proformas guardadas"

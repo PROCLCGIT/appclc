@@ -197,7 +197,25 @@ export class BaseService {
    * @returns {Object} - Standardized error object
    */
   handleError(error) {
+    // Primero, logueamos el error completo para debug
+    console.debug('[BaseService] Error completo:', error);
+    
     if (error.response) {
+      // Log detallado de la respuesta del servidor
+      console.debug('[BaseService] Response error data:', error.response.data);
+      console.debug('[BaseService] Response error status:', error.response.status);
+      
+      // Extraer detalles de errores específicos de campo
+      const errorDetails = {};
+      if (error.response.data && typeof error.response.data === 'object') {
+        Object.entries(error.response.data).forEach(([key, value]) => {
+          // Omitir propiedades no relacionadas con errores
+          if (key !== 'results' && key !== 'count' && value) {
+            errorDetails[key] = value;
+          }
+        });
+      }
+      
       // Server responded with an error status code
       return {
         status: error.response.status,
@@ -206,19 +224,25 @@ export class BaseService {
           error.response.data.message ||
           this.getErrorMessage(error.response.status),
         errors: error.response.data,
+        errorDetails: errorDetails, // Añadir detalles de error
+        originalError: error // Mantener el error original
       };
     } else if (error.request) {
       // Request was made but no response received
+      console.debug('[BaseService] Request error:', error.request);
+      
       return {
         status: 503,
         message:
           'No se pudo conectar con el servidor. Por favor, verifica tu conexión.',
+        originalError: error
       };
     } else {
       // Error during request setup
       return {
         status: 500,
         message: error.message || 'Error al procesar la solicitud.',
+        originalError: error
       };
     }
   }

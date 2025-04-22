@@ -174,26 +174,43 @@ export function useErrorHandler() {
             errorMessage = "Error de validación";
             // Obtener primer mensaje de error de validación
             if (typeof responseData === "object") {
-              const firstErrorField = Object.keys(responseData).find(
-                (k) =>
-                  k !== "detail" && k !== "non_field_errors" && responseData[k],
-              );
-              if (firstErrorField) {
-                const fieldMessage = Array.isArray(
-                  responseData[firstErrorField],
-                )
-                  ? responseData[firstErrorField][0]
-                  : responseData[firstErrorField];
-                errorDescription = `${firstErrorField}: ${fieldMessage}`;
-              } else if (responseData.detail) {
-                errorDescription = responseData.detail;
-              } else if (responseData.non_field_errors) {
-                errorDescription = Array.isArray(responseData.non_field_errors)
-                  ? responseData.non_field_errors[0]
+              // Construir una descripción detallada de errores
+              let errorDetails = "";
+              let foundSpecificError = false;
+              
+              // Procesar errores específicos de campo
+              Object.entries(responseData).forEach(([field, errors]) => {
+                if (field !== "detail" && field !== "non_field_errors" && errors) {
+                  foundSpecificError = true;
+                  const fieldErrors = Array.isArray(errors) ? errors.join(', ') : 
+                                     (typeof errors === 'object' ? JSON.stringify(errors) : errors);
+                  errorDetails += `${field}: ${fieldErrors}\n`;
+                }
+              });
+              
+              // Procesar errores generales
+              if (responseData.detail) {
+                errorDetails += `${responseData.detail}\n`;
+                foundSpecificError = true;
+              }
+              
+              if (responseData.non_field_errors) {
+                const nonFieldErrors = Array.isArray(responseData.non_field_errors) 
+                  ? responseData.non_field_errors.join(', ') 
                   : responseData.non_field_errors;
+                errorDetails += `Errores generales: ${nonFieldErrors}\n`;
+                foundSpecificError = true;
+              }
+              
+              // Si encontramos errores específicos, usarlos
+              if (foundSpecificError) {
+                errorDescription = errorDetails.trim();
               } else {
                 errorDescription = "Los datos proporcionados no son válidos.";
               }
+            } else if (typeof responseData === "string") {
+              // Si la respuesta es un string, usarlo directamente
+              errorDescription = responseData;
             } else {
               errorDescription = "Los datos proporcionados no son válidos.";
             }
