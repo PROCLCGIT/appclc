@@ -36,47 +36,158 @@ class ProformaItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['total', 'created_at', 'updated_at']
     
     def validate(self, data):
-        """Validaciones adicionales para los ítems"""
-        # Verificar que al menos un producto esté seleccionado si no es personalizado
+        """
+        Validaciones detalladas para los ítems de proforma.
+        Esta función centraliza todas las validaciones de negocio para ProformaItem.
+        """
+        # Obtener la instancia actual (si es actualización)
+        instance = self.instance
+        is_update = instance is not None
+        
+        # ===============================================================
+        # 1. VALIDACIONES DE CAMPOS OBLIGATORIOS Y CONSISTENCIA
+        # ===============================================================
+        errors = {}
+        
+        # Verificar consistencia entre tipo de ítem y producto seleccionado
         tipo_item = data.get('tipo_item', 'personalizado')
         producto_ofertado = data.get('producto_ofertado')
         producto_disponible = data.get('producto_disponible')
         
-        if tipo_item == 'producto_ofertado' and not producto_ofertado:
-            raise serializers.ValidationError({
-                'producto_ofertado': 'Debe seleccionar un producto ofertado para este tipo de ítem.'
-            })
+        # Validar selección de producto según tipo
+        item_type_validations = {
+            'producto_ofertado': (producto_ofertado, 'Debe seleccionar un producto ofertado para este tipo de ítem.'),
+            'producto_disponible': (producto_disponible, 'Debe seleccionar un producto disponible para este tipo de ítem.')
+        }
         
-        if tipo_item == 'producto_disponible' and not producto_disponible:
-            raise serializers.ValidationError({
-                'producto_disponible': 'Debe seleccionar un producto disponible para este tipo de ítem.'
-            })
+        if tipo_item in item_type_validations:
+            product, error_msg = item_type_validations[tipo_item]
+            if not product:
+                errors[tipo_item] = error_msg
         
-        # Validar cantidad y precio
+        # Validar que no se seleccionen productos de diferentes tipos
+        if tipo_item != 'producto_ofertado' and producto_ofertado:
+            errors['producto_ofertado'] = f'No debe seleccionar un producto ofertado para ítems de tipo {tipo_item}.'
+            
+        if tipo_item != 'producto_disponible' and producto_disponible:
+            errors['producto_disponible'] = f'No debe seleccionar un producto disponible para ítems de tipo {tipo_item}.'
+        
+        # Validar descripción (campo obligatorio)
+        descripcion = data.get('descripcion', '')
+        if not descripcion or not descripcion.strip():
+            errors['descripcion'] = 'La descripción del ítem no puede estar vacía.'
+            
+        # ===============================================================
+        # 2. VALIDACIONES DE VALORES NUMÉRICOS
+        # ===============================================================
+        
+        # Validar cantidad
         cantidad = data.get('cantidad', 0)
-        precio = data.get('precio_unitario', 0)
-        
         if cantidad <= 0:
-            raise serializers.ValidationError({
-                'cantidad': 'La cantidad debe ser mayor que cero.'
-            })
+            errors['cantidad'] = 'La cantidad debe ser mayor que cero.'
         
+        # Validar precio unitario
+        precio = data.get('precio_unitario', 0)
         if precio < 0:
-            raise serializers.ValidationError({
-                'precio_unitario': 'El precio no puede ser negativo.'
-            })
+            errors['precio_unitario'] = 'El precio no puede ser negativo.'
+            
+        # Validar porcentaje de descuento
+        porcentaje_descuento = data.get('porcentaje_descuento', 0)
+        if porcentaje_descuento < 0 or porcentaje_descuento > 100:
+            errors['porcentaje_descuento'] = 'El porcentaje de descuento debe estar entre 0 y 100.'
+            
+        # ===============================================================
+        # 3. CÁLCULOS Y VALIDACIONES DE LÍMITES
+        # ===============================================================
+        
+        # Pre-calcular el total para validar límites
+        if 'cantidad' in data or 'precio_unitario' in data or 'porcentaje_descuento' in data:
+            try:
+                # Utilizar valores de la instancia si no están en los datos
+                if is_update:
+                    if 'cantidad' not in data:
+                        cantidad = instance.cantidad
+                    if 'precio_unitario' not in data:
+                        precio = instance.precio_unitario
+                    if 'porcentaje_descuento' not in data:
+                        porcentaje_descuento = instance.porcentaje_descuento
+                
+                subtotal = cantidad * precio
+                descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
+                total = subtotal - descuento
+                
+                # Validar que el total sea válido
+                if total < 0:
+                    errors['total'] = 'El total calculado es negativo. Revise la cantidad, precio y descuento.'
+                
+                # Validar que el total no exceda límites del campo
+                if total > 9999999999.99:
+                    errors['total'] = 'El total calculado excede el límite permitido (máximo 12 dígitos).'
+                    
+            except (TypeError, ValueError) as e:
+                errors['error'] = f'Error al calcular el total: {str(e)}'
+        
+        # Si hay errores, lanzar excepción
+        if errors:
+            raise serializers.ValidationError(errors)
+            
+        # ===============================================================
+        # 4. VALIDACIONES DE NEGOCIO ADICIONALES
+        # ===============================================================
+        
+        # Ejemplo: Verificar stock si es un producto disponible
+        if tipo_item == 'producto_disponible' and producto_disponible:
+            try:
+                # Esta es una regla de negocio que verifica disponibilidad
+                if hasattr(producto_disponible, 'stock') and producto_disponible.stock < cantidad:
+                    raise serializers.ValidationError({
+                        'cantidad': f'Stock insuficiente. Disponible: {producto_disponible.stock}.'
+                    })
+            except Exception as e:
+                # Si no podemos verificar stock, lo registramos pero no fallamos
+                logger.warning(f"No se pudo verificar stock para {producto_disponible}: {e}")
+        
+        # ===============================================================
+        # 5. ENRIQUECIMIENTO DE DATOS
+        # ===============================================================
+        
+        # Auto-completar datos basados en el producto (si no se proporcionan)
+        if tipo_item == 'producto_ofertado' and producto_ofertado:
+            if 'codigo' not in data or not data.get('codigo'):
+                data['codigo'] = producto_ofertado.code
+                
+            if 'unidad' not in data or not data.get('unidad'):
+                data['unidad'] = 'Unidad'  # Valor por defecto para productos ofertados
+                
+        elif tipo_item == 'producto_disponible' and producto_disponible:
+            if 'codigo' not in data or not data.get('codigo'):
+                data['codigo'] = producto_disponible.code
+                
+            if 'unidad' not in data or not data.get('unidad'):
+                if hasattr(producto_disponible, 'presentacion') and producto_disponible.presentacion:
+                    data['unidad'] = producto_disponible.presentacion.nombre
+                else:
+                    data['unidad'] = 'Unidad'
+                    
+            # Si no se proporciona precio y es un producto disponible, usar el precio de venta
+            if 'precio_unitario' not in data and precio == 0:
+                if hasattr(producto_disponible, 'precio_venta_privado') and producto_disponible.precio_venta_privado:
+                    data['precio_unitario'] = producto_disponible.precio_venta_privado
+                elif hasattr(producto_disponible, 'precio_sie_referencial') and producto_disponible.precio_sie_referencial:
+                    data['precio_unitario'] = producto_disponible.precio_sie_referencial
         
         return data
     
     def create(self, validated_data):
-        # Calcular el total antes de crear el ítem
+        # Calcular el total antes de crear el ítem usando el método utilitario
         cantidad = validated_data.get('cantidad', 1)
         precio_unitario = validated_data.get('precio_unitario', 0)
         porcentaje_descuento = validated_data.get('porcentaje_descuento', 0)
         
-        subtotal = cantidad * precio_unitario
-        descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
-        total = subtotal - descuento
+        # Usar el método utilitario para calcular el total
+        total = ProformaService.calculate_item_total_from_values(
+            cantidad, precio_unitario, porcentaje_descuento
+        )
         
         validated_data['total'] = total
         
@@ -96,23 +207,24 @@ class ProformaItemSerializer(serializers.ModelSerializer):
             # Crear el ítem pero desactivar el recálculo
             item = ProformaItem(**validated_data)
             item._totales_actualizados = True  # Marcar para evitar recálculo por signal
-            item.save()
+            item.save(_from_serializer=True)  # Indicar que los datos vienen del serializer
             return item
         else:
-            # Crear el ítem normalmente con el servicio
+            # Crear el ítem normalmente con el servicio, indicando que los datos vienen del serializer
             item = ProformaItem(**validated_data)
-            return ProformaService.save_proforma_item(item)
+            return ProformaService.save_proforma_item(item, from_serializer=True)
     
     def update(self, instance, validated_data):
-        # Recalcular el total si cambian los valores relevantes
+        # Recalcular el total si cambian los valores relevantes usando el método utilitario
         if 'cantidad' in validated_data or 'precio_unitario' in validated_data or 'porcentaje_descuento' in validated_data:
             cantidad = validated_data.get('cantidad', instance.cantidad)
             precio_unitario = validated_data.get('precio_unitario', instance.precio_unitario)
             porcentaje_descuento = validated_data.get('porcentaje_descuento', instance.porcentaje_descuento)
             
-            subtotal = cantidad * precio_unitario
-            descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
-            validated_data['total'] = subtotal - descuento
+            # Usar el método utilitario para calcular el total
+            validated_data['total'] = ProformaService.calculate_item_total_from_values(
+                cantidad, precio_unitario, porcentaje_descuento
+            )
         
         # Si estamos en modo bulk update, no queremos que se recalculen los totales aún
         if hasattr(self.context.get('request', {}), '_bulk_operation'):
@@ -120,13 +232,13 @@ class ProformaItemSerializer(serializers.ModelSerializer):
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance._totales_actualizados = True  # Marcar para evitar recálculo por signal
-            instance.save()
+            instance.save(_from_serializer=True)  # Indicar que los datos vienen del serializer
             return instance
         else:
-            # Actualizar normalmente
+            # Actualizar normalmente, indicando que los datos vienen del serializer
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
-            return ProformaService.save_proforma_item(instance)
+            return ProformaService.save_proforma_item(instance, from_serializer=True)
 
 
 class ProformaHistorialSerializer(serializers.ModelSerializer):
@@ -178,29 +290,124 @@ class ProformaSerializer(serializers.ModelSerializer):
         read_only_fields = ['subtotal', 'impuesto', 'total', 'created_at', 'updated_at']
     
     def validate(self, data):
-        """Validaciones adicionales para proformas"""
-        # Validar fechas
-        fecha_emision = data.get('fecha_emision', None)
-        fecha_vencimiento = data.get('fecha_vencimiento', None)
+        """
+        Validaciones detalladas para proformas.
+        Esta función centraliza todas las validaciones de negocio para Proforma.
+        """
+        # Obtener la instancia actual (si es actualización)
+        instance = self.instance
+        is_update = instance is not None
+        
+        # ===============================================================
+        # 1. VALIDACIONES DE CAMPOS OBLIGATORIOS
+        # ===============================================================
+        errors = {}
+        
+        # Validar campos obligatorios sólo en creación (no en actualización)
+        if not is_update:
+            required_fields = {
+                'fecha_emision': 'La fecha de emisión es obligatoria.',
+                'fecha_vencimiento': 'La fecha de vencimiento es obligatoria.',
+                'cliente': 'Debe seleccionar un cliente para la proforma.',
+                'empresa': 'Debe seleccionar una empresa emisora para la proforma.'
+            }
+            
+            for field, error_msg in required_fields.items():
+                if field not in data or data.get(field) is None:
+                    errors[field] = error_msg
+        
+        # ===============================================================
+        # 2. VALIDACIONES DE FORMATOS Y RANGOS
+        # ===============================================================
+        
+        # Validar porcentaje de impuesto
+        porcentaje_impuesto = data.get('porcentaje_impuesto', None)
+        if porcentaje_impuesto is not None and (porcentaje_impuesto < 0 or porcentaje_impuesto > 100):
+            errors['porcentaje_impuesto'] = 'El porcentaje de impuesto debe estar entre 0 y 100.'
+        
+        # Validar longitud del nombre
+        nombre = data.get('nombre', '')
+        if nombre and len(nombre) > 255:
+            errors['nombre'] = 'El nombre de la proforma no puede exceder los 255 caracteres.'
+        
+        # ===============================================================
+        # 3. VALIDACIONES DE RELACIONES LÓGICAS ENTRE CAMPOS
+        # ===============================================================
+        
+        # Validar relación entre fechas de emisión y vencimiento
+        fecha_emision = data.get('fecha_emision')
+        fecha_vencimiento = data.get('fecha_vencimiento')
         
         if fecha_emision and fecha_vencimiento and fecha_vencimiento < fecha_emision:
-            raise serializers.ValidationError({
-                'fecha_vencimiento': 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.'
-            })
+            errors['fecha_vencimiento'] = 'La fecha de vencimiento no puede ser anterior a la fecha de emisión.'
         
-        # Validar que existan cliente y empresa
-        cliente = data.get('cliente', None)
-        if not cliente and not self.instance:
-            raise serializers.ValidationError({
-                'cliente': 'Debe seleccionar un cliente para la proforma.'
-            })
+        # Validar que la fecha de emisión no sea futura
+        if fecha_emision and fecha_emision > timezone.now().date():
+            errors['fecha_emision'] = 'La fecha de emisión no puede ser una fecha futura.'
         
-        empresa = data.get('empresa', None)
-        if not empresa and not self.instance:
-            raise serializers.ValidationError({
-                'empresa': 'Debe seleccionar una empresa emisora para la proforma.'
-            })
+        # ===============================================================
+        # 4. VALIDACIONES DE ESTADOS Y TRANSICIONES
+        # ===============================================================
         
+        # Validar estado
+        estado = data.get('estado')
+        if estado:
+            estados_validos = dict(Proforma.ESTADO_CHOICES).keys()
+            if estado not in estados_validos:
+                errors['estado'] = f'Estado no válido. Opciones: {", ".join(estados_validos)}'
+            
+            # Validar transiciones de estado permitidas
+            if is_update and estado != instance.estado:
+                # Definir transiciones permitidas
+                transiciones_permitidas = {
+                    'borrador': ['enviada'],
+                    'enviada': ['aprobada', 'rechazada', 'borrador'],
+                    'aprobada': ['convertida', 'vencida'],
+                    'rechazada': ['borrador'],
+                    'vencida': [],
+                    'convertida': []
+                }
+                
+                # Verificar si la transición es válida
+                if estado not in transiciones_permitidas.get(instance.estado, []):
+                    current_state_name = dict(Proforma.ESTADO_CHOICES).get(instance.estado, instance.estado)
+                    new_state_name = dict(Proforma.ESTADO_CHOICES).get(estado, estado)
+                    errors['estado'] = f'No se permite la transición de "{current_state_name}" a "{new_state_name}".'
+        
+        # Si hay errores, lanzar excepción
+        if errors:
+            raise serializers.ValidationError(errors)
+            
+        # ===============================================================
+        # 5. VALIDACIONES DE NEGOCIO ADICIONALES
+        # ===============================================================
+        
+        # Ejemplo: Validar que ciertas combinaciones de cliente y tipo de contratación sean válidas
+        # (esto sería específico de las reglas de negocio particulares)
+        
+        # Ejemplo: Validar que la proforma no exceda cierto monto según el tipo de cliente
+        # (regla de negocio específica)
+        
+        # ===============================================================
+        # 6. ENRIQUECIMIENTO DE DATOS
+        # ===============================================================
+        
+        # Ejemplo: Si no se proporciona fecha de vencimiento pero sí de emisión, 
+        # calcularla automáticamente usando una configuración global
+        if 'fecha_emision' in data and not data.get('fecha_vencimiento') and not is_update:
+            try:
+                from .models import ConfiguracionProforma
+                config = ConfiguracionProforma.objects.first()
+                dias_validez = 15  # Valor por defecto
+                if config and config.dias_validez:
+                    dias_validez = config.dias_validez
+                    
+                data['fecha_vencimiento'] = data['fecha_emision'] + timezone.timedelta(days=dias_validez)
+            except Exception as e:
+                # Registrar pero no fallar
+                logger.warning(f"Error al calcular fecha de vencimiento: {e}")
+        
+        # Devolver datos validados y posiblemente enriquecidos
         return data
     
     def create(self, validated_data):
@@ -209,44 +416,17 @@ class ProformaSerializer(serializers.ModelSerializer):
         items_data = validated_data.pop('items_data', [])
         
         # Crear proforma usando el servicio para generar número automáticamente
-        # y asegurar que las señales manejen el historial
-        proforma = ProformaService.save_proforma(Proforma(**validated_data))
+        # y asegurar que las señales manejen el historial, indicando que viene del serializer
+        proforma = ProformaService.save_proforma(Proforma(**validated_data), from_serializer=True)
         
-        # Crear ítems si hay datos, usando bulk_create para mejor rendimiento
+        # Procesar los ítems usando el servicio centralizado
         if items_data:
             # Marcar el contexto como operación masiva
             if self.context.get('request'):
                 self.context['request']._bulk_operation = True
-            
-            # Preparar ítems para crear en lote
-            item_instances = []
-            for idx, item_data in enumerate(items_data):
-                # Preparar datos del ítem
-                item_data['proforma'] = proforma
                 
-                # Establecer orden si no se proporciona
-                if 'orden' not in item_data or item_data['orden'] == 0:
-                    item_data['orden'] = idx + 1
-                
-                # Calcular total
-                cantidad = item_data.get('cantidad', 1)
-                precio_unitario = item_data.get('precio_unitario', 0)
-                porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
-                
-                subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-                descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
-                item_data['total'] = subtotal - descuento
-                
-                # Crear instancia de ítem
-                item = ProformaItem(**item_data)
-                item_instances.append(item)
-            
-            # Crear ítems en lote
-            if item_instances:
-                ProformaItem.objects.bulk_create(item_instances)
-                
-                # Actualizar los totales de la proforma
-                ProformaService.calculate_amounts(proforma, save=True)
+            # Usar el servicio para procesar los ítems
+            ProformaService.process_items_data(proforma, items_data)
         
         return proforma
     
@@ -263,10 +443,12 @@ class ProformaSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         
         # Actualizar con el servicio, la lógica de historial está ahora en señales
+        # indicar que los datos vienen del serializer para evitar validaciones redundantes
         proforma = ProformaService.save_proforma(
             instance, 
             validate=True, 
-            calculate_amounts=False  # Calcularemos después de procesar ítems
+            calculate_amounts=False,  # Calcularemos después de procesar ítems
+            from_serializer=True      # Indicar que proviene del serializer y ya se validó
         )
         
         # Manejar ítems si hay datos nuevos
@@ -275,126 +457,8 @@ class ProformaSerializer(serializers.ModelSerializer):
             if self.context.get('request'):
                 self.context['request']._bulk_operation = True
             
-            with transaction.atomic():
-                # Opción 1: Reemplazar todos los ítems existentes
-                if any(item.get('replace_all', False) for item in items_data):
-                    # Eliminar ítems existentes
-                    instance.items.all().delete()
-                    
-                    # Preparar nuevos ítems para bulk create
-                    new_items = []
-                    for idx, item_data in enumerate(items_data):
-                        # Eliminar la bandera replace_all si existe
-                        item_data.pop('replace_all', None)
-                        
-                        # Preparar datos
-                        item_data['proforma'] = proforma
-                        
-                        # Establecer orden si no se proporciona
-                        if 'orden' not in item_data or item_data['orden'] == 0:
-                            item_data['orden'] = idx + 1
-                        
-                        # Calcular total
-                        cantidad = item_data.get('cantidad', 1)
-                        precio_unitario = item_data.get('precio_unitario', 0)
-                        porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
-                        
-                        subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-                        descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
-                        item_data['total'] = subtotal - descuento
-                        
-                        # Crear instancia
-                        item = ProformaItem(**item_data)
-                        new_items.append(item)
-                    
-                    # Crear ítems en lote
-                    if new_items:
-                        ProformaItem.objects.bulk_create(new_items)
-                
-                # Opción 2: Actualizar ítems existentes y agregar nuevos
-                else:
-                    # Separar ítems a actualizar y a crear
-                    items_to_update = []
-                    new_items_data = []
-                    
-                    for item_data in items_data:
-                        item_id = item_data.pop('id', None)
-                        if item_id:
-                            # Agregar a la lista de actualizaciones
-                            items_to_update.append((item_id, item_data))
-                        else:
-                            # Agregar a la lista de creaciones
-                            new_items_data.append(item_data)
-                    
-                    # Actualizar ítems existentes en lote
-                    if items_to_update:
-                        # Obtener todos los ítems a actualizar en una sola consulta
-                        item_ids = [id for id, _ in items_to_update]
-                        items_dict = {item.id: item for item in 
-                                     ProformaItem.objects.filter(id__in=item_ids, proforma=proforma)}
-                        
-                        updated_items = []
-                        for item_id, item_data in items_to_update:
-                            if item_id in items_dict:
-                                item = items_dict[item_id]
-                                
-                                # Actualizar campos
-                                for attr, value in item_data.items():
-                                    setattr(item, attr, value)
-                                
-                                # Recalcular total si es necesario
-                                if 'cantidad' in item_data or 'precio_unitario' in item_data or 'porcentaje_descuento' in item_data:
-                                    cantidad = item.cantidad
-                                    precio_unitario = item.precio_unitario
-                                    porcentaje_descuento = item.porcentaje_descuento
-                                    
-                                    subtotal = cantidad * precio_unitario
-                                    descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
-                                    item.total = subtotal - descuento
-                                
-                                updated_items.append(item)
-                        
-                        # Actualizar en lote
-                        if updated_items:
-                            ProformaItem.objects.bulk_update(
-                                updated_items, 
-                                ['tipo_item', 'producto_ofertado', 'producto_disponible', 
-                                 'codigo', 'descripcion', 'unidad', 'cantidad', 
-                                 'precio_unitario', 'porcentaje_descuento', 'total', 'orden']
-                            )
-                    
-                    # Crear nuevos ítems en lote
-                    if new_items_data:
-                        new_items = []
-                        for idx, item_data in enumerate(new_items_data):
-                            # Preparar datos
-                            item_data['proforma'] = proforma
-                            
-                            # Establecer orden si no se proporciona
-                            if 'orden' not in item_data or item_data['orden'] == 0:
-                                # Obtener el último orden actual
-                                last_order = ProformaItem.objects.filter(proforma=proforma).order_by('-orden').values_list('orden', flat=True).first() or 0
-                                item_data['orden'] = last_order + idx + 1
-                            
-                            # Calcular total
-                            cantidad = item_data.get('cantidad', 1)
-                            precio_unitario = item_data.get('precio_unitario', 0)
-                            porcentaje_descuento = item_data.get('porcentaje_descuento', 0)
-                            
-                            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-                            descuento = subtotal * (Decimal(porcentaje_descuento) / Decimal('100.0'))
-                            item_data['total'] = subtotal - descuento
-                            
-                            # Crear instancia
-                            item = ProformaItem(**item_data)
-                            new_items.append(item)
-                        
-                        # Crear ítems en lote
-                        if new_items:
-                            ProformaItem.objects.bulk_create(new_items)
-                
-                # Recalcular totales después de todas las operaciones
-                ProformaService.calculate_amounts(proforma, save=True)
+            # Usar el servicio para procesar las actualizaciones
+            ProformaService.process_items_update(proforma, items_data)
         
         return proforma
 

@@ -105,9 +105,40 @@ export class BaseService {
    */
   async create(data) {
     try {
-      const response = await api.post(this.endpoint, data);
+      // Verificar autenticación - el token debería estar en el localStorage
+      const token = localStorage.getItem('auth-token');
+      if (!token) {
+        console.error('BaseService.create: No hay token de autenticación disponible');
+        throw new Error('No estás autenticado. Inicia sesión para continuar.');
+      }
+
+      // Preparar configuración con headers explícitos
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 30000, // 30 segundos
+      };
+
+      console.log(`BaseService.create: Enviando POST a ${this.endpoint}`, {
+        dataLength: JSON.stringify(data).length,
+        headers: config.headers
+      });
+      
+      const response = await api.post(this.endpoint, data, config);
+      console.log(`BaseService.create: Respuesta exitosa de ${this.endpoint}`, {
+        status: response.status,
+        dataType: typeof response.data
+      });
+      
       return response.data;
     } catch (error) {
+      console.error(`BaseService.create: Error en ${this.endpoint}`, {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       throw this.handleError(error);
     }
   }

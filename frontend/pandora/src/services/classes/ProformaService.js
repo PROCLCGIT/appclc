@@ -29,21 +29,16 @@ export class ProformaService extends ActionService {
       // Usar la implementación original desde BaseService
       const response = await super.getAll(params, options);
       
-      console.log('ProformaService.getAll: Transformando datos de respuesta');
-      
       // Transformar los datos antes de devolverlos
       if (response?.results && Array.isArray(response.results)) {
-        console.log(`Transformando ${response.results.length} proformas del paginador`);
         response.results = response.results.map(proforma => this.transformProforma(proforma));
         return response;
       } else if (Array.isArray(response)) {
-        console.log(`Transformando ${response.length} proformas del array`);
         return response.map(proforma => this.transformProforma(proforma));
       }
       
       return response;
     } catch (error) {
-      console.error("Error en getAll proformas:", error);
       throw error;
     }
   }
@@ -56,149 +51,175 @@ export class ProformaService extends ActionService {
   transformProforma(proforma) {
     // Verificar si tenemos datos válidos
     if (!proforma || typeof proforma !== 'object') {
-      console.error('ProformaService.transformProforma: Datos de proforma inválidos:', proforma);
       return proforma;
     }
     
     try {
-      // Log detallado para depuración
-      console.log(`TRANSFORMACIÓN DE PROFORMA #${proforma.id || 'N/A'}: 
-        - Nombre original: "${proforma.nombre || 'VACÍO'}"
-        - Tipo de nombre: ${typeof proforma.nombre}
-        - Número: "${proforma.numero || 'N/A'}"
-        - Cliente: ${typeof proforma.cliente === 'object' ? 'objeto' : typeof proforma.cliente}
-        - Cliente_detail: ${proforma.cliente_detail ? 'presente' : 'ausente'}`);
-      
       // Asegurarse de que es una copia para no modificar el original
       const transformed = { ...proforma };
       
-      // Asegurar que nombre tenga un valor
-      if (!transformed.nombre || transformed.nombre === '') {
-        console.log(`  - Nombre vacío, asignando valor predeterminado`);
-        if (transformed.quote && transformed.quote.nombre) {
-          console.log(`  - Usando nombre del quote: "${transformed.quote.nombre}"`);
-          transformed.nombre = transformed.quote.nombre;
-        } else if (transformed.descripcion) {
-          console.log(`  - Usando descripción: "${transformed.descripcion}"`);
-          transformed.nombre = transformed.descripcion;
-        } else {
-          const nombrePredeterminado = `Proforma #${transformed.numero || transformed.id}`;
-          console.log(`  - Usando nombre predeterminado: "${nombrePredeterminado}"`);
-          transformed.nombre = nombrePredeterminado;
-        }
-      } else {
-        console.log(`  - Preservando nombre original: "${transformed.nombre}"`);
-      }
-      
-      // Crear o actualizar el campo 'client' que espera el frontend
-      let clientData = null;
-      
-      // Primero, verificar si tenemos cliente_detail (que viene del backend)
-      if (transformed.cliente_detail) {
-        console.log('  - Usando cliente_detail del backend');
-        clientData = {
-          id: transformed.cliente_detail.id,
-          name: transformed.cliente_detail.nombre || "",
-          attention: transformed.atencion_a || "",
-          email: transformed.cliente_detail.email || "",
-          phone: transformed.cliente_detail.telefono || "",
-          address: transformed.cliente_detail.direccion || "",
-          ruc: transformed.cliente_detail.ruc || ""
-        };
-        console.log('  - Cliente mapeado desde cliente_detail:', clientData);
-      }
-      // Si no hay cliente_detail pero sí hay cliente como objeto
-      else if (transformed.cliente && typeof transformed.cliente === 'object' && transformed.cliente.id) {
-        console.log('  - Cliente encontrado como objeto:', transformed.cliente);
-        clientData = {
-          id: transformed.cliente.id,
-          name: transformed.cliente.nombre || "",
-          attention: transformed.atencion_a || "",
-          email: transformed.cliente.email || "",
-          phone: transformed.cliente.telefono || "",
-          address: transformed.cliente.direccion || "",
-          ruc: transformed.cliente.ruc || ""
-        };
-        console.log('  - Cliente mapeado desde cliente objeto:', clientData);
-      }
-      // Si cliente es solo un ID, intentamos completar la información
-      else if (transformed.cliente && (typeof transformed.cliente === 'string' || typeof transformed.cliente === 'number')) {
-        const clienteId = transformed.cliente;
-        console.log(`  - Cliente es solo un ID (${clienteId}), creando objeto completo`);
-        
-        clientData = {
-          id: clienteId || 'unknown',
-          name: 'Cliente sin detalles',
-          attention: transformed.atencion_a || "",
-          email: "",
-          phone: "",
-          address: "",
-          ruc: ""
-        };
-        
-        // Intentar extraer datos del quote o cliente_nombre
-        if (transformed.quote) {
-          if (transformed.quote.cliente_nombre) {
-            console.log(`  - Usando nombre del cliente del quote: "${transformed.quote.cliente_nombre}"`);
-            clientData.name = transformed.quote.cliente_nombre;
-          } else if (transformed.quote.cliente && transformed.quote.cliente.nombre) {
-            console.log(`  - Usando nombre del cliente.nombre del quote: "${transformed.quote.cliente.nombre}"`);
-            clientData.name = transformed.quote.cliente.nombre;
-          }
-          
-          if (transformed.quote.cliente_ruc) {
-            clientData.ruc = transformed.quote.cliente_ruc;
-          } else if (transformed.quote.cliente && transformed.quote.cliente.ruc) {
-            clientData.ruc = transformed.quote.cliente.ruc;
-          }
-        }
-        
-        // Si tenemos cliente_nombre, usarlo
-        if (transformed.cliente_nombre) {
-          console.log(`  - Usando cliente_nombre directo: "${transformed.cliente_nombre}"`);
-          clientData.name = transformed.cliente_nombre;
-        }
-        
-        console.log('  - Cliente creado a partir del ID:', clientData);
-      }
-      
-      // Asignar el clientData al campo 'client' que espera el frontend
-      if (clientData) {
-        transformed.client = clientData;
-        console.log('  - Campo client creado para compatibilidad con frontend:', transformed.client);
-      } else {
-        console.log('  - No se pudo crear cliente, utilizando objeto vacío');
-        transformed.client = {
-          id: null,
-          name: "Cliente no especificado",
-          attention: transformed.atencion_a || "",
-          email: "",
-          phone: "",
-          address: "",
-          ruc: ""
-        };
-      }
-      
-      // También preservamos el objeto cliente original para compatibilidad
-      transformed.cliente = transformed.cliente || (clientData ? { 
-        id: clientData.id,
-        nombre: clientData.name,
-        email: clientData.email,
-        telefono: clientData.phone,
-        direccion: clientData.address,
-        ruc: clientData.ruc
-      } : null);
-      
-      // Log final para ver resultado
-      console.log(`  - Resultado: nombre="${transformed.nombre}", client=${typeof transformed.client === 'object' ? 
-        `{id:${transformed.client.id}, name:${transformed.client.name}}` : transformed.client}`);
+      // Normalizar campos individuales
+      this.normalizeProformaNombre(transformed);
+      this.normalizeProformaCliente(transformed);
       
       return transformed;
     } catch (error) {
-      console.error('Error al transformar proforma:', error);
       // Devolver el objeto original en caso de error
       return proforma;
     }
+  }
+  
+  /**
+   * Normaliza el campo 'nombre' de la proforma
+   * @param {Object} proforma - La proforma a normalizar (modificada in-place)
+   * @private
+   */
+  normalizeProformaNombre(proforma) {
+    // Si ya tiene un nombre válido, no hacer nada
+    if (proforma.nombre && proforma.nombre !== '') {
+      return;
+    }
+    
+    // Buscar el nombre en diferentes fuentes
+    if (proforma.quote?.nombre) {
+      proforma.nombre = proforma.quote.nombre;
+    } else if (proforma.descripcion) {
+      proforma.nombre = proforma.descripcion;
+    } else {
+      // Último recurso: generar nombre basado en número o ID
+      proforma.nombre = `Proforma #${proforma.numero || proforma.id}`;
+    }
+  }
+  
+  /**
+   * Normaliza los datos del cliente en la proforma
+   * @param {Object} proforma - La proforma a normalizar (modificada in-place)
+   * @private
+   */
+  normalizeProformaCliente(proforma) {
+    // Intentar extraer datos del cliente de diferentes fuentes
+    const clientData = this.extractClientData(proforma);
+    
+    // Asignar el cliente normalizado al formato esperado por el frontend
+    proforma.client = clientData;
+    
+    // Preservar el objeto cliente original para compatibilidad
+    if (!proforma.cliente) {
+      proforma.cliente = this.convertToLegacyClientFormat(clientData);
+    }
+  }
+  
+  /**
+   * Extrae información del cliente de diferentes fuentes en la proforma
+   * @param {Object} proforma - La proforma de donde extraer datos
+   * @returns {Object} - Datos del cliente normalizados
+   * @private
+   */
+  extractClientData(proforma) {
+    // Caso 1: Tenemos cliente_detail (formato backend detallado)
+    if (proforma.cliente_detail) {
+      return {
+        id: proforma.cliente_detail.id,
+        name: proforma.cliente_detail.nombre || "",
+        attention: proforma.atencion_a || "",
+        email: proforma.cliente_detail.email || "",
+        phone: proforma.cliente_detail.telefono || "",
+        address: proforma.cliente_detail.direccion || "",
+        ruc: proforma.cliente_detail.ruc || ""
+      };
+    }
+    
+    // Caso 2: Cliente como objeto completo
+    if (proforma.cliente && typeof proforma.cliente === 'object' && proforma.cliente.id) {
+      return {
+        id: proforma.cliente.id,
+        name: proforma.cliente.nombre || "",
+        attention: proforma.atencion_a || "",
+        email: proforma.cliente.email || "",
+        phone: proforma.cliente.telefono || "",
+        address: proforma.cliente.direccion || "",
+        ruc: proforma.cliente.ruc || ""
+      };
+    }
+    
+    // Caso 3: Cliente como ID, tenemos que construir un objeto parcial
+    if (proforma.cliente && (typeof proforma.cliente === 'string' || typeof proforma.cliente === 'number')) {
+      return this.buildPartialClientData(proforma);
+    }
+    
+    // Caso 4: No hay datos de cliente, crear uno predeterminado
+    return {
+      id: null,
+      name: "Cliente no especificado",
+      attention: proforma.atencion_a || "",
+      email: "",
+      phone: "",
+      address: "",
+      ruc: ""
+    };
+  }
+  
+  /**
+   * Construye datos parciales del cliente cuando solo tenemos un ID
+   * @param {Object} proforma - La proforma con información parcial
+   * @returns {Object} - Datos del cliente parcialmente completados
+   * @private
+   */
+  buildPartialClientData(proforma) {
+    const clientData = {
+      id: proforma.cliente || 'unknown',
+      name: 'Cliente sin detalles',
+      attention: proforma.atencion_a || "",
+      email: "",
+      phone: "",
+      address: "",
+      ruc: ""
+    };
+    
+    // Intentar extraer datos del quote
+    if (proforma.quote) {
+      // Buscar nombre del cliente
+      if (proforma.quote.cliente_nombre) {
+        clientData.name = proforma.quote.cliente_nombre;
+      } else if (proforma.quote.cliente?.nombre) {
+        clientData.name = proforma.quote.cliente.nombre;
+      }
+      
+      // Buscar RUC del cliente
+      if (proforma.quote.cliente_ruc) {
+        clientData.ruc = proforma.quote.cliente_ruc;
+      } else if (proforma.quote.cliente?.ruc) {
+        clientData.ruc = proforma.quote.cliente.ruc;
+      }
+    }
+    
+    // Preferir cliente_nombre si está disponible
+    if (proforma.cliente_nombre) {
+      clientData.name = proforma.cliente_nombre;
+    }
+    
+    return clientData;
+  }
+  
+  /**
+   * Convierte el formato de cliente del frontend al formato legacy
+   * @param {Object} clientData - Datos del cliente en formato frontend
+   * @returns {Object} - Datos en formato legacy para compatibilidad
+   * @private
+   */
+  convertToLegacyClientFormat(clientData) {
+    if (!clientData || !clientData.id) {
+      return null;
+    }
+    
+    return {
+      id: clientData.id,
+      nombre: clientData.name,
+      email: clientData.email,
+      telefono: clientData.phone,
+      direccion: clientData.address,
+      ruc: clientData.ruc
+    };
   }
   
   /**
@@ -209,14 +230,35 @@ export class ProformaService extends ActionService {
    */
   async searchProducts(term, source = 'all') {
     try {
-      console.log(`ProformaService.searchProducts: Buscando "${term}" en fuente "${source}"`);
+      // Validar parámetros antes de hacer la petición
+      if (!term || term.trim().length === 0) {
+        return []; // Devolver array vacío si no hay término de búsqueda
+      }
+      
+      // Establecer un timeout más corto para búsquedas de productos
       const response = await api.get('proformas/buscar-productos/', {
-        params: { term, source }
+        params: { term, source },
+        timeout: 15000, // 15 segundos max para búsquedas
+        _highPriority: true, // Marcar como alta prioridad para evitar cancelación
+        _disableRetry: false // Permitir reintentos automáticos
       });
-      console.log('ProformaService.searchProducts: Respuesta recibida:', response.data);
+      
+      // Validar la respuesta antes de devolverla
+      if (!response.data || !Array.isArray(response.data)) {
+        console.warn('searchProducts: Respuesta no es un array:', response.data);
+        return []; // Devolver array vacío como fallback
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('ProformaService.searchProducts: Error:', error);
+      // Manejar específicamente el error de servidor (500)
+      if (error.response && error.response.status === 500) {
+        console.error('Error 500 en búsqueda de productos:', error.message);
+        // Devolver array vacío en lugar de propagar el error
+        // para evitar que la interfaz se rompa por errores del servidor
+        return [];
+      }
+      
       throw this.handleError(error);
     }
   }
@@ -253,7 +295,6 @@ export class ProformaService extends ActionService {
    */
   async getDashboard(startDate, endDate, additionalParams = {}) {
     try {
-      console.log(`ProformaService.getDashboard: Consultando dashboard con fechas ${startDate} a ${endDate}`);
       const params = {
         ...additionalParams
       };
@@ -266,9 +307,6 @@ export class ProformaService extends ActionService {
       const response = await api.get(`${this.endpoint}dashboard/`, {
         params
       });
-      
-      console.log('ProformaService.getDashboard: Respuesta recibida con', 
-                 Object.keys(response.data).length, 'secciones');
       
       // Transformar los datos para mejor compatibilidad con el frontend
       const responseData = response.data;
@@ -286,7 +324,6 @@ export class ProformaService extends ActionService {
       
       return responseData;
     } catch (error) {
-      console.error('Error en getDashboard:', error);
       throw this.handleError(error);
     }
   }
@@ -373,7 +410,7 @@ export class ProformaService extends ActionService {
   /**
    * Downloads a file from a URL
    * @param {string} url - The URL to download from
-   * @returns {Promise<void>} - A promise that resolves when the download begins
+   * @returns {Promise<boolean>} - A promise that resolves when the download begins
    */
   async downloadFile(url) {
     try {
@@ -422,7 +459,6 @@ export class ProformaService extends ActionService {
       
       return true;
     } catch (error) {
-      console.error("Error al descargar archivo:", error);
       throw this.handleError(error);
     }
   }

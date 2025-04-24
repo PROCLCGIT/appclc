@@ -393,3 +393,74 @@ class ClientesSerializer(serializers.ModelSerializer):
             'razon_social', 'ruc', 'email', 'telefono', 'direccion', 
             'nota', 'activo', 'created_at', 'updated_at'
         ]
+    
+    def validate(self, data):
+        """
+        Validación a nivel de objeto para clientes.
+        """
+        errors = {}
+        
+        # Validar campos requeridos explícitamente
+        required_fields = ['zona', 'ciudad', 'tipo_cliente', 'nombre', 'alias', 
+                           'razon_social', 'ruc', 'email', 'direccion']
+        for field in required_fields:
+            if field not in data:
+                errors[field] = f"El campo '{field}' es requerido."
+                
+        # Validar FKs (existencia y tipo)
+        if 'zona' in data:
+            try:
+                zona_id = data['zona'].id if hasattr(data['zona'], 'id') else data['zona']
+                from pandora.models import Zonas
+                zona = Zonas.objects.filter(id=zona_id).first()
+                if not zona:
+                    errors['zona'] = f"La zona con ID {zona_id} no existe."
+            except (ValueError, TypeError, AttributeError) as e:
+                errors['zona'] = f"Error validando zona: {str(e)}"
+        
+        if 'ciudad' in data:
+            try:
+                ciudad_id = data['ciudad'].id if hasattr(data['ciudad'], 'id') else data['ciudad']
+                from pandora.models import Ciudades
+                ciudad = Ciudades.objects.filter(id=ciudad_id).first()
+                if not ciudad:
+                    errors['ciudad'] = f"La ciudad con ID {ciudad_id} no existe."
+            except (ValueError, TypeError, AttributeError) as e:
+                errors['ciudad'] = f"Error validando ciudad: {str(e)}"
+        
+        if 'tipo_cliente' in data:
+            try:
+                tipo_id = data['tipo_cliente'].id if hasattr(data['tipo_cliente'], 'id') else data['tipo_cliente']
+                from pandora.models import TipoCliente
+                tipo = TipoCliente.objects.filter(id=tipo_id).first()
+                if not tipo:
+                    errors['tipo_cliente'] = f"El tipo de cliente con ID {tipo_id} no existe."
+            except (ValueError, TypeError, AttributeError) as e:
+                errors['tipo_cliente'] = f"Error validando tipo de cliente: {str(e)}"
+        
+        # Validar unicidad
+        from pandora.models import Clientes
+        
+        if 'nombre' in data:
+            nombre = data['nombre']
+            if Clientes.objects.filter(nombre__iexact=nombre).exists():
+                errors['nombre'] = f"Ya existe un cliente con el nombre '{nombre}'."
+                
+        if 'alias' in data:
+            alias = data['alias']
+            if Clientes.objects.filter(alias__iexact=alias).exists():
+                errors['alias'] = f"Ya existe un cliente con el alias '{alias}'."
+                
+        if 'ruc' in data:
+            ruc = data['ruc']
+            if len(ruc) != 13:
+                errors['ruc'] = "El RUC debe tener exactamente 13 caracteres."
+            elif not ruc.isdigit():
+                errors['ruc'] = "El RUC debe contener solo dígitos."
+            elif Clientes.objects.filter(ruc=ruc).exists():
+                errors['ruc'] = f"Ya existe un cliente con el RUC '{ruc}'."
+        
+        if errors:
+            raise serializers.ValidationError(errors)
+        
+        return data

@@ -40,6 +40,9 @@ router.register(r'categorias', views.CategoriasViewSet, basename='categorias')
 urlpatterns = [
     # Rutas del router principal
     path('', include(router.urls)),
+    
+    # Ruta directa para crear clientes (convenience route)
+    path('clientes-create/', views.ClientesViewSet.as_view({'post': 'create'}), name='clientes-create-direct'),
 
     # Rutas de autenticación JWT
     path('auth/', include([

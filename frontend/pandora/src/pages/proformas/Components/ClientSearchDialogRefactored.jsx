@@ -4,6 +4,7 @@ import { SearchDialog } from "@/components/shared";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { User, Building, Phone, Plus, CheckCircle } from "lucide-react";
+import { normalizarIDsCliente } from "@/services/utils/clienteUtils";
 
 const ClientSearchDialogRefactored = ({ isOpen, onClose, onSelectClient, clientes, loadingClientes }) => {
   const navigate = useNavigate();
@@ -22,11 +23,13 @@ const ClientSearchDialogRefactored = ({ isOpen, onClose, onSelectClient, cliente
     );
   };
 
+  // Utilizamos la función de utilidad para normalizar IDs de clientes
+
   // Renderer for client items
   const renderClientItem = (cliente) => (
     <TableRow 
       className="cursor-pointer hover:bg-blue-50 transition-colors border-b last:border-b-0"
-      onDoubleClick={() => onSelectClient(cliente)}
+      onDoubleClick={() => onSelectClient(normalizarIDsCliente(cliente))}
     >
       <TableCell className="font-medium">
         <div className="flex items-center">
@@ -50,7 +53,7 @@ const ClientSearchDialogRefactored = ({ isOpen, onClose, onSelectClient, cliente
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onSelectClient(cliente)}
+          onClick={() => onSelectClient(normalizarIDsCliente(cliente))}
           className="rounded-full hover:bg-green-100 hover:text-green-700 transition-colors"
           title="Seleccionar cliente"
         >

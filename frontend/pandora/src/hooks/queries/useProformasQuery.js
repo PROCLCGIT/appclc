@@ -1,5 +1,6 @@
 /**
  * Hook centralizado para gestionar consultas y mutaciones de Proformas con React Query
+ * Incluye manejo robusto de errores y notificaciones
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ProformaService } from '@/services/classes/ProformaService';
@@ -197,7 +198,7 @@ export function useProformaDetailQuery(id, options = {}) {
     refetchInterval = false,
   } = options;
 
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: proformaKeys.detail(id),
     queryFn: () => proformaService.getById(id),
     enabled,
@@ -208,6 +209,8 @@ export function useProformaDetailQuery(id, options = {}) {
       errorHandler.handleError(error, `obtener detalle de proforma #${id}`);
     }
   });
+  
+  return queryResult;
 }
 
 /**
@@ -223,7 +226,7 @@ export function useProformaDashboardQuery(dateRange = {}, options = {}) {
     refetchInterval = false,
   } = options;
 
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: proformaKeys.dashboard(dateRange),
     queryFn: () => proformaService.getDashboard(startDate, endDate),
     enabled,
@@ -233,29 +236,104 @@ export function useProformaDashboardQuery(dateRange = {}, options = {}) {
       errorHandler.handleError(error, 'obtener datos del dashboard');
     }
   });
+  
+  return queryResult;
 }
 
 /**
- * Hook para buscar productos para incluir en proformas
+ * Hook para buscar productos para incluir en proformas con manejo robusto de errores
  */
 export function useProductSearchQuery(searchParams, options = {}) {
   const errorHandler = useErrorHandler();
+  const notify = useNotifications();
   const { term, source } = searchParams || {};
   
   const { 
     enabled = Boolean(term && term.length >= 2),
     staleTime = 1000 * 60 * 5, // 5 minutos
+    retry = 2, // Reintentar 2 veces por defecto
+    retryDelay = attempt => Math.min(1000 * 2 ** attempt, 10000), // Backoff exponencial con máximo de 10s
+    refetchOnWindowFocus = false, // No refrescar cuando se enfoca la ventana
+    onSuccess = null, // Callback opcional de éxito
+    suppressErrorToast = false, // Suprimir notificaciones de error
   } = options;
 
-  return useQuery({
+  // Usar queryResult para manejar escenarios de error
+  const queryResult = useQuery({
     queryKey: ['products', 'search', searchParams],
-    queryFn: () => proformaService.searchProducts(term, source),
+    queryFn: async () => {
+      try {
+        // Validar parámetros
+        if (!term || term.trim().length < 2) {
+          return []; // Devolver array vacío para términos demasiado cortos
+        }
+        
+        // Realizar la consulta
+        const results = await proformaService.searchProducts(term, source);
+        
+        // Callback de éxito personalizado
+        if (onSuccess && typeof onSuccess === 'function') {
+          onSuccess(results);
+        }
+        
+        return results;
+      } catch (error) {
+        // Clasificar el error
+        const errorType = errorHandler.classifyError ? 
+                         errorHandler.classifyError(error) : 
+                         'unknown';
+        
+        // Manejar específicamente errores de servidor
+        if (errorType === 'server') {
+          console.warn(`Error de servidor al buscar productos con término "${term}":`, error);
+          
+          // Mostrar una notificación amigable (sólo una vez)
+          if (!suppressErrorToast) {
+            notify.warning('Problema al buscar productos', {
+              description: 'El servidor está experimentando problemas. Se mostrarán resultados limitados.',
+              id: 'product-search-server-error', // ID único para evitar duplicados
+              duration: 4000
+            });
+          }
+          
+          // Devolver array vacío para evitar romper la UI
+          return [];
+        }
+        
+        // Para otros tipos de error, delegamos al manejador de errores
+        errorHandler.handleError(error, `buscar productos con término "${term}"`, {
+          suppressToast: suppressErrorToast
+        });
+        
+        // Propagar el error para que React Query lo maneje
+        throw error;
+      }
+    },
     enabled,
     staleTime,
+    retry,
+    retryDelay,
+    refetchOnWindowFocus,
+    // Manejar errores no capturados por el queryFn
     onError: (error) => {
-      errorHandler.handleError(error, 'buscar productos');
+      // Ya manejamos errores dentro de queryFn, este es solo un respaldo
+      console.error('Error no capturado en useProductSearchQuery:', error);
     }
   });
+  
+  // Enriquecer el resultado con helpers adicionales
+  return {
+    ...queryResult,
+    // Helper para saber si hay resultados
+    hasResults: Boolean(queryResult.data && queryResult.data.length > 0),
+    // Helper para obtener conteo
+    resultCount: (queryResult.data && queryResult.data.length) || 0,
+    // Helper para determinar si la búsqueda está en progreso sin resultados previos
+    isSearchingFirstTime: queryResult.isLoading && !queryResult.data,
+    // Indicador de "sin resultados" para búsquedas completadas
+    noResults: !queryResult.isLoading && !queryResult.isFetching && 
+              queryResult.data && queryResult.data.length === 0
+  };
 }
 
 /**

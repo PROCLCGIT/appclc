@@ -381,7 +381,10 @@ export const ProformaProvider = ({ children }) => {
     activeProformaId,
     client,
     items,
-    config: config || initialState.config,
+    config: { 
+      ...(config || initialState.config),
+      showLogo: true // Forzar showLogo a true siempre
+    },
     previewMode,
     loading: loading || loadingConfig,
   });
@@ -399,7 +402,12 @@ export const ProformaProvider = ({ children }) => {
   // Actualizar config cuando se obtiene de React Query
   React.useEffect(() => {
     if (config) {
-      dispatch({ type: ActionTypes.SET_CONFIG, payload: config });
+      // Asegurarnos de que showLogo siempre es true
+      const configWithLogo = {
+        ...config,
+        showLogo: true
+      };
+      dispatch({ type: ActionTypes.SET_CONFIG, payload: configWithLogo });
     }
   }, [config]);
 
@@ -484,8 +492,13 @@ export const ProformaProvider = ({ children }) => {
   }, [dispatch, state.activeProformaId, state.proformas, updateProformaLocal]);
 
   const setConfigAction = useCallback((configData) => {
-    dispatch({ type: ActionTypes.SET_CONFIG, payload: configData });
-    updateConfig(configData);
+    // Asegurarnos de que showLogo siempre sea true
+    const configWithLogo = {
+      ...configData,
+      showLogo: true // Forzar showLogo a true
+    };
+    dispatch({ type: ActionTypes.SET_CONFIG, payload: configWithLogo });
+    updateConfig(configWithLogo);
   }, [dispatch, updateConfig]);
 
   const setPreviewModeAction = useCallback((mode) => {

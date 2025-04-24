@@ -8,6 +8,11 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from .permissions import (
+    ProformaAccessPermission, CanViewProformas, CanCreateProformas,
+    CanApproveProformas, CanRejectProformas, CanSendProformas,
+    CanConvertProformas, CanManageProformaItems
+)
 from datetime import datetime, timedelta
 from django.db.models import F, Sum, Count, Q, Case, When, Value, ExpressionWrapper, FloatField, IntegerField
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, Extract, Concat, Cast
@@ -26,6 +31,7 @@ import os
 logger = logging.getLogger(__name__)
 
 from .models import Proforma, ProformaItem, ProformaHistorial, ConfiguracionProforma
+from .services import ProformaService
 from .serializers import (
     ProformaSerializer, ProformaItemSerializer, 
     ProformaHistorialSerializer, ConfiguracionProformaSerializer,
@@ -127,13 +133,39 @@ class DashboardPagination(StandardResultsSetPagination):
 
 class ProformaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para gestionar proformas
+    ViewSet para gestionar proformas con permisos basados en roles
     """
     queryset = Proforma.objects.select_related(
         'cliente', 'empresa', 'tipo_contratacion', 'created_by', 'updated_by'
     ).prefetch_related('items', 'historial').all()
     serializer_class = ProformaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ProformaAccessPermission]
+    
+    def get_permissions(self):
+        """
+        Configurar permisos específicos según la acción
+        """
+        if self.action == 'list' or self.action == 'retrieve':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        elif self.action == 'create':
+            permission_classes = [IsAuthenticated, CanCreateProformas]
+        elif self.action == 'enviar':
+            permission_classes = [IsAuthenticated, CanSendProformas]
+        elif self.action == 'aprobar':
+            permission_classes = [IsAuthenticated, CanApproveProformas]
+        elif self.action == 'rechazar':
+            permission_classes = [IsAuthenticated, CanRejectProformas]
+        elif self.action == 'convertir':
+            permission_classes = [IsAuthenticated, CanConvertProformas]
+        elif self.action == 'historial':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        elif self.action == 'items':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        else:
+            # Para update, partial_update, delete y otras acciones
+            permission_classes = [IsAuthenticated, ProformaAccessPermission]
+            
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ProformaFilter
     search_fields = ['numero', 'nombre', 'cliente__nombre', 'notas', 'atencion_a']
@@ -143,23 +175,138 @@ class ProformaViewSet(viewsets.ModelViewSet):
     
     @transaction.atomic
     def perform_create(self, serializer):
-        """Asignar el usuario actual como creador dentro de una transacción atómica"""
+        """
+        Asignar el usuario actual como creador y usar ProformaService para guardar la proforma 
+        dentro de una transacción atómica
+        """
         try:
-            serializer.save(created_by=self.request.user, updated_by=self.request.user)
-            logger.info(f"Proforma creada por usuario {self.request.user.username}")
+            # Preparar datos con los usuarios para trazabilidad
+            validated_data = serializer.validated_data.copy()
+            validated_data['created_by'] = self.request.user
+            validated_data['updated_by'] = self.request.user
+            
+            # Extraer datos de ítems si están presentes
+            items_data = validated_data.pop('items_data', [])
+            
+            # Crear instancia sin guardar
+            instance = Proforma(**validated_data)
+            
+            # Usar el servicio para guardar con flag from_serializer=True para optimizar validaciones
+            proforma = ProformaService.save_proforma(
+                instance, 
+                validate=True, 
+                calculate_amounts=True, 
+                update_history=True, 
+                from_serializer=True
+            )
+            
+            # Procesar los ítems si hay datos
+            if items_data:
+                # Marcar el contexto como operación masiva para optimizar
+                self.request._bulk_operation = True
+                # Usar el servicio para procesar los ítems
+                ProformaService.process_items_data(proforma, items_data)
+                
+            # Actualizar la instancia en el serializer
+            serializer.instance = proforma
+            
+            logger.info(f"Proforma {proforma.numero} creada por usuario {self.request.user.username}")
+            
         except Exception as e:
             logger.exception(f"Error al crear proforma: {str(e)}")
             raise
     
     @transaction.atomic
     def perform_update(self, serializer):
-        """Asignar el usuario actual como actualizador dentro de una transacción atómica"""
+        """
+        Asignar el usuario actual como actualizador y usar ProformaService para actualizar la proforma
+        dentro de una transacción atómica
+        """
         try:
-            serializer.save(updated_by=self.request.user)
-            logger.info(f"Proforma {serializer.instance.id} actualizada por usuario {self.request.user.username}")
+            # Preparar datos
+            validated_data = serializer.validated_data.copy()
+            validated_data['updated_by'] = self.request.user
+            
+            # Extraer datos de ítems si están presentes
+            items_data = validated_data.pop('items_data', [])
+            
+            # Actualizar la instancia sin guardar
+            instance = serializer.instance
+            
+            # Guardar estado anterior para tracking de cambios
+            estado_anterior = instance.estado
+            
+            # Aplicar los cambios a la instancia
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            
+            # Usar el servicio para guardar con flag from_serializer=True para optimizar validaciones
+            proforma = ProformaService.save_proforma(
+                instance, 
+                validate=True, 
+                calculate_amounts=(not items_data),  # Calcular solo si no hay ítems para procesar
+                update_history=True, 
+                from_serializer=True
+            )
+            
+            # Manejar ítems si hay datos
+            if items_data:
+                # Marcar el contexto como operación masiva para optimizar
+                self.request._bulk_operation = True
+                # Usar el servicio para procesar las actualizaciones
+                ProformaService.process_items_update(proforma, items_data)
+            
+            # Actualizar la instancia en el serializer
+            serializer.instance = proforma
+            
+            logger.info(f"Proforma {proforma.numero} actualizada por usuario {self.request.user.username}")
+            
         except Exception as e:
             logger.exception(f"Error al actualizar proforma {serializer.instance.id}: {str(e)}")
             raise
+            
+    def finalize_response(self, request, response, *args, **kwargs):
+        """
+        Método para realizar operaciones de limpieza después de que se completa una operación en lote.
+        Se asegura de que todos los cálculos pendientes se completen correctamente.
+        """
+        # Verificar si hay operaciones en lote que requieren finalización
+        if hasattr(request, '_bulk_operation') and request._bulk_operation:
+            try:
+                # Verificar si hay proformas afectadas que necesitan recálculos
+                if hasattr(request, '_affected_proformas') and request._affected_proformas:
+                    if not hasattr(request, '_totals_recalculated'):
+                        # Marcar que ya se recalcularon para evitar recálculos duplicados
+                        request._totals_recalculated = True
+                        
+                        # Usar el servicio para recalcular en lote
+                        affected_proformas = list(request._affected_proformas)
+                        updated_count = ProformaService.calculate_amounts_batch(affected_proformas)
+                        
+                        logger.info(f"Recalculados totales de {updated_count} proformas tras operación en lote")
+                
+                # Si hay una proforma actual afectada por operaciones en lote
+                if hasattr(self, 'serializer_class') and hasattr(response, 'data'):
+                    # Para operaciones tipo create/update, asegurarse de que la respuesta es correcta
+                    if 'id' in response.data and not hasattr(request, '_totals_recalculated'):
+                        from .models import Proforma
+                        try:
+                            # Refrescar datos de la proforma para tener datos actualizados en la respuesta
+                            proforma_id = response.data['id']
+                            proforma = Proforma.objects.get(id=proforma_id)
+                            
+                            # Actualizar la respuesta con los totales actualizados (si es necesario)
+                            response.data['subtotal'] = float(proforma.subtotal)
+                            response.data['impuesto'] = float(proforma.impuesto)
+                            response.data['total'] = float(proforma.total)
+                        except Exception as inner_e:
+                            logger.error(f"Error al actualizar respuesta: {inner_e}")
+                            
+            except Exception as e:
+                logger.error(f"Error en finalize_response: {e}")
+        
+        # Devolver la respuesta normal
+        return super().finalize_response(request, response, *args, **kwargs)
     
     @action(detail=True, methods=['get'])
     def items(self, request, pk=None):
@@ -850,10 +997,10 @@ class ProformaViewSet(viewsets.ModelViewSet):
 
 
 class ProformaItemViewSet(viewsets.ModelViewSet):
-    """ViewSet para gestionar ítems de proformas"""
+    """ViewSet para gestionar ítems de proformas con permisos basados en roles"""
     queryset = ProformaItem.objects.all()
     serializer_class = ProformaItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanManageProformaItems]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ProformaItemFilter
     ordering_fields = ['orden', 'codigo', 'precio_unitario', 'total']
@@ -866,6 +1013,80 @@ class ProformaItemViewSet(viewsets.ModelViewSet):
         if proforma_id:
             queryset = queryset.filter(proforma_id=proforma_id)
         return queryset
+    
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """Usar el servicio para crear el ítem y mantener la consistencia"""
+        try:
+            # Crear la instancia sin guardar
+            validated_data = serializer.validated_data.copy()
+            instance = ProformaItem(**validated_data)
+            
+            # Usar el servicio para crear y mantener consistencia
+            item = ProformaService.save_proforma_item(
+                instance, 
+                validate=True, 
+                calculate_amounts=True, 
+                from_serializer=True
+            )
+            
+            # Actualizar la instancia en el serializer
+            serializer.instance = item
+            
+            logger.info(f"Item creado para proforma {item.proforma.numero if item.proforma else 'N/A'}")
+            
+        except Exception as e:
+            logger.exception(f"Error al crear ítem de proforma: {str(e)}")
+            raise
+    
+    @transaction.atomic
+    def perform_update(self, serializer):
+        """Usar el servicio para actualizar el ítem y mantener la consistencia"""
+        try:
+            # Actualizar la instancia sin guardar
+            validated_data = serializer.validated_data.copy()
+            instance = serializer.instance
+            
+            # Aplicar los cambios
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            
+            # Usar el servicio para actualizar y mantener consistencia
+            item = ProformaService.save_proforma_item(
+                instance, 
+                validate=True, 
+                calculate_amounts=True, 
+                from_serializer=True
+            )
+            
+            # Actualizar la instancia en el serializer
+            serializer.instance = item
+            
+            logger.info(f"Item {item.id} actualizado para proforma {item.proforma.numero if item.proforma else 'N/A'}")
+            
+        except Exception as e:
+            logger.exception(f"Error al actualizar ítem de proforma: {str(e)}")
+            raise
+    
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        """Usar el servicio para eliminar el ítem y mantener la consistencia"""
+        try:
+            # Guardar información para el log
+            item_id = instance.id
+            proforma_numero = instance.proforma.numero if instance.proforma else 'N/A'
+            
+            # Usar el servicio para eliminar y recalcular totales
+            result = ProformaService.delete_proforma_item(instance, recalculate=True)
+            
+            if result:
+                logger.info(f"Item {item_id} eliminado de proforma {proforma_numero}")
+            else:
+                logger.warning(f"No se pudo eliminar el ítem {item_id} de proforma {proforma_numero}")
+                
+        except Exception as e:
+            logger.exception(f"Error al eliminar ítem de proforma: {str(e)}")
+            raise
 
 
 class ProformaHistorialViewSet(viewsets.ReadOnlyModelViewSet):
@@ -902,12 +1123,41 @@ class ConfiguracionProformaViewSet(viewsets.ModelViewSet):
 class OptimizedProformaViewSet(viewsets.ModelViewSet):
     """
     ViewSet optimizado para gestionar proformas con mejoras de rendimiento
+    y permisos basados en roles
     """
     queryset = Proforma.objects.select_related(
         'cliente', 'empresa', 'tipo_contratacion', 'created_by', 'updated_by'
     ).prefetch_related('items', 'historial').all()
     serializer_class = ProformaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ProformaAccessPermission]
+    
+    def get_permissions(self):
+        """
+        Configurar permisos específicos según la acción
+        """
+        if self.action == 'list' or self.action == 'retrieve':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        elif self.action == 'create':
+            permission_classes = [IsAuthenticated, CanCreateProformas]
+        elif self.action == 'enviar':
+            permission_classes = [IsAuthenticated, CanSendProformas]
+        elif self.action == 'aprobar':
+            permission_classes = [IsAuthenticated, CanApproveProformas]
+        elif self.action == 'rechazar':
+            permission_classes = [IsAuthenticated, CanRejectProformas]
+        elif self.action == 'convertir':
+            permission_classes = [IsAuthenticated, CanConvertProformas]
+        elif self.action == 'historial':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        elif self.action == 'items':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        elif self.action == 'dashboard':
+            permission_classes = [IsAuthenticated, CanViewProformas]
+        else:
+            # Para update, partial_update, delete y otras acciones
+            permission_classes = [IsAuthenticated, ProformaAccessPermission]
+            
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ProformaFilter
     search_fields = ['numero', 'nombre', 'cliente__nombre', 'notas', 'atencion_a']
@@ -915,86 +1165,237 @@ class OptimizedProformaViewSet(viewsets.ModelViewSet):
     ordering = ['-fecha_emision']
     pagination_class = StandardResultsSetPagination
     
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """
+        Asignar el usuario actual como creador y usar ProformaService para guardar la proforma 
+        con optimizaciones de rendimiento
+        """
+        try:
+            # Preparar datos con los usuarios para trazabilidad
+            validated_data = serializer.validated_data.copy()
+            validated_data['created_by'] = self.request.user
+            validated_data['updated_by'] = self.request.user
+            
+            # Extraer datos de ítems si están presentes
+            items_data = validated_data.pop('items_data', [])
+            
+            # Crear instancia sin guardar
+            instance = Proforma(**validated_data)
+            
+            # Usar el servicio para guardar con flag from_serializer=True para optimizar validaciones
+            proforma = ProformaService.save_proforma(
+                instance, 
+                validate=True, 
+                calculate_amounts=True, 
+                update_history=True, 
+                from_serializer=True
+            )
+            
+            # Procesar los ítems si hay datos (usando operaciones en lote)
+            if items_data:
+                # Marcar el contexto como operación masiva para optimizar
+                self.request._bulk_operation = True
+                # Usar el servicio para procesar los ítems
+                ProformaService.process_items_data(proforma, items_data)
+                
+            # Actualizar la instancia en el serializer
+            serializer.instance = proforma
+            
+            logger.info(f"Proforma optimizada {proforma.numero} creada por usuario {self.request.user.username}")
+            
+        except Exception as e:
+            logger.exception(f"Error al crear proforma optimizada: {str(e)}")
+            raise
+    
+    @transaction.atomic
+    def perform_update(self, serializer):
+        """
+        Asignar el usuario actual como actualizador y usar ProformaService para actualizar la proforma
+        con optimizaciones de rendimiento
+        """
+        try:
+            # Preparar datos
+            validated_data = serializer.validated_data.copy()
+            validated_data['updated_by'] = self.request.user
+            
+            # Extraer datos de ítems si están presentes
+            items_data = validated_data.pop('items_data', [])
+            
+            # Actualizar la instancia sin guardar
+            instance = serializer.instance
+            
+            # Aplicar los cambios a la instancia
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            
+            # Usar el servicio para guardar con flag from_serializer=True para optimizar validaciones
+            proforma = ProformaService.save_proforma(
+                instance, 
+                validate=True, 
+                calculate_amounts=(not items_data),  # Calcular solo si no hay ítems para procesar
+                update_history=True, 
+                from_serializer=True
+            )
+            
+            # Manejar ítems si hay datos
+            if items_data:
+                # Marcar el contexto como operación masiva para optimizar
+                self.request._bulk_operation = True
+                # Usar el servicio para procesar las actualizaciones con optimizaciones
+                ProformaService.process_items_update(proforma, items_data)
+            
+            # Actualizar la instancia en el serializer
+            serializer.instance = proforma
+            
+            logger.info(f"Proforma optimizada {proforma.numero} actualizada por usuario {self.request.user.username}")
+            
+        except Exception as e:
+            logger.exception(f"Error al actualizar proforma optimizada {serializer.instance.id}: {str(e)}")
+            raise
+    
+    def finalize_response(self, request, response, *args, **kwargs):
+        """
+        Método para realizar operaciones de limpieza después de que se completa una operación en lote.
+        Versión optimizada que usa cálculos en batch para mejor rendimiento.
+        """
+        # Verificar si hay operaciones en lote que requieren finalización
+        if hasattr(request, '_bulk_operation') and request._bulk_operation:
+            try:
+                # Verificar si hay proformas afectadas que necesitan recálculos
+                if hasattr(request, '_affected_proformas') and request._affected_proformas:
+                    if not hasattr(request, '_totals_recalculated'):
+                        # Marcar que ya se recalcularon para evitar recálculos duplicados
+                        request._totals_recalculated = True
+                        
+                        # Usar el servicio para recalcular en lote
+                        affected_proformas = list(request._affected_proformas)
+                        updated_count = ProformaService.calculate_amounts_batch(affected_proformas)
+                        
+                        logger.info(f"Recalculados totales de {updated_count} proformas tras operación en lote optimizada")
+                
+                # Si hay una proforma actual afectada por operaciones en lote
+                if hasattr(self, 'serializer_class') and hasattr(response, 'data'):
+                    # Para operaciones tipo create/update, asegurarse de que la respuesta es correcta
+                    if 'id' in response.data and not hasattr(request, '_totals_recalculated'):
+                        from .models import Proforma
+                        try:
+                            # Refrescar datos de la proforma para tener datos actualizados en la respuesta
+                            proforma_id = response.data['id']
+                            # Usar select_related para optimizar la consulta
+                            proforma = Proforma.objects.select_related().get(id=proforma_id)
+                            
+                            # Actualizar la respuesta con los totales actualizados (si es necesario)
+                            response.data['subtotal'] = float(proforma.subtotal)
+                            response.data['impuesto'] = float(proforma.impuesto)
+                            response.data['total'] = float(proforma.total)
+                        except Exception as inner_e:
+                            logger.error(f"Error al actualizar respuesta optimizada: {inner_e}")
+                            
+            except Exception as e:
+                logger.error(f"Error en finalize_response optimizado: {e}")
+        
+        # Devolver la respuesta normal
+        return super().finalize_response(request, response, *args, **kwargs)
+    
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         """
         Obtener estadísticas para el dashboard de proformas.
-        Versión optimizada que consolida múltiples consultas en una sola.
+        Versión optimizada que consolida múltiples consultas en una sola
+        y utiliza caché para mejorar el rendimiento.
         """
         try:
-            # Filtrar por rango de fechas y otros parámetros
-            start_date = request.query_params.get('start_date')
-            end_date = request.query_params.get('end_date')
-            estado_filter = request.query_params.get('estado')
-            cliente_id = request.query_params.get('cliente_id')
-            min_total = request.query_params.get('min_total')
-            max_total = request.query_params.get('max_total')
+            # Extraer parámetros de filtro
+            params = {
+                'start_date': request.query_params.get('start_date'),
+                'end_date': request.query_params.get('end_date'),
+                'estado': request.query_params.get('estado'),
+                'cliente_id': request.query_params.get('cliente_id'),
+                'min_total': request.query_params.get('min_total'),
+                'max_total': request.query_params.get('max_total')
+            }
+            
+            # Intentar obtener datos desde la caché
+            from .cache import get_cached_dashboard, cache_dashboard_data
+            
+            # Si force_refresh=true en parámetros, ignorar caché
+            force_refresh = request.query_params.get('force_refresh', '').lower() in ('true', 't', '1', 'yes')
+            
+            if not force_refresh:
+                cached_data = get_cached_dashboard(params)
+                if cached_data:
+                    logger.info(f"Dashboard servido desde caché: {request.query_params}")
+                    return Response(cached_data)
+            
+            # Si no hay datos en caché o se forzó refresco, generar nuevos datos
+            logger.info(f"Generando datos de dashboard: {params}")
             
             # Base queryset con filtros
             queryset = self.get_queryset()
             
             # Validar formato de fechas y aplicar filtros
-            if start_date:
+            if params['start_date']:
                 try:
                     # Validar formato de fecha (YYYY-MM-DD)
-                    datetime.strptime(start_date, '%Y-%m-%d')
-                    queryset = queryset.filter(fecha_emision__gte=start_date)
+                    datetime.strptime(params['start_date'], '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__gte=params['start_date'])
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Error en formato de fecha inicio: {start_date}, error: {str(e)}")
+                    logger.error(f"Error en formato de fecha inicio: {params['start_date']}, error: {str(e)}")
                     # No aplicar filtro de fecha inválida
                     pass
                     
-            if end_date:
+            if params['end_date']:
                 try:
                     # Validar formato de fecha (YYYY-MM-DD)
-                    datetime.strptime(end_date, '%Y-%m-%d')
-                    queryset = queryset.filter(fecha_emision__lte=end_date)
+                    datetime.strptime(params['end_date'], '%Y-%m-%d')
+                    queryset = queryset.filter(fecha_emision__lte=params['end_date'])
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Error en formato de fecha fin: {end_date}, error: {str(e)}")
+                    logger.error(f"Error en formato de fecha fin: {params['end_date']}, error: {str(e)}")
                     # No aplicar filtro de fecha inválida
                     pass
                     
-            if estado_filter:
+            if params['estado']:
                 try:
                     # Permitir filtrar por múltiples estados
-                    estados = [estado.strip() for estado in estado_filter.split(',')]
+                    estados = [estado.strip() for estado in params['estado'].split(',')]
                     queryset = queryset.filter(estado__in=estados)
                 except Exception as e:
                     logger.error(f"Error al procesar filtro de estados: {str(e)}")
                     # No aplicar filtro si hay error
                     pass
                     
-            if cliente_id:
+            if params['cliente_id']:
                 try:
-                    queryset = queryset.filter(cliente_id=cliente_id)
+                    queryset = queryset.filter(cliente_id=params['cliente_id'])
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Error en ID de cliente: {cliente_id}, error: {str(e)}")
+                    logger.error(f"Error en ID de cliente: {params['cliente_id']}, error: {str(e)}")
                     # No aplicar filtro de cliente inválido
                     pass
                     
-            if min_total:
+            if params['min_total']:
                 try:
-                    min_total_value = float(min_total)
+                    min_total_value = float(params['min_total'])
                     queryset = queryset.filter(total__gte=min_total_value)
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Error en valor mínimo total: {min_total}, error: {str(e)}")
+                    logger.error(f"Error en valor mínimo total: {params['min_total']}, error: {str(e)}")
                     # No aplicar filtro de total mínimo inválido
                     pass
                     
-            if max_total:
+            if params['max_total']:
                 try:
-                    max_total_value = float(max_total)
+                    max_total_value = float(params['max_total'])
                     queryset = queryset.filter(total__lte=max_total_value)
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Error en valor máximo total: {max_total}, error: {str(e)}")
+                    logger.error(f"Error en valor máximo total: {params['max_total']}, error: {str(e)}")
                     # No aplicar filtro de total máximo inválido
                     pass
             
             # Registrar información de filtrado
             logger.info(
-                f"Dashboard optimizado filtrado: fechas={start_date}~{end_date}, "
-                f"estado={estado_filter}, cliente={cliente_id}, "
-                f"total={min_total}~{max_total}, resultados={queryset.count()}"
+                f"Dashboard optimizado filtrado: fechas={params['start_date']}~{params['end_date']}, "
+                f"estado={params['estado']}, cliente={params['cliente_id']}, "
+                f"total={params['min_total']}~{params['max_total']}, resultados={queryset.count()}"
             )
 
             # 1. OPTIMIZACIÓN: Estadísticas por estado en una sola consulta
@@ -1194,6 +1595,9 @@ class OptimizedProformaViewSet(viewsets.ModelViewSet):
                 }
             }
             
+            # Guardar en caché antes de devolver
+            cache_dashboard_data(params, response_data)
+            
             return Response(response_data)
             
         except Exception as e:
@@ -1249,13 +1653,13 @@ class OptimizedProformaViewSet(viewsets.ModelViewSet):
 class OptimizedProformaItemViewSet(viewsets.ModelViewSet):
     """
     ViewSet optimizado para gestionar ítems de proformas.
-    Incluye mejoras de prefetch y paginación por defecto.
+    Incluye mejoras de prefetch, paginación por defecto y permisos basados en roles.
     """
     queryset = ProformaItem.objects.select_related(
         'proforma', 'producto_ofertado', 'producto_disponible'
     ).all()
     serializer_class = ProformaItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanManageProformaItems]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ProformaItemFilter
     ordering_fields = ['orden', 'codigo', 'precio_unitario', 'total']
@@ -1275,6 +1679,149 @@ class OptimizedProformaItemViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(proforma_id=proforma_id)
         
         return queryset
+    
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """
+        Usar el servicio para crear el ítem y mantener la consistencia
+        con optimizaciones de rendimiento
+        """
+        try:
+            # Crear la instancia sin guardar
+            validated_data = serializer.validated_data.copy()
+            instance = ProformaItem(**validated_data)
+            
+            # Detectar si estamos en una operación en lote
+            is_bulk = hasattr(self.request, '_bulk_operation') and self.request._bulk_operation
+            
+            if is_bulk:
+                # En operaciones masivas, calcular el total pero no recalcular la proforma todavía
+                instance.total = ProformaService.calculate_item_total_from_values(
+                    instance.cantidad, instance.precio_unitario, instance.porcentaje_descuento
+                )
+                instance._totales_actualizados = True  # Marcar para evitar recálculo por signal
+                instance.save(_from_serializer=True)
+                serializer.instance = instance
+            else:
+                # Operación individual, usar el servicio completo
+                item = ProformaService.save_proforma_item(
+                    instance, 
+                    validate=True, 
+                    calculate_amounts=True, 
+                    from_serializer=True
+                )
+                serializer.instance = item
+            
+            logger.info(f"Item optimizado creado para proforma {instance.proforma.numero if instance.proforma else 'N/A'}")
+            
+        except Exception as e:
+            logger.exception(f"Error al crear ítem optimizado: {str(e)}")
+            raise
+    
+    @transaction.atomic
+    def perform_update(self, serializer):
+        """
+        Usar el servicio para actualizar el ítem y mantener la consistencia
+        con optimizaciones de rendimiento
+        """
+        try:
+            # Actualizar la instancia sin guardar
+            validated_data = serializer.validated_data.copy()
+            instance = serializer.instance
+            
+            # Aplicar los cambios
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            
+            # Detectar si estamos en una operación en lote
+            is_bulk = hasattr(self.request, '_bulk_operation') and self.request._bulk_operation
+            
+            if is_bulk:
+                # En operaciones masivas, calcular el total pero no recalcular la proforma todavía
+                instance.total = ProformaService.calculate_item_total_from_values(
+                    instance.cantidad, instance.precio_unitario, instance.porcentaje_descuento
+                )
+                instance._totales_actualizados = True  # Marcar para evitar recálculo por signal
+                instance.save(_from_serializer=True)
+                serializer.instance = instance
+            else:
+                # Operación individual, usar el servicio completo
+                item = ProformaService.save_proforma_item(
+                    instance, 
+                    validate=True, 
+                    calculate_amounts=True, 
+                    from_serializer=True
+                )
+                serializer.instance = item
+            
+            logger.info(f"Item optimizado {instance.id} actualizado para proforma {instance.proforma.numero if instance.proforma else 'N/A'}")
+            
+        except Exception as e:
+            logger.exception(f"Error al actualizar ítem optimizado: {str(e)}")
+            raise
+    
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        """
+        Usar el servicio para eliminar el ítem y mantener la consistencia
+        con optimizaciones de rendimiento
+        """
+        try:
+            # Guardar información para el log
+            item_id = instance.id
+            proforma_id = instance.proforma_id
+            proforma_numero = instance.proforma.numero if instance.proforma else 'N/A'
+            
+            # Detectar si estamos en una operación en lote
+            is_bulk = hasattr(self.request, '_bulk_operation') and self.request._bulk_operation
+            
+            if is_bulk:
+                # En operaciones masivas, eliminar pero no recalcular todavía
+                instance.delete()
+                
+                # Mantener registro de la proforma para actualización posterior
+                if hasattr(self.request, '_affected_proformas'):
+                    self.request._affected_proformas.add(proforma_id)
+                else:
+                    self.request._affected_proformas = {proforma_id}
+                    
+                logger.info(f"Item optimizado {item_id} eliminado de proforma {proforma_numero} (en lote)")
+            else:
+                # Operación individual, usar el servicio completo
+                result = ProformaService.delete_proforma_item(instance, recalculate=True)
+                
+                if result:
+                    logger.info(f"Item optimizado {item_id} eliminado de proforma {proforma_numero}")
+                else:
+                    logger.warning(f"No se pudo eliminar el ítem optimizado {item_id} de proforma {proforma_numero}")
+                
+        except Exception as e:
+            logger.exception(f"Error al eliminar ítem optimizado: {str(e)}")
+            raise
+    
+    def finalize_response(self, request, response, *args, **kwargs):
+        """
+        Método para realizar operaciones de limpieza después de que se completa una operación en lote.
+        Recalcula los totales de las proformas afectadas si hay operaciones en lote.
+        """
+        # Verificar si hay proformas que necesitan recálculos después de operaciones en lote
+        if (hasattr(request, '_affected_proformas') and request._affected_proformas and 
+            not hasattr(request, '_totals_recalculated')):
+            try:
+                # Marcar que ya se recalcularon para evitar recálculos duplicados
+                request._totals_recalculated = True
+                
+                # Usar el servicio para recalcular en lote
+                affected_proformas = list(request._affected_proformas)
+                updated_count = ProformaService.calculate_amounts_batch(affected_proformas)
+                
+                logger.info(f"Recalculados totales de {updated_count} proformas tras operación en lote")
+                
+            except Exception as e:
+                logger.error(f"Error al recalcular totales después de operación en lote: {e}")
+        
+        # Devolver la respuesta normal
+        return super().finalize_response(request, response, *args, **kwargs)
 
 
 class OptimizedProformaHistorialViewSet(viewsets.ReadOnlyModelViewSet):

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, CheckCircle, User, Building, Phone } from "lucide-react";
+import { normalizarIDsCliente } from "@/services/utils/clienteUtils";
 
 const ClientSearchDialog = ({ 
   isOpen, 
@@ -72,7 +73,9 @@ const ClientSearchDialog = ({
   // Función para seleccionar un cliente
   const handleSelectClient = useCallback((cliente) => {
     if (typeof onSelectClient === 'function') {
-      onSelectClient(cliente);
+      // Usar utilidad para normalizar IDs
+      const clienteNormalizado = normalizarIDsCliente(cliente);
+      onSelectClient(clienteNormalizado);
     }
   }, [onSelectClient]);
 

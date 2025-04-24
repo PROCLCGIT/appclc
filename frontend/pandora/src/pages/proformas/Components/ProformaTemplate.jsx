@@ -109,6 +109,12 @@ export default function ProformaTemplate({
     });
   }, [quote]);
   
+  // Log para depuración de config
+  useEffect(() => {
+    console.log("ProformaTemplate config:", config);
+    console.log("showLogo status:", config.showLogo);
+  }, [config]);
+
   // Efecto para enfocar los inputs cuando se abren los popovers
   // Versión corregida que no causa bucles infinitos
   useEffect(() => {
@@ -145,24 +151,23 @@ export default function ProformaTemplate({
           <h1 className="text-3xl font-bold text-blue-800">Proforma</h1>
           <p className="text-gray-600 mt-1">#{quote.number}</p>
         </div>
-        {config.showLogo && (
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-3 rounded-full mr-3">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={company.logo} alt="Company Logo" />
-                <AvatarFallback className="bg-blue-500 text-white">
-                  {company.name.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-blue-800">{company.name}</h2>
-              <p className="text-sm text-gray-600">{company.email}</p>
-              <p className="text-sm text-gray-600">{company.phone}</p>
-              <p className="text-sm text-gray-600">{company.website}</p>
-            </div>
+        {/* Eliminamos la condición config.showLogo para forzar la visualización del logo */}
+        <div className="flex items-center">
+          <div className="bg-blue-100 p-3 rounded-full mr-3">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={company.logo} alt="Company Logo" />
+              <AvatarFallback className="bg-blue-500 text-white">
+                {company.name.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           </div>
-        )}
+          <div>
+            <h2 className="text-xl font-bold text-blue-800">{company.name}</h2>
+            <p className="text-sm text-gray-600">{company.email}</p>
+            <p className="text-sm text-gray-600">{company.phone}</p>
+            <p className="text-sm text-gray-600">{company.website}</p>
+          </div>
+        </div>
       </div>
 
       {/* Datos de Cliente y Detalles de Proforma */}

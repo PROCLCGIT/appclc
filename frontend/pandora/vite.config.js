@@ -24,8 +24,37 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        // Rewrite path to remove the /api prefix when sending to backend
-        rewrite: (path) => path.replace(/^\/api/, '')
+        secure: false,
+        // Ya no eliminar el prefijo /api, mantenerlo para compatibilidad con el backend
+        rewrite: (path) => path,
+        // Configuración para solucionar problemas de cors y otros
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxy request:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Proxy response:', proxyRes.statusCode, req.url);
+          });
+        }
+      },
+      // Proxies directos sin prefijo para casos donde el frontend puede estar utilizando rutas directas
+      '/core': {
+        target: 'http://localhost:8000/api',
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`
+      },
+      '/pandora': {
+        target: 'http://localhost:8000/api',
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`
+      },
+      '/clientes': {
+        target: 'http://localhost:8000/api/core',
+        changeOrigin: true,
+        rewrite: (path) => `/api/core${path}`
       }
     }
   }

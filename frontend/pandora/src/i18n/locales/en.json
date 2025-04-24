@@ -1,0 +1,71 @@
+{
+  "dashboard": {
+    "title": "Quote Dashboard",
+    "subtitle": "Quote analysis and metrics",
+    "buttons": {
+      "export": "Export",
+      "refresh": "Refresh",
+      "new": "New Quote",
+      "exporting": "Exporting..."
+    },
+    "exportFormats": {
+      "title": "Export Format",
+      "csv": "CSV",
+      "pdf": "PDF"
+    },
+    "dateSelector": {
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "error": "Start date cannot be after end date"
+    },
+    "summary": {
+      "totalProformas": "Total Quotes",
+      "approvalRate": "Approval Rate",
+      "totalAmount": "Total Amount",
+      "avgAmount": "Average per Quote"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "converted": "Converted",
+      "filterTitle": "Filter by status"
+    },
+    "charts": {
+      "statusTitle": "Quotes by Status",
+      "amountTitle": "Amount by Status",
+      "monthlyTitle": "Monthly Trend",
+      "noData": "No data available",
+      "loading": "Loading chart data...",
+      "yAxisAmount": "Amount ($)",
+      "yAxisCount": "Count",
+      "xAxisMonth": "Month"
+    },
+    "recentQuotes": {
+      "title": "Recent Quotes",
+      "columns": {
+        "id": "ID",
+        "client": "Client",
+        "date": "Date",
+        "expires": "Expires",
+        "amount": "Amount",
+        "status": "Status",
+        "seller": "Seller",
+        "actions": "Actions"
+      },
+      "viewDetails": "View details",
+      "noQuotes": "No recent quotes"
+    },
+    "errors": {
+      "loadFailed": "Failed to load dashboard data",
+      "retry": "Retry",
+      "exportFailed": "Export failed"
+    },
+    "dateFormat": "MM/dd/yyyy",
+    "currencyFormat": "{{value, currency}}"
+  }
+}

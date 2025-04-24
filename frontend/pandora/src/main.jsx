@@ -8,6 +8,8 @@ import store from './redux/store';
 import App from './App';
 import './config/axios';
 import './index.css';
+// Import i18n (internationalization)
+import '@/i18n/i18n';
 
 // Crear instancia de QueryClient con configuración optimizada
 const queryClient = new QueryClient({

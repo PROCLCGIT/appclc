@@ -91,30 +91,59 @@ export function useClientesQuery(options = {}) {
   const createMutation = useMutation({
     mutationFn: async (nuevoCliente) => {
       try {
+        // Asegurarnos que los campos están en el formato correcto
+        const clienteFormateado = {
+          ...nuevoCliente,
+          // Asegurarnos que los IDs son numéricos si se pasan como string
+          tipo_cliente: nuevoCliente.tipo_cliente ? Number(nuevoCliente.tipo_cliente) : nuevoCliente.tipo_cliente,
+          zona: nuevoCliente.zona ? Number(nuevoCliente.zona) : nuevoCliente.zona,
+          ciudad: nuevoCliente.ciudad ? Number(nuevoCliente.ciudad) : nuevoCliente.ciudad,
+        };
+        
+        console.log('Datos del cliente a crear:', clienteFormateado);
+        
+        // Configuración personalizada para aumentar el timeout para creación
+        const config = {
+          timeout: 30000, // 30 segundos
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        };
+        
         try {
-          // Intentar primero con el endpoint core
-          const response = await api.post('core/clientes/', nuevoCliente);
-          console.log('✅ Cliente creado exitosamente en core/clientes/');
+          // Intentar primero con el endpoint core de forma directa
+          console.log('Intentando crear cliente en core/clientes/');
+          const response = await api.post('core/clientes/', clienteFormateado, config);
+          console.log('✅ Cliente creado exitosamente en core/clientes/:', response.data);
           return response.data;
         } catch (coreError) {
-          console.warn('Error al crear cliente en core/clientes/', coreError.message);
+          console.warn('Error al crear cliente en core/clientes/:', coreError.message);
+          console.log('Detalles del error:', coreError.response?.data || coreError);
           
           // Intentar con pandora endpoint
           try {
-            const apiResponse = await api.post('pandora/clientes/', nuevoCliente);
-            console.log('✅ Cliente creado exitosamente en pandora/clientes/');
+            console.log('Intentando crear cliente en pandora/clientes/');
+            const apiResponse = await api.post('pandora/clientes/', clienteFormateado, config);
+            console.log('✅ Cliente creado exitosamente en pandora/clientes/:', apiResponse.data);
             return apiResponse.data;
           } catch (apiError) {
-            console.warn('Error al crear cliente en pandora/clientes/', apiError.message);
+            console.warn('Error al crear cliente en pandora/clientes/:', apiError.message);
+            console.log('Detalles del error:', apiError.response?.data || apiError);
             
             // Último intento con madvance endpoint
-            const madvanceResponse = await api.post('madvance/clientes/', nuevoCliente);
-            console.log('✅ Cliente creado exitosamente en madvance/clientes/');
+            console.log('Intentando crear cliente en madvance/clientes/');
+            const madvanceResponse = await api.post('madvance/clientes/', clienteFormateado, config);
+            console.log('✅ Cliente creado exitosamente en madvance/clientes/:', madvanceResponse.data);
             return madvanceResponse.data;
           }
         }
       } catch (error) {
         console.error('❌ Error en todos los intentos al crear cliente:', error);
+        
+        // Verificar si tenemos datos específicos del error del servidor
+        const errorData = error.response?.data;
+        console.error('Datos del error:', errorData);
+        
         if (showErrors) {
           errorHandler.handleError(error, 'crear cliente');
         }

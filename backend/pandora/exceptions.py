@@ -6,6 +6,7 @@ import traceback
 from django.db import IntegrityError, DataError, OperationalError
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
+from django.conf import settings
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import APIException, ValidationError, NotFound, PermissionDenied
 from rest_framework.response import Response

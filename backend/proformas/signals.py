@@ -4,6 +4,7 @@ Señales (signals) para el módulo de proformas.
 Este módulo define receptores para las señales de Django que se conectan
 a los eventos de los modelos Proforma y ProformaItem, delegando la lógica
 de negocio al servicio ProformaService con optimizaciones de rendimiento.
+También maneja la invalidación de caché cuando es necesario.
 """
 import logging
 from django.db.models.signals import post_save, pre_save, post_delete
@@ -15,6 +16,7 @@ from functools import wraps
 
 from .models import Proforma, ProformaItem, ProformaHistorial
 from .services import ProformaService
+from .cache import invalidate_dashboard_cache
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +124,7 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
     Crea automáticamente un registro en el historial de la proforma.
     Maneja tanto las creaciones como los cambios de estado,
     reemplazando la lógica que estaba en el serializer.
+    También invalida la caché del dashboard cuando corresponde.
     """
     try:
         # Evitar crear múltiples registros en una transacción
@@ -134,6 +137,10 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
             estado_anterior = ''
             estado_nuevo = instance.estado
             notas = f"Proforma {instance.numero} creada con éxito"
+            
+            # Invalidar caché del dashboard cuando se crea una nueva proforma
+            invalidate_dashboard_cache()
+            logger.debug("Caché de dashboard invalidado por nueva proforma")
         else:
             # Obtener estado anterior usando el valor capturado en pre_save
             estado_anterior = getattr(instance, '_estado_original', None)
@@ -168,6 +175,10 @@ def crear_historial_proforma(sender, instance, created, update_fields=None, **kw
                 
                 estado_nuevo = instance.estado
                 notas = f"Estado cambiado de {estado_anterior} a {estado_nuevo}"
+                
+                # Invalidar caché del dashboard cuando cambia el estado de una proforma
+                invalidate_dashboard_cache()
+                logger.debug(f"Caché de dashboard invalidado por cambio de estado de proforma #{instance.numero}")
             else:
                 # Si no hay cambio de estado, es modificación general
                 accion = 'modificacion'
@@ -217,6 +228,7 @@ def actualizar_totales_proforma(sender, instance, created, **kwargs):
     """
     Actualiza los totales de la proforma cuando se crea o modifica un ítem.
     Delega el cálculo al servicio optimizado.
+    Además, invalida la caché del dashboard cuando se crea un nuevo ítem.
     """
     try:
         # Evitar recálculos innecesarios marcando la instancia
@@ -235,6 +247,12 @@ def actualizar_totales_proforma(sender, instance, created, **kwargs):
                 instance._totales_actualizados = True
                 
                 logger.debug(f"Totales actualizados para Proforma #{proforma.numero}")
+                
+            # Si es un nuevo ítem, invalidar la caché del dashboard
+            # (solo para creaciones, no para actualizaciones, para reducir invalidaciones)
+            if created:
+                invalidate_dashboard_cache()
+                logger.debug(f"Caché de dashboard invalidado por nuevo ítem en proforma #{proforma.numero}")
             
     except Exception as e:
         logger.error(f"Error al actualizar totales de Proforma: {str(e)}")
@@ -246,6 +264,7 @@ def actualizar_totales_tras_eliminar_item(sender, instance, **kwargs):
     """
     Actualiza los totales de la proforma cuando se elimina un ítem.
     Delega el cálculo al servicio optimizado.
+    Además, invalida la caché del dashboard cuando se elimina un ítem.
     """
     try:
         # Capturar la proforma antes de que se elimine la relación
@@ -256,6 +275,10 @@ def actualizar_totales_tras_eliminar_item(sender, instance, **kwargs):
                 ProformaService.calculate_amounts(proforma, save=True)
                 
             logger.debug(f"Totales actualizados para Proforma #{proforma.numero} tras eliminar ítem")
+            
+            # Invalidar caché del dashboard cuando se elimina un ítem
+            invalidate_dashboard_cache()
+            logger.debug(f"Caché de dashboard invalidado por eliminación de ítem en proforma #{proforma.numero}")
             
     except Exception as e:
         logger.error(f"Error al actualizar totales tras eliminar ítem: {str(e)}")
@@ -282,5 +305,7 @@ def trigger_batch_update():
     """
     Activa el procesamiento por lotes de las actualizaciones pendientes.
     Útil para llamar desde un trabajo programado o al final de una transacción.
+    También invalida la caché para asegurar coherencia.
     """
     process_batch_updates()
+    invalidate_dashboard_cache()

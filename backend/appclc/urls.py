@@ -55,6 +55,10 @@ urlpatterns = [
     path('api/brief/', include('brief.urls')),
     path('api/docmanager/', include('docmanager.urls')),
     
+    # Endpoints directos para compatibilidad con clientes legacy/alternos
+    # Redirección exacta para el endpoint problemático
+    path('api/clientes/', RedirectView.as_view(url='/api/core/clientes/', permanent=False)),
+    
     # API versionada (si se implementa en el futuro)
     # path('api/v1/', include([
     #     path('auth/', include('pandora.urls_auth')),

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { proformasService } from '@/services/api';
+import pandoraLogo from '@/assets/pandora.png';
 
 /**
  * Hook personalizado para gestionar el estado de la plantilla de proforma
@@ -33,7 +34,7 @@ export default function useProformaTemplate() {
 
   // Configuración general con valores predeterminados
   const [config, setConfig] = useState({
-    showLogo: true,
+    showLogo: true, // Siempre debe ser true para mostrar el logo
     showDiscount: true,
     showTax: true,
     footerText: "Gracias por su preferencia. Esta proforma no constituye una factura.",
@@ -49,7 +50,7 @@ export default function useProformaTemplate() {
     phone: "+593 98-765-4321",
     address: "Centro Empresarial El Ducado, Torre B, Oficina 405",
     ruc: "0987654321001",
-    logo: "/company-logo.png",
+    logo: pandoraLogo, // Usar la imagen pandora.png importada directamente desde assets
     website: "www.suempresa.com"
   });
 
@@ -75,7 +76,10 @@ export default function useProformaTemplate() {
         const defaultConfig = {
           formas_pago: formasPago,
           tiempos_entrega: tiemposEntrega,
-          configuracion_visual: config
+          configuracion_visual: {
+            ...config,
+            showLogo: true // Forzar showLogo a true
+          }
         };
         
         setProformaConfig(defaultConfig);
@@ -83,6 +87,12 @@ export default function useProformaTemplate() {
       }
       
       const configData = await proformasService.obtenerConfiguracion();
+      
+      // Asegurarse de que showLogo siempre sea true
+      if (configData.configuracion_visual) {
+        configData.configuracion_visual.showLogo = true;
+      }
+      
       setProformaConfig(configData);
       console.log("Configuración de proformas cargada:", configData);
       
@@ -111,6 +121,12 @@ export default function useProformaTemplate() {
    * Actualiza una configuración específica
    */
   const updateConfig = (field, value) => {
+    // Si intentan cambiar showLogo a false, ignorarlo
+    if (field === 'showLogo' && value === false) {
+      console.warn('No se permite cambiar showLogo a false');
+      return;
+    }
+    
     setConfig(prev => ({
       ...prev,
       [field]: value
@@ -129,7 +145,10 @@ export default function useProformaTemplate() {
         ...proformaConfig,
         formas_pago: formasPago,
         tiempos_entrega: tiemposEntrega,
-        configuracion_visual: config
+        configuracion_visual: {
+          ...config,
+          showLogo: true // Forzar showLogo a true para garantizar que se mantenga visible
+        }
       };
       
       // Check if the function exists before calling it

@@ -2,6 +2,7 @@
 
 import React, { useCallback } from "react";
 import { toast } from "sonner";
+import { normalizarIDsCliente, formatearClienteParaUI } from '@/services/utils/clienteUtils';
 
 /**
  * Conjunto de funciones para manejar clientes en la proforma
@@ -23,15 +24,9 @@ export const useClientHandlers = ({
     }
     
     try {
-      const clientData = {
-        id: selectedClient.id,
-        name: selectedClient.nombre || "Cliente sin nombre",
-        attention: selectedClient.persona_contacto || "",
-        email: selectedClient.email || "",
-        phone: selectedClient.telefono || "",
-        address: selectedClient.direccion || "",
-        ruc: selectedClient.ruc || ""
-      };
+      // Usar las funciones de utilidad para normalizar y formatear el cliente
+      const clienteNormalizado = normalizarIDsCliente(selectedClient);
+      const clientData = formatearClienteParaUI(clienteNormalizado);
       
       console.log("Datos de cliente formateados:", clientData);
       

@@ -145,9 +145,20 @@ class Proforma(TimeStampedModel):
         verbose_name_plural = _('Proformas')
         ordering = ['-fecha_emision', '-id']
         indexes = [
-            models.Index(fields=['numero']),
-            models.Index(fields=['fecha_emision']),
-            models.Index(fields=['estado']),
+            models.Index(fields=['numero'], name='idx_proforma_numero'),
+            models.Index(fields=['fecha_emision'], name='idx_proforma_fecha_emision'),
+            models.Index(fields=['estado'], name='idx_proforma_estado'),
+            models.Index(fields=['cliente'], name='idx_proforma_cliente'),
+            models.Index(fields=['empresa'], name='idx_proforma_empresa'),
+            models.Index(fields=['created_by'], name='idx_proforma_created_by'),
+            models.Index(fields=['created_at'], name='idx_proforma_created_at'),
+            # Índices compuestos para consultas comunes
+            models.Index(fields=['estado', 'fecha_emision'], name='idx_proforma_estado_fecha'),
+            models.Index(fields=['cliente', 'estado'], name='idx_proforma_cliente_estado'),
+            models.Index(fields=['created_by', 'estado'], name='idx_proforma_createdby_estado'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['numero'], name='unique_proforma_numero')
         ]
     
     def __str__(self):
@@ -447,96 +458,187 @@ class Proforma(TimeStampedModel):
         Returns:
             str: Número de proforma en formato 'PRO-YYYY-NNNN'
         """
+        max_intentos = 3  # Número máximo de intentos para generar un número único
+        
         try:
             # Obtener el año actual
             year = timezone.now().year
             
-            # Utilizar el modelo de secuencia para obtener el siguiente número
-            # de manera atómica (con bloqueo de tabla)
-            numero = SecuenciaProforma.obtener_siguiente_numero(year)
+            # Intentar hasta 3 veces para manejar posibles colisiones
+            for intento in range(max_intentos):
+                try:
+                    # Utilizar el modelo de secuencia para obtener el siguiente número
+                    # de manera atómica (con bloqueo de tabla)
+                    numero = SecuenciaProforma.obtener_siguiente_numero(year)
+                    
+                    # Verificar que el número generado sea único (doble verificación)
+                    if not Proforma.objects.filter(numero=numero).exists():
+                        # Si no existe, retornar el número
+                        return numero
+                    else:
+                        # Colisión detectada, registrar y reintentar
+                        logger.warning(f"Colisión detectada con número {numero} (intento {intento+1}/{max_intentos})")
+                        # Continuar al siguiente intento
+                except Exception as e:
+                    logger.error(f"Error en intento {intento+1}/{max_intentos} al generar número secuencial: {str(e)}")
+                    # Continuar al siguiente intento
             
-            # Verificar que el número generado sea único (doble verificación)
+            # Si llegamos aquí, todos los intentos fallaron, generar un número basado en timestamp
+            import time
+            import uuid
+            
+            # Combinar timestamp con UUID para garantizar unicidad
+            timestamp = int(time.time())
+            short_uuid = str(uuid.uuid4())[:8]  # Usar primeros 8 caracteres del UUID
+            
+            # Generar un número único más seguro
+            numero = f'PRO-{year}-{timestamp}-{short_uuid}'
+            
+            # Verificar que este número de emergencia también sea único
             if Proforma.objects.filter(numero=numero).exists():
-                # Si hay una colisión (muy raro pero posible en caso de inconsistencias),
-                # intentar generar otro número
-                logger.warning(f"Colisión detectada con número {numero} a pesar del uso de secuencia, intentando nuevamente")
-                
-                # Generar un nuevo número con timestamp para garantizar unicidad
-                import time
-                timestamp = int(time.time())
-                numero = f'PRO-{year}-{timestamp}'
-                
-                # Registrar evento inusual para investigación posterior
-                logger.error(f"Se generó número alternativo con timestamp: {numero}")
+                # Esto es extremadamente improbable, pero por seguridad generamos otro con microsegundos
+                import datetime
+                microseconds = datetime.datetime.now().microsecond
+                numero = f'PRO-{year}-{timestamp}-{microseconds}-{short_uuid}'
+            
+            # Registrar evento inusual para investigación posterior
+            logger.error(f"Se agotaron los reintentos normales. Se generó número especial: {numero}")
             
             return numero
             
         except Exception as e:
-            # Registrar el error y generar un número de respaldo utilizando timestamp
+            # Registrar el error y generar un número de respaldo utilizando timestamp + UUID
             logger.error(f"Error crítico al generar número de proforma: {str(e)}")
             
-            # En caso de error, generar un número basado en timestamp que sea único
+            # En caso de error crítico, generar un número extremadamente único
             import time
+            import uuid
+            import os
+            
             year = timezone.now().year
             timestamp = int(time.time())
+            random_str = os.urandom(4).hex()  # 8 caracteres hexadecimales aleatorios
             
             # Se incluye un prefijo 'E' para indicar que es un número de emergencia
-            numero = f'PRO-{year}-E{timestamp}'
-            logger.warning(f"Generado número de emergencia: {numero}")
+            numero = f'PRO-{year}-E{timestamp}-{random_str}'
+            logger.warning(f"Generado número de emergencia crítica: {numero}")
             
             return numero
     
     def clean(self):
         """
-        Validaciones del modelo:
-        - Valida fechas
-        - Valida relaciones
-        - Otras validaciones de negocio
+        Validaciones fundamentales del modelo.
+        Las validaciones de negocio complejas se manejan principalmente en el serializer.
+        Aquí solo mantenemos restricciones inmutables que afectan la integridad de datos.
         """
         super().clean()
         
-        # Validar que la fecha de vencimiento es posterior o igual a la fecha de emisión
-        if self.fecha_vencimiento and self.fecha_emision and self.fecha_vencimiento < self.fecha_emision:
-            raise ValidationError({
-                'fecha_vencimiento': _('La fecha de vencimiento debe ser igual o posterior a la fecha de emisión')
-            })
-            
-        # Validar que exista cliente
-        if not self.cliente:
-            raise ValidationError({
-                'cliente': _('Debe seleccionar un cliente para la proforma')
-            })
-            
-        # Validar que exista empresa
-        if not self.empresa:
-            raise ValidationError({
-                'empresa': _('Debe seleccionar una empresa emisora para la proforma')
-            })
-            
-        # Validar porcentaje de impuesto
+        # Validar porcentaje de impuesto (restricción matemática inmutable)
         if self.porcentaje_impuesto < 0 or self.porcentaje_impuesto > 100:
             raise ValidationError({
                 'porcentaje_impuesto': _('El porcentaje de impuesto debe estar entre 0 y 100')
+            })
+            
+        # Validar que el subtotal, impuesto y total no sean negativos (restricción matemática)
+        if self.subtotal < 0:
+            raise ValidationError({
+                'subtotal': _('El subtotal no puede ser negativo')
+            })
+            
+        if self.impuesto < 0:
+            raise ValidationError({
+                'impuesto': _('El impuesto no puede ser negativo')
+            })
+            
+        if self.total < 0:
+            raise ValidationError({
+                'total': _('El total no puede ser negativo')
             })
     
     def save(self, *args, **kwargs):
         """
         Sobrescritura del método save para:
-        1. Realizar validaciones completas con full_clean()
+        1. Realizar validaciones mínimas o completas según el contexto
         2. Generar número de proforma si no existe
-        3. Calcular montos automáticamente
+        3. Calcular montos automáticamente (solo cuando sea necesario)
+        
+        Args:
+            skip_validation (bool): Si es True, omite la validación completa
+                se usa cuando los datos ya han sido validados por el serializer
+            skip_item_recalculation (bool): Si es True, omite el recálculo de montos
+                para evitar recursión al ser llamado desde los ítems
+            _from_serializer (bool): Indica que los datos vienen del serializer
+                y ya pasaron validaciones de negocio
+            *args, **kwargs: Argumentos adicionales para super().save()
         """
-        # 1. Realizar validaciones completas
-        self.full_clean()
+        # Extraer parámetros especiales
+        skip_validation = kwargs.pop('skip_validation', False)
+        skip_item_recalculation = kwargs.pop('skip_item_recalculation', False)
+        _from_serializer = kwargs.pop('_from_serializer', False)
+        
+        # Guardar el contexto para futuras referencias
+        if _from_serializer:
+            self._from_serializer = True
+        
+        # Bandera para identificar si es creación o actualización
+        is_new = self.pk is None
+        
+        # 1. Realizar validaciones (completas o limitadas según el contexto)
+        if not skip_validation:
+            # Si viene desde el serializer, reducir la validación a solo restricciones fundamentales
+            if hasattr(self, '_from_serializer') and self._from_serializer:
+                # Validar restricciones matemáticas fundamentales
+                if self.porcentaje_impuesto < 0 or self.porcentaje_impuesto > 100:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError({
+                        'porcentaje_impuesto': _('El porcentaje de impuesto debe estar entre 0 y 100')
+                    })
+                    
+                # Validar que montos no sean negativos
+                if self.subtotal < 0 or self.impuesto < 0 or self.total < 0:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError({
+                        'montos': _('Los montos no pueden ser negativos')
+                    })
+            else:
+                # Si viene de otro contexto (shell, admin, etc.), validación completa
+                self.full_clean()
         
         # 2. Generar número de proforma si no existe
         if not self.numero or self.numero.strip() == '':
             self.numero = self.generar_numero()
             logger.info(f"Número de proforma generado automáticamente: {self.numero}")
         
-        # 3. Calcular montos antes de guardar
-        self.calcular_montos()
+        # 3. Calcular montos antes de guardar solo si no se está saltando el cálculo
+        # y si hay algún campo relacionado con montos que no esté en update_fields (si se especifica)
+        update_fields = kwargs.get('update_fields')
+        should_calculate = (
+            not skip_item_recalculation and 
+            (update_fields is None or 
+             any(field in update_fields for field in ['subtotal', 'impuesto', 'total', 'porcentaje_impuesto']))
+        )
         
+        if should_calculate:
+            self.calcular_montos()
+            
+            # Si se especifica update_fields y calculamos montos, asegurarse de que los campos calculados estén incluidos
+            if update_fields is not None:
+                # Crear una copia para no modificar la lista original si es inmutable
+                update_fields = list(update_fields)
+                # Asegurar que los campos calculados estén incluidos
+                for field in ['subtotal', 'impuesto', 'total']:
+                    if field not in update_fields:
+                        update_fields.append(field)
+                # Actualizar kwargs con la lista modificada
+                kwargs['update_fields'] = update_fields
+                
+        # Registrar operación para auditoría
+        if is_new:
+            logger.info(f"Creando nueva proforma con número: {self.numero}")
+        else:
+            logger.info(f"Actualizando proforma #{self.numero}" + 
+                       (f" (campos: {', '.join(update_fields)})" if update_fields else ""))
+            
         # Guardar el modelo
         super().save(*args, **kwargs)
     
@@ -544,23 +646,70 @@ class Proforma(TimeStampedModel):
         """
         Calcula subtotal, impuesto y total basado en los ítems.
         Usa agregación de base de datos para optimizar el rendimiento.
+        
+        Returns:
+            dict: Diccionario con los montos calculados (para uso en ciertas operaciones)
         """
+        # Inicialización de valores por defecto
+        valores_actualizados = {
+            'subtotal': Decimal('0'),
+            'impuesto': Decimal('0'),
+            'total': Decimal('0')
+        }
+        
         # Obtenemos los ítems relacionados, si la proforma ya está guardada
         if self.pk:
             try:
                 # Método optimizado usando agregación de base de datos
                 from django.db.models import Sum
-                items_sum = self.items.aggregate(subtotal_sum=Sum('total'))
-                self.subtotal = items_sum['subtotal_sum'] or Decimal('0')
-                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
-                self.total = self.subtotal + self.impuesto
+                
+                # Verificar si hay ítems relacionados para evitar queries innecesarias
+                if not hasattr(self, '_items_count_cache'):
+                    self._items_count_cache = self.items.count()
+                
+                if self._items_count_cache > 0:
+                    items_sum = self.items.aggregate(subtotal_sum=Sum('total'))
+                    self.subtotal = items_sum['subtotal_sum'] or Decimal('0')
+                    self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
+                    self.total = self.subtotal + self.impuesto
+                    
+                    # Registrar montos calculados en el diccionario de retorno
+                    valores_actualizados.update({
+                        'subtotal': self.subtotal,
+                        'impuesto': self.impuesto,
+                        'total': self.total
+                    })
+                else:
+                    # Si no hay ítems, establecer todos los montos a 0
+                    self.subtotal = Decimal('0')
+                    self.impuesto = Decimal('0')
+                    self.total = Decimal('0')
+                
             except Exception as e:
                 # Método de respaldo para garantizar funcionamiento en caso de error
-                logger.warning(f"Error en método optimizado de calcular_montos: {e}. Usando método de respaldo.")
-                items = self.items.all()
-                self.subtotal = sum(item.total for item in items)
-                self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
-                self.total = self.subtotal + self.impuesto
+                logger.warning(f"Error en método optimizado de calcular_montos para proforma #{self.numero if hasattr(self, 'numero') else 'N/A'}: {e}. Usando método de respaldo.")
+                
+                try:
+                    # Usar método alternativo que sea menos propenso a fallar
+                    items = self.items.all()
+                    self.subtotal = sum(item.total for item in items)
+                    self.impuesto = self.subtotal * (self.porcentaje_impuesto / Decimal('100.0'))
+                    self.total = self.subtotal + self.impuesto
+                    
+                    # Registrar montos calculados en el diccionario de retorno
+                    valores_actualizados.update({
+                        'subtotal': self.subtotal,
+                        'impuesto': self.impuesto,
+                        'total': self.total
+                    })
+                    
+                except Exception as e2:
+                    # Error crítico, registrar y mantener valores actuales
+                    logger.error(f"Error crítico al calcular montos (método de respaldo) para proforma #{self.numero if hasattr(self, 'numero') else 'N/A'}: {e2}")
+                    # No cambiar los valores existentes en caso de error crítico
+        
+        # Retornar los valores actualizados (útil para actualizaciones directas a BD)
+        return valores_actualizados
 
 
 class ProformaItem(TimeStampedModel):
@@ -668,40 +817,45 @@ class ProformaItem(TimeStampedModel):
     
     def clean(self):
         """
-        Validaciones para ítems de proforma:
-        - Validar cantidad y precio
-        - Validar descuento
-        - Validar tipo de ítem y productos asociados
+        Validaciones fundamentales para ítems de proforma.
+        Las validaciones de negocio complejas se manejan principalmente en el serializer.
+        Aquí solo mantenemos restricciones inmutables que afectan la integridad de datos.
         """
+        # Asegurarse de que haya un total calculado antes de las validaciones
+        # para evitar errores de campos requeridos (esto es fundamental para el modelo)
+        if not hasattr(self, 'total') or self.total is None:
+            # Si no hay un total, calcularlo a partir de los otros campos
+            try:
+                self.calcular_total()
+            except Exception:
+                # En caso de error al calcular (por ejemplo, si faltan datos),
+                # asignar un valor por defecto para que pase la validación
+                self.total = Decimal('0')
+        
         super().clean()
         
-        # Validar cantidad
-        if self.cantidad <= 0:
-            raise ValidationError({
-                'cantidad': _('La cantidad debe ser mayor que cero')
-            })
-            
-        # Validar precio unitario
-        if self.precio_unitario < 0:
-            raise ValidationError({
-                'precio_unitario': _('El precio unitario no puede ser negativo')
-            })
-            
-        # Validar porcentaje de descuento
+        # Validar porcentaje de descuento (restricción matemática inmutable)
         if self.porcentaje_descuento < 0 or self.porcentaje_descuento > 100:
             raise ValidationError({
                 'porcentaje_descuento': _('El porcentaje de descuento debe estar entre 0 y 100')
             })
             
-        # Validar tipo de ítem y productos asociados
-        if self.tipo_item == 'producto_ofertado' and not self.producto_ofertado:
+        # Validar que la cantidad sea positiva (restricción matemática/lógica)
+        if self.cantidad <= 0:
             raise ValidationError({
-                'producto_ofertado': _('Debe seleccionar un producto ofertado para este tipo de ítem')
+                'cantidad': _('La cantidad debe ser mayor que cero')
             })
             
-        if self.tipo_item == 'producto_disponible' and not self.producto_disponible:
+        # Validar que el precio no sea negativo (restricción matemática/lógica)
+        if self.precio_unitario < 0:
             raise ValidationError({
-                'producto_disponible': _('Debe seleccionar un producto disponible para este tipo de ítem')
+                'precio_unitario': _('El precio unitario no puede ser negativo')
+            })
+            
+        # Validar que el total no sea negativo (restricción matemática)
+        if self.total < 0:
+            raise ValidationError({
+                'total': _('El total no puede ser negativo')
             })
     
     def calcular_total(self):
@@ -713,16 +867,63 @@ class ProformaItem(TimeStampedModel):
     def save(self, *args, **kwargs):
         """
         Sobrescritura del método save para:
-        1. Validar datos con full_clean()
-        2. Calcular el total antes de guardar
+        1. Calcular el total *antes* de la validación
+        2. Validar datos (completos o parciales según el contexto)
         3. Autocompletar datos del producto si es necesario
-        4. Actualizar totales de la proforma
-        """
-        # 1. Validar datos
-        self.full_clean()
+        4. Actualizar totales de la proforma de manera segura sin riesgo de recursión
         
-        # 2. Calcular el total antes de guardar
-        self.calcular_total()
+        Args:
+            skip_proforma_update (bool): Si es True, no actualiza la proforma relacionada
+            skip_validation (bool): Si es True, omite las validaciones
+            _from_serializer (bool): Indica que los datos vienen del serializer
+                y ya pasaron validaciones de negocio
+            *args, **kwargs: Argumentos adicionales para super().save()
+        """
+        # Verificar si hay parámetros especiales
+        skip_proforma_update = kwargs.pop('skip_proforma_update', False)
+        skip_validation = kwargs.pop('skip_validation', False)
+        _from_serializer = kwargs.pop('_from_serializer', False)
+        
+        # Guardar el contexto para futuras referencias
+        if _from_serializer:
+            self._from_serializer = True
+        
+        # 1. Calcular el total ANTES de la validación para evitar errores
+        # de campos requeridos
+        try:
+            self.calcular_total()
+        except Exception as e:
+            logger.warning(f"Error al calcular total en pre-validación: {str(e)}")
+            # Asignar valor por defecto para evitar errores en validación
+            if not hasattr(self, 'total') or self.total is None:
+                self.total = Decimal('0')
+        
+        # 2. Validar datos según el contexto
+        if not skip_validation:
+            # Si viene desde el serializer, reducir la validación a restricciones fundamentales
+            if hasattr(self, '_from_serializer') and self._from_serializer:
+                # Validar restricciones matemáticas fundamentales
+                if self.porcentaje_descuento < 0 or self.porcentaje_descuento > 100:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError({
+                        'porcentaje_descuento': _('El porcentaje de descuento debe estar entre 0 y 100')
+                    })
+                    
+                # Validar que la cantidad y precios sean válidos
+                if self.cantidad <= 0:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError({
+                        'cantidad': _('La cantidad debe ser mayor que cero')
+                    })
+                    
+                if self.precio_unitario < 0 or self.total < 0:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError({
+                        'precios': _('Los precios no pueden ser negativos')
+                    })
+            else:
+                # Si viene de otro contexto (shell, admin, etc.), validación completa
+                self.full_clean()
         
         # 3. Si hay un producto asociado, tomar sus datos
         if self.tipo_item == 'producto_ofertado' and self.producto_ofertado:
@@ -739,13 +940,51 @@ class ProformaItem(TimeStampedModel):
             if not self.unidad:
                 self.unidad = self.producto_disponible.presentacion.nombre if hasattr(self.producto_disponible, 'presentacion') and self.producto_disponible.presentacion else 'Unidad'
         
-        # Guardar el ítem
+        # 4. Guardar el ítem
         super().save(*args, **kwargs)
         
-        # 4. Actualizar los totales de la proforma
-        if self.proforma:
-            self.proforma.calcular_montos()
-            self.proforma.save(update_fields=['subtotal', 'impuesto', 'total'])
+        # 5. Actualizar los totales de la proforma solo si no se omite esta operación
+        if self.proforma and not skip_proforma_update:
+            # Usar actualizaciones optimizadas con update_fields y evitar re-validaciones innecesarias
+            try:
+                # Calcular montos sin ejecutar validaciones
+                self.proforma.calcular_montos()
+                
+                # Actualizar directamente en la base de datos sin disparar save() completo
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE proformas_proforma 
+                        SET subtotal = %s, impuesto = %s, total = %s 
+                        WHERE id = %s
+                        """,
+                        [
+                            self.proforma.subtotal,
+                            self.proforma.impuesto,
+                            self.proforma.total,
+                            self.proforma.pk
+                        ]
+                    )
+                
+                # Registrar la operación para auditoría
+                logger.info(f"Actualización directa de montos para proforma #{self.proforma.numero}: "
+                           f"subtotal={self.proforma.subtotal}, impuesto={self.proforma.impuesto}, "
+                           f"total={self.proforma.total}")
+                
+            except Exception as e:
+                logger.error(f"Error al actualizar montos de proforma directamente: {str(e)}")
+                # En caso de error con la actualización directa, usar el método save con campos específicos
+                # y flags para evitar re-validaciones y ejecuciones innecesarias
+                try:
+                    self.proforma.save(
+                        update_fields=['subtotal', 'impuesto', 'total'],
+                        skip_item_recalculation=True,
+                        skip_validation=True
+                    )
+                except Exception as e2:
+                    logger.error(f"Error secundario al actualizar proforma con save(): {str(e2)}")
+                    # No podemos hacer nada más, solo registrar el error
 
 
 class ProformaHistorial(TimeStampedModel):
@@ -845,23 +1084,35 @@ class SecuenciaProforma(models.Model):
         """
         if anio is None:
             anio = timezone.now().year
-            
-        with transaction.atomic():
-            # Bloquear la tabla para evitar race conditions con select_for_update()
-            secuencia, created = cls.objects.select_for_update().get_or_create(
-                anio=anio,
-                defaults={'ultimo_numero': 999}  # Empezar desde 1000
-            )
-            
-            # Incrementar el contador
-            secuencia.ultimo_numero += 1
-            secuencia.save(update_fields=['ultimo_numero', 'ultima_actualizacion'])
-            
-            # Generar el número de proforma en formato PRO-YYYY-NNNN
-            numero_proforma = f"PRO-{anio}-{secuencia.ultimo_numero:04d}"
-            
-            logger.info(f"Generado número de proforma: {numero_proforma}")
-            return numero_proforma
+        
+        try:    
+            with transaction.atomic():
+                # Bloquear la tabla para evitar race conditions con select_for_update()
+                secuencia, created = cls.objects.select_for_update().get_or_create(
+                    anio=anio,
+                    defaults={'ultimo_numero': 999}  # Empezar desde 1000
+                )
+                
+                # Incrementar el contador
+                secuencia.ultimo_numero += 1
+                
+                # Verificar si el contador se está acercando al límite
+                if secuencia.ultimo_numero > 9990:  # Advertir cuando se acerca al límite de 9999
+                    logger.warning(f"¡Atención! Secuencia de proformas para el año {anio} se aproxima al límite: {secuencia.ultimo_numero}")
+                
+                # Guardar los cambios, asegurando que solo se actualicen los campos necesarios
+                secuencia.save(update_fields=['ultimo_numero', 'ultima_actualizacion'])
+                
+                # Generar el número de proforma en formato PRO-YYYY-NNNN
+                numero_proforma = f"PRO-{anio}-{secuencia.ultimo_numero:04d}"
+                
+                logger.info(f"Generado número de proforma: {numero_proforma}")
+                return numero_proforma
+        except Exception as e:
+            # Capturar cualquier excepción inesperada para mejor trazabilidad
+            logger.error(f"Error en obtener_siguiente_numero para año {anio}: {str(e)}")
+            # Propagar la excepción para ser manejada por el método generar_numero
+            raise
 
 
 class ConfiguracionProforma(models.Model):

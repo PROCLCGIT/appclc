@@ -1,0 +1,71 @@
+{
+  "dashboard": {
+    "title": "Dashboard de Proformas",
+    "subtitle": "Análisis y métricas de proformas",
+    "buttons": {
+      "export": "Exportar",
+      "refresh": "Actualizar",
+      "new": "Nueva Proforma",
+      "exporting": "Exportando..."
+    },
+    "exportFormats": {
+      "title": "Formato de exportación",
+      "csv": "CSV",
+      "pdf": "PDF"
+    },
+    "dateSelector": {
+      "startDate": "Fecha inicial",
+      "endDate": "Fecha final",
+      "apply": "Aplicar",
+      "cancel": "Cancelar",
+      "error": "La fecha de inicio no puede ser posterior a la fecha final"
+    },
+    "summary": {
+      "totalProformas": "Total Proformas",
+      "approvalRate": "Tasa de Aprobación",
+      "totalAmount": "Monto Total",
+      "avgAmount": "Promedio por Proforma"
+    },
+    "status": {
+      "draft": "Borrador",
+      "sent": "Enviada",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "expired": "Vencida",
+      "converted": "Convertida",
+      "filterTitle": "Filtrar por estado"
+    },
+    "charts": {
+      "statusTitle": "Proformas por Estado",
+      "amountTitle": "Monto por Estado",
+      "monthlyTitle": "Tendencia Mensual",
+      "noData": "No hay datos disponibles",
+      "loading": "Cargando datos del gráfico...",
+      "yAxisAmount": "Monto ($)",
+      "yAxisCount": "Cantidad",
+      "xAxisMonth": "Mes"
+    },
+    "recentQuotes": {
+      "title": "Proformas Recientes",
+      "columns": {
+        "id": "ID",
+        "client": "Cliente",
+        "date": "Fecha",
+        "expires": "Vence",
+        "amount": "Monto",
+        "status": "Estado",
+        "seller": "Vendedor",
+        "actions": "Acciones"
+      },
+      "viewDetails": "Ver detalles",
+      "noQuotes": "No hay proformas recientes"
+    },
+    "errors": {
+      "loadFailed": "Error al cargar los datos del dashboard",
+      "retry": "Reintentar",
+      "exportFailed": "Error al exportar"
+    },
+    "dateFormat": "dd/MM/yyyy",
+    "currencyFormat": "{{value, currency}}"
+  }
+}

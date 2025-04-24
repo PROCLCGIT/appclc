@@ -105,25 +105,66 @@ const ClientFormWithValidation = ({ initialClient = {}, onSubmit, onCancel, zona
       return;
     }
     
+    // Preparar datos para envío, asegurándonos que los IDs estén en formato correcto
+    const clienteData = {
+      ...values,
+      // Asegurar formato numérico para IDs (fundamental para APIs Django)
+      zona: values.zona ? Number(values.zona) : null,
+      ciudad: values.ciudad ? Number(values.ciudad) : null,
+      tipo_cliente: values.tipo_cliente ? Number(values.tipo_cliente) : null,
+    };
+    
+    console.log("Datos de cliente a enviar:", clienteData);
+    
     // Submit form
     try {
       setIsSubmitting(true);
-      await onSubmit(values);
+      await onSubmit(clienteData);
       resetForm();
       toast.success("Cliente guardado exitosamente");
     } catch (error) {
-      toast.error(
-        error.message || "Error al guardar cliente"
-      );
+      console.error("Error completo al guardar cliente:", error);
       
-      // If the server returns field-specific errors, update the form errors
-      if (error.errors && typeof error.errors === 'object') {
+      let errorMessage = "Error al guardar cliente";
+      
+      // Extraer mensaje de error más específico si está disponible
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+      
+      // Si el servidor devuelve errores específicos por campo, actualizar el estado del formulario
+      if (error.response?.data && typeof error.response.data === 'object') {
         const serverErrors = {};
-        Object.entries(error.errors).forEach(([field, message]) => {
-          serverErrors[field] = message;
-          setFieldTouched(field, true);
+        const errorData = error.response.data;
+        
+        // Recorrer los errores de campo devueltos por el servidor
+        Object.entries(errorData).forEach(([field, message]) => {
+          // Ignorar campos que no son errores
+          if (field !== 'id' && field !== 'created_at' && field !== 'updated_at') {
+            // Convertir mensaje de error a string si es un array
+            const errorMessage = Array.isArray(message) ? message[0] : message;
+            serverErrors[field] = errorMessage;
+            setFieldTouched(field, true);
+            // Añadir el error directamente al estado del formulario
+            setFieldValue(field, values[field], errorMessage);
+          }
         });
-        // You would need to add server errors to the form state
+        
+        console.log("Errores de servidor por campo:", serverErrors);
       }
     } finally {
       setIsSubmitting(false);

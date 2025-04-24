@@ -11,6 +11,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction, connection
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Case, When, Value
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,33 @@ class ProformaService:
                 return Decimal('0')
             except:
                 return Decimal('0')
+                
+    @staticmethod
+    def calculate_item_total_from_values(cantidad, precio_unitario, porcentaje_descuento):
+        """
+        Calcula el total del ítem basado en valores individuales (no requiere una instancia).
+        
+        Args:
+            cantidad: Cantidad del ítem
+            precio_unitario: Precio unitario
+            porcentaje_descuento: Porcentaje de descuento (0-100)
+            
+        Returns:
+            Decimal: Total calculado
+        """
+        try:
+            # Asegurar que los valores sean Decimal para evitar errores de precisión
+            cantidad = Decimal(str(cantidad))
+            precio_unitario = Decimal(str(precio_unitario))
+            porcentaje_descuento = Decimal(str(porcentaje_descuento))
+            
+            subtotal = cantidad * precio_unitario
+            descuento = subtotal * (porcentaje_descuento / Decimal('100.0'))
+            total = subtotal - descuento
+            return total
+        except Exception as e:
+            logger.error(f"Error calculando total de ítem desde valores: {e}")
+            return Decimal('0')
     
     @staticmethod
     def complete_item_data(item):
@@ -283,7 +311,7 @@ class ProformaService:
                 return 0
 
     @staticmethod
-    def save_proforma(proforma, validate=True, calculate_amounts=True, update_history=True):
+    def save_proforma(proforma, validate=True, calculate_amounts=True, update_history=True, from_serializer=False):
         """
         Guarda una proforma realizando todas las operaciones necesarias.
         
@@ -292,6 +320,8 @@ class ProformaService:
             validate: Si es True, realiza validaciones antes de guardar
             calculate_amounts: Si es True, calcula los montos
             update_history: Si es True, actualiza el historial
+            from_serializer: Si es True, indica que los datos vienen del serializer
+                             y ya pasaron validaciones de negocio
             
         Returns:
             Proforma: La instancia guardada
@@ -307,7 +337,17 @@ class ProformaService:
         with transaction.atomic():
             # 1. Validar si se solicita
             if validate:
-                proforma.full_clean()
+                if from_serializer:
+                    # Si los datos vienen del serializer, solo validamos restricciones fundamentales
+                    # aquí no llamamos a full_clean porque muchas validaciones ya se hicieron en el serializer
+                    if proforma.porcentaje_impuesto < 0 or proforma.porcentaje_impuesto > 100:
+                        from django.core.exceptions import ValidationError
+                        raise ValidationError({
+                            'porcentaje_impuesto': 'El porcentaje de impuesto debe estar entre 0 y 100'
+                        })
+                else:
+                    # Validación completa en otros contextos (shell, admin, etc.)
+                    proforma.full_clean()
             
             # 2. Generar número si no existe
             if not proforma.numero or proforma.numero.strip() == '':
@@ -315,14 +355,15 @@ class ProformaService:
                 
             # 3. Guardar primero para asegurar que existe el ID
             if is_creation or not calculate_amounts:
-                proforma.save()
+                # Indicar que viene del serializer para evitar validaciones duplicadas
+                proforma.save(_from_serializer=from_serializer)
             
             # 4. Calcular montos si se solicita (usando SQL optimizado)
             if calculate_amounts and proforma.pk:
                 ProformaService.calculate_amounts(proforma, save=True)
             elif not calculate_amounts:
                 # Si no calculamos montos, debemos guardar
-                proforma.save()
+                proforma.save(_from_serializer=from_serializer)
                 
             # 5. Actualizar historial si se solicita
             if update_history:
@@ -411,7 +452,7 @@ class ProformaService:
             return (saved_count, len(proforma_ids))
 
     @staticmethod
-    def save_proforma_item(item, validate=True, calculate_amounts=True):
+    def save_proforma_item(item, validate=True, calculate_amounts=True, from_serializer=False):
         """
         Guarda un ítem de proforma y actualiza la proforma asociada.
         
@@ -419,6 +460,8 @@ class ProformaService:
             item: Instancia de ProformaItem
             validate: Si es True, realiza validaciones antes de guardar
             calculate_amounts: Si es True, recalcula los montos de la proforma
+            from_serializer: Si es True, indica que los datos vienen del serializer
+                             y ya pasaron validaciones de negocio
             
         Returns:
             ProformaItem: La instancia guardada
@@ -429,7 +472,22 @@ class ProformaService:
         with transaction.atomic():
             # 1. Validar si se solicita
             if validate:
-                item.full_clean()
+                if from_serializer:
+                    # Si los datos vienen del serializer, solo validamos restricciones fundamentales
+                    # aquí no llamamos a full_clean porque muchas validaciones ya se hicieron en el serializer
+                    if item.porcentaje_descuento < 0 or item.porcentaje_descuento > 100:
+                        from django.core.exceptions import ValidationError
+                        raise ValidationError({
+                            'porcentaje_descuento': 'El porcentaje de descuento debe estar entre 0 y 100'
+                        })
+                    if item.cantidad <= 0:
+                        from django.core.exceptions import ValidationError
+                        raise ValidationError({
+                            'cantidad': 'La cantidad debe ser mayor que cero'
+                        })
+                else:
+                    # Validación completa en otros contextos (shell, admin, etc.)
+                    item.full_clean()
                 
             # 2. Completar datos basados en el producto
             ProformaService.complete_item_data(item)
@@ -437,8 +495,8 @@ class ProformaService:
             # 3. Calcular total del ítem
             item.total = ProformaService.calculate_item_total(item)
                 
-            # 4. Guardar el ítem
-            item.save()
+            # 4. Guardar el ítem, indicando que viene del serializer si es el caso
+            item.save(_from_serializer=from_serializer)
                 
             # 5. Actualizar montos de la proforma si se solicita (usando SQL optimizado)
             if calculate_amounts and item.proforma_id:
@@ -519,6 +577,190 @@ class ProformaService:
                 
             return (deleted_count, len(proforma_ids))
             
+    @staticmethod
+    def process_items_data(proforma, items_data):
+        """
+        Procesa los datos de ítems para una proforma, manejando tanto la creación
+        como la actualización masiva de ítems.
+        
+        Args:
+            proforma: Instancia de Proforma
+            items_data: Lista de diccionarios con los datos de los ítems
+            
+        Returns:
+            tuple: (items_creados, proforma_actualizada)
+        """
+        if not items_data:
+            return (0, proforma)
+            
+        try:
+            from .models import ProformaItem
+            
+            # Listas para procesar operaciones
+            items_a_crear = []
+            
+            with transaction.atomic():
+                # Procesar los datos de ítems
+                for idx, item_data in enumerate(items_data):
+                    # Asignar proforma a cada ítem
+                    item_data['proforma'] = proforma
+                    
+                    # Asignar orden automático si no se proporciona
+                    if 'orden' not in item_data or not item_data.get('orden'):
+                        item_data['orden'] = idx + 1
+                    
+                    # Preparar ítem para creación
+                    item = ProformaItem(**item_data)
+                    
+                    # Calcular total 
+                    item.total = ProformaService.calculate_item_total(item)
+                    
+                    # Completar datos basados en producto si es necesario
+                    ProformaService.complete_item_data(item)
+                    
+                    # Agregar a la lista para creación masiva
+                    items_a_crear.append(item)
+                
+                # Crear ítems en una sola operación
+                if items_a_crear:
+                    # Marcar ítems para evitar triggers recursivos
+                    for item in items_a_crear:
+                        item._totales_actualizados = True
+                    
+                    # Usar bulk_create para optimizar
+                    ProformaItem.objects.bulk_create(items_a_crear)
+                    
+                    # Recalcular totales de la proforma una sola vez
+                    ProformaService.calculate_amounts(proforma, save=True)
+                    
+                    logger.info(f"Procesados {len(items_a_crear)} ítems para proforma {proforma.numero}")
+                
+            return (len(items_a_crear), proforma)
+            
+        except Exception as e:
+            logger.error(f"Error procesando ítems de proforma: {str(e)}")
+            # Reenviar excepción para mantener consistencia transaccional
+            raise
+    
+    @staticmethod
+    def process_items_update(proforma, items_data):
+        """
+        Procesa la actualización de ítems existentes y la creación de nuevos ítems
+        para una proforma.
+        
+        Args:
+            proforma: Instancia de Proforma
+            items_data: Lista de diccionarios con los datos de los ítems
+            
+        Returns:
+            tuple: (items_actualizados, items_creados, items_eliminados, proforma_actualizada)
+        """
+        if not items_data:
+            return (0, 0, 0, proforma)
+            
+        try:
+            from .models import ProformaItem
+            
+            # Determinar modo de actualización
+            modo_replace_all = True
+            ids_a_mantener = []
+            
+            # Verificar si hay IDs en los datos, lo que indica actualizaciones selectivas
+            for item_data in items_data:
+                if 'id' in item_data and item_data['id']:
+                    modo_replace_all = False
+                    ids_a_mantener.append(item_data['id'])
+            
+            # Listas para procesar operaciones
+            items_a_crear = []
+            items_a_actualizar = []
+            
+            with transaction.atomic():
+                # Para modo replace_all, eliminar primero los ítems existentes
+                if modo_replace_all:
+                    # Eliminar todos los ítems existentes
+                    items_eliminados = ProformaItem.objects.filter(proforma=proforma).delete()[0]
+                    
+                    # Procesar items como si fueran todos nuevos
+                    return ProformaService.process_items_data(proforma, items_data)
+                else:
+                    # Modo de actualización selectiva
+                    # Eliminar ítems no incluidos en la actualización
+                    items_eliminados = ProformaItem.objects.filter(
+                        proforma=proforma
+                    ).exclude(
+                        id__in=ids_a_mantener
+                    ).delete()[0]
+                    
+                    # Procesar cada ítem como actualización o creación
+                    for idx, item_data in enumerate(items_data):
+                        # Asignar proforma a cada ítem
+                        item_data['proforma'] = proforma
+                        
+                        # Asignar orden automático si no se proporciona
+                        if 'orden' not in item_data or not item_data.get('orden'):
+                            item_data['orden'] = idx + 1
+                        
+                        if 'id' in item_data and item_data['id']:
+                            # Actualizar ítem existente
+                            try:
+                                item = ProformaItem.objects.get(id=item_data['id'], proforma=proforma)
+                                
+                                # Actualizar atributos
+                                for attr, value in item_data.items():
+                                    if attr != 'id' and attr != 'proforma':
+                                        setattr(item, attr, value)
+                                
+                                # Calcular total
+                                item.total = ProformaService.calculate_item_total(item)
+                                
+                                # Completar datos basados en producto si es necesario
+                                ProformaService.complete_item_data(item)
+                                
+                                # Marcar para evitar recálculos recursivos
+                                item._totales_actualizados = True
+                                
+                                # Guardar
+                                item.save(_from_serializer=True)
+                                items_a_actualizar.append(item)
+                                
+                            except ProformaItem.DoesNotExist:
+                                # Si no existe, crear como nuevo (pero conservar ID si es válido)
+                                item_id = item_data.pop('id')
+                                item = ProformaItem(**item_data)
+                                item.total = ProformaService.calculate_item_total(item)
+                                ProformaService.complete_item_data(item)
+                                item._totales_actualizados = True
+                                item.save(_from_serializer=True)
+                                items_a_crear.append(item)
+                        else:
+                            # Nuevo ítem
+                            if 'id' in item_data:
+                                item_data.pop('id')  # Eliminar ID nulo o vacío
+                                
+                            item = ProformaItem(**item_data)
+                            item.total = ProformaService.calculate_item_total(item)
+                            ProformaService.complete_item_data(item)
+                            item._totales_actualizados = True
+                            item.save(_from_serializer=True)
+                            items_a_crear.append(item)
+                    
+                    # Recalcular totales de la proforma una sola vez
+                    ProformaService.calculate_amounts(proforma, save=True)
+                    
+                    logger.info(
+                        f"Procesada actualización de ítems para proforma {proforma.numero}: "
+                        f"{len(items_a_actualizar)} actualizados, {len(items_a_crear)} creados, "
+                        f"{items_eliminados} eliminados"
+                    )
+                
+            return (len(items_a_actualizar), len(items_a_crear), items_eliminados, proforma)
+            
+        except Exception as e:
+            logger.error(f"Error procesando actualización de ítems: {str(e)}")
+            # Reenviar excepción para mantener consistencia transaccional
+            raise
+    
     @staticmethod
     def change_proforma_state(proforma, new_state, user=None, update_history=True):
         """

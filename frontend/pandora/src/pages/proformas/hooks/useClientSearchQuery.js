@@ -39,21 +39,51 @@ export default function useClientSearch() {
         
         if (clientesData.length > 0) {
           console.log(`Éxito: Se cargaron ${clientesData.length} clientes desde la API`);
-          setClientes(clientesData);
+          
+          // Normalizar los IDs de los clientes antes de guardarlos en el estado
+          const clientesNormalizados = clientesData.map(cliente => {
+            return {
+              ...cliente,
+              // Asegurar que los IDs relacionados sean numéricos
+              id: typeof cliente.id === 'string' ? Number(cliente.id) : cliente.id,
+              zona: cliente.zona ? Number(cliente.zona) : cliente.zona,
+              ciudad: cliente.ciudad ? Number(cliente.ciudad) : cliente.ciudad,
+              tipo_cliente: cliente.tipo_cliente ? Number(cliente.tipo_cliente) : cliente.tipo_cliente,
+            };
+          });
+          
+          console.log(`Clientes normalizados con IDs numéricos: ${clientesNormalizados.length}`);
+          setClientes(clientesNormalizados);
         } else {
           console.warn("Advertencia: La API devolvió 0 clientes");
           toast.warning("No hay clientes disponibles. Por favor, agregue clientes desde el panel de administración.");
           
-          // Si no hay clientes, usar datos de ejemplo
-          setClientes(mockClientes);
+          // Si no hay clientes, usar datos de ejemplo pero asegurar que tengan IDs numéricos
+          const mockClientesNormalizados = mockClientes.map(cliente => ({
+            ...cliente,
+            id: typeof cliente.id === 'string' ? Number(cliente.id) : cliente.id,
+            zona: cliente.zona ? Number(cliente.zona) : cliente.zona,
+            ciudad: cliente.ciudad ? Number(cliente.ciudad) : cliente.ciudad,
+            tipo_cliente: cliente.tipo_cliente ? Number(cliente.tipo_cliente) : cliente.tipo_cliente,
+          }));
+          
+          setClientes(mockClientesNormalizados);
         }
       } else {
         // Manejar respuesta inválida
         console.error("Error: Formato de respuesta inesperado:", response);
         toast.error("Error al cargar clientes: formato inesperado");
         
-        // Si la respuesta es inválida, usar datos de ejemplo
-        setClientes(mockClientes);
+        // Si la respuesta es inválida, usar datos de ejemplo pero normalizar IDs
+        const mockClientesNormalizados = mockClientes.map(cliente => ({
+          ...cliente,
+          id: typeof cliente.id === 'string' ? Number(cliente.id) : cliente.id,
+          zona: cliente.zona ? Number(cliente.zona) : cliente.zona,
+          ciudad: cliente.ciudad ? Number(cliente.ciudad) : cliente.ciudad,
+          tipo_cliente: cliente.tipo_cliente ? Number(cliente.tipo_cliente) : cliente.tipo_cliente,
+        }));
+        
+        setClientes(mockClientesNormalizados);
       }
     } catch (error) {
       // Manejar errores
@@ -66,9 +96,17 @@ export default function useClientSearch() {
                           (error.response?.data?.detail || 'Error de conexión');
       toast.error(`Error al cargar clientes: ${errorMessage}`);
       
-      // En caso de error, usar datos de ejemplo
+      // En caso de error, usar datos de ejemplo pero normalizar IDs
       console.log("Usando clientes de ejemplo como respaldo por error");
-      setClientes(mockClientes);
+      const mockClientesNormalizados = mockClientes.map(cliente => ({
+        ...cliente,
+        id: typeof cliente.id === 'string' ? Number(cliente.id) : cliente.id,
+        zona: cliente.zona ? Number(cliente.zona) : cliente.zona,
+        ciudad: cliente.ciudad ? Number(cliente.ciudad) : cliente.ciudad,
+        tipo_cliente: cliente.tipo_cliente ? Number(cliente.tipo_cliente) : cliente.tipo_cliente,
+      }));
+      
+      setClientes(mockClientesNormalizados);
     } finally {
       // Finalizar la carga
       setLoadingClientes(false);
@@ -106,7 +144,22 @@ export default function useClientSearch() {
    */
   const getClienteById = async (id) => {
     try {
-      const cliente = await clientesService.getById(id);
+      // Asegurar que el ID sea numérico para la petición a la API
+      const clienteId = typeof id === 'string' ? Number(id) : id;
+      
+      const cliente = await clientesService.getById(clienteId);
+      
+      // Asegurar que los IDs relacionados sean numéricos al obtener el cliente
+      if (cliente) {
+        return {
+          ...cliente,
+          // Convertir IDs relacionados a números
+          zona: cliente.zona ? Number(cliente.zona) : cliente.zona,
+          ciudad: cliente.ciudad ? Number(cliente.ciudad) : cliente.ciudad,
+          tipo_cliente: cliente.tipo_cliente ? Number(cliente.tipo_cliente) : cliente.tipo_cliente,
+        };
+      }
+      
       return cliente;
     } catch (error) {
       console.error(`Error al obtener cliente con ID ${id}:`, error);

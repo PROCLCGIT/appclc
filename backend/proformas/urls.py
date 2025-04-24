@@ -26,9 +26,9 @@ router = DefaultRouter()
 # Registrar viewsets según configuración
 if USE_OPTIMIZED:
     # Registrar viewsets optimizados
-    router.register(r'proformas', OptimizedProformaViewSet, basename='proformas')
-    router.register(r'items', OptimizedProformaItemViewSet, basename='items')
-    router.register(r'historial', OptimizedProformaHistorialViewSet, basename='historial')
+    router.register(r'proformas', OptimizedProformaViewSet, basename='optimizedproforma')
+    router.register(r'items', OptimizedProformaItemViewSet, basename='optimizeditem')
+    router.register(r'historial', OptimizedProformaHistorialViewSet, basename='optimizedhistorial')
 else:
     # Registrar viewsets estándar
     router.register(r'proformas', views.ProformaViewSet, basename='proformas')
