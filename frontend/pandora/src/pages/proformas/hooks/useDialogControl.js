@@ -5,8 +5,12 @@ import { debounce } from 'lodash';
 
 /**
  * Hook personalizado para controlar diálogos y modales en la aplicación
+ * @param {Object} options - Opciones de configuración y funciones externas
+ * @param {Function} options.loadSavedProformas - Función para cargar proformas guardadas
  */
-export const useDialogControl = () => {
+export const useDialogControl = (options = {}) => {
+  // Extraer la función de carga de proformas, si existe
+  const { loadSavedProformas } = options;
   // Diálogo para búsqueda de clientes
   const [showClientSearch, setShowClientSearch] = useState(false);
   
@@ -47,14 +51,32 @@ export const useDialogControl = () => {
 
   /**
    * Muestra el diálogo de proformas guardadas (con debounce para evitar múltiples aperturas)
+   * Opcionalmente carga proformas si se proporciona una función loadSavedProformas
    */
   const openProformasDialog = useMemo(
     () =>
       debounce(() => {
         console.log('Abriendo diálogo de proformas guardadas (debounced)');
+        
         setShowProformasDialog(true);
+        
+        // Si tenemos una función para cargar proformas, la ejecutamos
+        if (typeof loadSavedProformas === 'function') {
+          console.log('useDialogControl: Ejecutando loadSavedProformas desde openProformasDialog');
+          
+          // Pequeño retraso para que primero se abra el diálogo
+          setTimeout(() => {
+            loadSavedProformas({
+              showToasts: true,
+              forceRefresh: true,
+              itemsLimit: 10
+            }).catch(err => {
+              console.error('Error al cargar proformas:', err);
+            });
+          }, 100);
+        }
       }, 300),
-    []
+    [loadSavedProformas]
   );
 
   /**

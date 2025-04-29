@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import useRateLimit from "./useRateLimit.jsx";
-import useNotifications from "./useNotifications.jsx";
+import { toast } from "sonner";
 
 /**
  * Hook para manejar la selección y carga de proformas con manejo de errores
@@ -27,7 +27,6 @@ export default function useProformaSelection({
 }) {
   // Inicializar hooks auxiliares
   const rateLimit = useRateLimit({ baseWaitTime: 3000 });
-  const notify = useNotifications();
 
   /**
    * Valida el ID de una proforma
@@ -55,16 +54,15 @@ export default function useProformaSelection({
       // Ya no soportamos proformas de demostración
       const isDemoProforma = proformaIdStr.startsWith("demo-");
       if (isDemoProforma) {
-        notify.info(
-          "Las proformas de demostración están deshabilitadas",
-          "Cargando desde la base de datos.",
-        );
+        toast.info("Las proformas de demostración están deshabilitadas", {
+          description: "Cargando desde la base de datos."
+        });
         return false;
       }
 
       return true;
     },
-    [errorHandler, notify],
+    [errorHandler],
   );
 
   /**
@@ -108,7 +106,7 @@ export default function useProformaSelection({
       // Pequeño delay para asegurar que la UI responda bien
       setTimeout(() => {
         setActiveProformaId(proformas[proformaIndex].id);
-        notify.success("Proforma cargada", { duration: 2000 });
+        toast.success("Proforma cargada");
 
         // Resetear contadores de error cuando hay una operación exitosa
         errorHandler.resetErrorCounts();
@@ -122,7 +120,6 @@ export default function useProformaSelection({
       proformas,
       setActiveProformaId,
       errorHandler,
-      notify,
       rateLimit,
     ],
   );
@@ -140,7 +137,7 @@ export default function useProformaSelection({
       // Mostrar indicador de carga con retraso para evitar parpadeos en cargas rápidas
       const loadingId = setTimeout(() => {
         if (!isHandled) {
-          notify.loading("Cargando proforma...", { id: "proforma-loading" });
+          toast.loading("Cargando proforma...", { id: "proforma-loading" });
         }
       }, 500);
 
@@ -158,7 +155,7 @@ export default function useProformaSelection({
         clearTimeout(loadingId);
 
         // Ocultar el toast de carga si existe
-        notify.dismiss("proforma-loading");
+        toast.dismiss("proforma-loading");
 
         if (!loadedProforma) {
           errorHandler.handleError(
@@ -167,7 +164,7 @@ export default function useProformaSelection({
           );
           return false;
         } else {
-          notify.success("Proforma cargada correctamente");
+          toast.success("Proforma cargada correctamente");
 
           // Resetear contadores de error cuando hay una operación exitosa
           errorHandler.resetErrorCounts();
@@ -180,7 +177,7 @@ export default function useProformaSelection({
         clearTimeout(loadingId);
 
         // Ocultar el toast de carga si existe
-        notify.dismiss("proforma-loading");
+        toast.dismiss("proforma-loading");
 
         // Usar el manejador centralizado de errores
         const errorType = errorHandler.handleError(
@@ -201,7 +198,6 @@ export default function useProformaSelection({
       closeProformasDialog,
       loadSpecificProforma,
       errorHandler,
-      notify,
       rateLimit,
     ],
   );

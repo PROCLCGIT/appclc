@@ -51,7 +51,7 @@ const VentasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/V
 const ComprasHistoricaProducto = lazy(() => import('@/pages/products/Historicos/ComprasHistoricaProducto'));
 
 // Proformas
-const EnhancedProforma = lazy(() => import('@/pages/proformas/EnhancedProforma'));
+const OptimizedProformaView = lazy(() => import('@/pages/proformas/OptimizedProformaView'));
 const DashboardProformas = lazy(() => import('@/pages/proformas/DashboardProformas'));
 const ProformasGuardadas = lazy(() => import('@/pages/proformas/ProformasGuardadas'));
 
@@ -199,7 +199,7 @@ export const routes = createBrowserRouter([
       { path: 'historico-compras', element: <PageWrapper component={ComprasHistoricaProducto} /> },
       
       // Proformas
-      { path: 'enhancedproforma', element: <PageWrapper component={EnhancedProforma} /> },
+      { path: 'enhancedproforma', element: <PageWrapper component={OptimizedProformaView} /> },
       { path: 'dashboardproformas', element: <PageWrapper component={DashboardProformas} /> },
       { path: 'proformas-guardadas', element: <PageWrapper component={ProformasGuardadas} /> },
       // Redirector for compatibility with old routes

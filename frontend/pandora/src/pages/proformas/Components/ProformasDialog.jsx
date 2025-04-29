@@ -317,6 +317,12 @@ const ProformasDialog = ({
       
       // Usar la función de carga proporcionada desde el componente padre, si existe
       if (typeof onLoadProformas === 'function') {
+        console.log("LLAMANDO A onLoadProformas con opciones:", {
+          showToasts: true,
+          forceRefresh: true,
+          itemsLimit: 10
+        });
+        
         // Llamar a la función con opciones específicas para el diálogo
         const proformasData = await onLoadProformas({
           showToasts: true,
@@ -324,7 +330,7 @@ const ProformasDialog = ({
           itemsLimit: 10
         }) || [];
         
-        console.log(`Cargadas ${proformasData.length} proformas a través de onLoadProformas`);
+        console.log(`Cargadas ${proformasData.length} proformas a través de onLoadProformas - Tipo:`, Array.isArray(proformasData) ? "Array" : typeof proformasData);
         
         // Log especial para cada proforma
         if (proformasData.length > 0) {

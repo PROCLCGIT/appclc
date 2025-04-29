@@ -3,13 +3,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { useProductSearchQuery as useProductSearchBaseQuery } from "@/hooks/queries/useProformasQuery";
 import { useErrorHandler } from "./useErrorHandler";
-import { useNotifications } from "./useNotifications";
+import { toast } from "sonner";
 
 /**
  * Hook optimizado para buscar productos utilizando React Query
  */
 export function useProductSearchQuery() {
-  const notify = useNotifications();
   const errorHandler = useErrorHandler();
 
   // Estado local para términos de búsqueda
@@ -59,7 +58,7 @@ export function useProductSearchQuery() {
    */
   const searchProducts = useCallback(async (term, source = "all") => {
     if (!term || term.length < 2) {
-      notify.warning("Ingrese al menos 2 caracteres para buscar");
+      toast.warning("Ingrese al menos 2 caracteres para buscar");
       return [];
     }
 
@@ -76,7 +75,7 @@ export function useProductSearchQuery() {
       errorHandler.handleError(error, "buscar productos");
       return [];
     }
-  }, [refetch, errorHandler, notify, searchResults]);
+  }, [refetch, errorHandler, searchResults]);
 
   /**
    * Carga los productos iniciales (utilizados como sugerencias)

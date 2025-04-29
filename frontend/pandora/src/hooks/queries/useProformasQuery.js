@@ -4,7 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ProformaService } from '@/services/classes/ProformaService';
-import { useNotifications } from '@/pages/proformas/hooks/useNotifications';
+import { toast } from 'sonner';
 import { useErrorHandler } from '@/pages/proformas/hooks/useErrorHandler';
 
 // Crear instancia del servicio de proformas
@@ -26,7 +26,6 @@ export const proformaKeys = {
  */
 export function useProformasQuery(options = {}) {
   const queryClient = useQueryClient();
-  const notify = useNotifications();
   const errorHandler = useErrorHandler();
   
   // Obtener parámetros de opciones
@@ -60,14 +59,14 @@ export function useProformasQuery(options = {}) {
       queryClient.invalidateQueries(proformaKeys.lists());
       
       if (showToasts) {
-        notify.success('Proforma creada con éxito');
+        toast.success('Proforma creada con éxito');
       }
     },
     onError: (error, variables) => {
       errorHandler.handleError(error, 'crear proforma');
       
       if (showToasts) {
-        notify.error('Error al crear la proforma');
+        toast.error('Error al crear la proforma');
       }
     }
   });
@@ -81,14 +80,14 @@ export function useProformasQuery(options = {}) {
       queryClient.invalidateQueries(proformaKeys.detail(variables.id));
       
       if (showToasts) {
-        notify.success('Proforma actualizada con éxito');
+        toast.success('Proforma actualizada con éxito');
       }
     },
     onError: (error, variables) => {
       errorHandler.handleError(error, 'actualizar proforma');
       
       if (showToasts) {
-        notify.error('Error al actualizar la proforma');
+        toast.error('Error al actualizar la proforma');
       }
     }
   });
@@ -101,14 +100,14 @@ export function useProformasQuery(options = {}) {
       queryClient.invalidateQueries(proformaKeys.lists());
       
       if (showToasts) {
-        notify.success('Proforma eliminada con éxito');
+        toast.success('Proforma eliminada con éxito');
       }
     },
     onError: (error, variables) => {
       errorHandler.handleError(error, 'eliminar proforma');
       
       if (showToasts) {
-        notify.error('Error al eliminar la proforma');
+        toast.error('Error al eliminar la proforma');
       }
     }
   });
@@ -127,14 +126,14 @@ export function useProformasQuery(options = {}) {
         const message = `Proforma ${variables.estado === 'aprobada' ? 'aprobada' : 
                         variables.estado === 'enviada' ? 'enviada' : 
                         variables.estado === 'rechazada' ? 'rechazada' : 'actualizada'} con éxito`;
-        notify.success(message);
+        toast.success(message);
       }
     },
     onError: (error, variables) => {
       errorHandler.handleError(error, `cambiar estado de proforma a ${variables.estado}`);
       
       if (showToasts) {
-        notify.error(`Error al cambiar el estado de la proforma`);
+        toast.error(`Error al cambiar el estado de la proforma`);
       }
     }
   });
@@ -147,14 +146,14 @@ export function useProformasQuery(options = {}) {
       queryClient.invalidateQueries(proformaKeys.lists());
       
       if (showToasts) {
-        notify.success('Proforma duplicada con éxito');
+        toast.success('Proforma duplicada con éxito');
       }
     },
     onError: (error, variables) => {
       errorHandler.handleError(error, 'duplicar proforma');
       
       if (showToasts) {
-        notify.error('Error al duplicar la proforma');
+        toast.error('Error al duplicar la proforma');
       }
     }
   });
@@ -245,7 +244,6 @@ export function useProformaDashboardQuery(dateRange = {}, options = {}) {
  */
 export function useProductSearchQuery(searchParams, options = {}) {
   const errorHandler = useErrorHandler();
-  const notify = useNotifications();
   const { term, source } = searchParams || {};
   
   const { 
@@ -289,7 +287,7 @@ export function useProductSearchQuery(searchParams, options = {}) {
           
           // Mostrar una notificación amigable (sólo una vez)
           if (!suppressErrorToast) {
-            notify.warning('Problema al buscar productos', {
+            toast.warning('Problema al buscar productos', {
               description: 'El servidor está experimentando problemas. Se mostrarán resultados limitados.',
               id: 'product-search-server-error', // ID único para evitar duplicados
               duration: 4000
@@ -341,7 +339,6 @@ export function useProductSearchQuery(searchParams, options = {}) {
  */
 export function useProformaConfigQuery(options = {}) {
   const queryClient = useQueryClient();
-  const notify = useNotifications();
   const errorHandler = useErrorHandler();
   
   const { 
@@ -369,14 +366,14 @@ export function useProformaConfigQuery(options = {}) {
       queryClient.invalidateQueries(proformaKeys.config());
       
       if (showToasts) {
-        notify.success('Configuración actualizada con éxito');
+        toast.success('Configuración actualizada con éxito');
       }
     },
     onError: (error) => {
       errorHandler.handleError(error, 'actualizar configuración');
       
       if (showToasts) {
-        notify.error('Error al actualizar la configuración');
+        toast.error('Error al actualizar la configuración');
       }
     }
   });

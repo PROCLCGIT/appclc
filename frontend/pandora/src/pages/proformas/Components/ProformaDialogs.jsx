@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import ClientSearchDialog from "./ClientSearchDialog";
+import ClientSearchDialogRefactored from "./ClientSearchDialogRefactored";
 import ProformasDialog from "./ProformasDialog";
 import { useErrorHandler } from "@/pages/proformas/hooks/useErrorHandler.jsx";
 
@@ -53,60 +53,28 @@ export default function ProformaDialogs({
   // Usar el errorHandler pasado por props o inicializar uno nuevo
   const defaultErrorHandler = useErrorHandler();
   const errorHandler = propErrorHandler || defaultErrorHandler;
-  // Verificar que los datos se pasan correctamente
+  // No longer needed since we're using the refactored component
   useEffect(() => {
-    if (showClientSearch) {
-      console.log('ProformaDialogs - Diálogo de clientes abierto:', {
-        clientesRecibidos: clientes?.length || 0,
-        isLoading: loadingClientes,
-        showClientSearch,
-        hayFuncionCarga: typeof onRequestLoadClientes === 'function'
-      });
-    }
-  }, [showClientSearch, clientes, loadingClientes, onRequestLoadClientes]);
+    // Removed debug logs since we're transitioning to the refactored component
+  }, []);
   
   return (
     <>
       {/* Diálogo de búsqueda de clientes */}
-      <ClientSearchDialog
+      <ClientSearchDialogRefactored
         isOpen={showClientSearch}
         onClose={closeClientSearch}
         onSelectClient={handleClientSelection}
         clientes={clientes || []}
         loadingClientes={loadingClientes}
-        onRequestLoadClientes={(forceRefresh = false, searchQuery = "") => {
-          console.log('ProformaDialogs: Solicitando carga manual de clientes... forceRefresh:', forceRefresh, 'searchQuery:', searchQuery);
-          
-          try {
-            // Usar onRequestLoadClientes prop si está disponible
-            if (typeof onRequestLoadClientes === 'function') {
-              console.log('Usando función onRequestLoadClientes pasada desde el componente principal');
-              return onRequestLoadClientes(forceRefresh);
-            } 
-            // Fallback a searchClientes si no hay onRequestLoadClientes
-            else if (typeof searchClientes === 'function') {
-              console.log('Fallback: Usando searchClientes como alternativa');
-              return searchClientes(searchQuery);
-            } else {
-              const error = new Error('No hay función disponible para cargar clientes');
-              console.warn(error);
-              errorHandler.handleError(error, 'cargar clientes', { 
-                suppressToast: false,
-                customMessages: {
-                  unknown: {
-                    message: 'No se pudieron cargar los clientes',
-                    description: 'No se encontró un método apropiado para cargar clientes'
-                  }
-                }
-              });
-              return Promise.resolve([]);
-            }
-          } catch (error) {
-            errorHandler.handleError(error, 'cargar clientes');
-            toast.error('Error al cargar clientes');
-            return Promise.resolve([]);
+        onRequestLoadClientes={(forceRefresh = false) => {
+          console.log('ProformaDialogs: Solicitando carga de clientes desde el componente refactorizado... forceRefresh:', forceRefresh);
+          if (typeof onRequestLoadClientes === 'function') {
+            return onRequestLoadClientes(forceRefresh);
           }
+          return Promise.resolve([]);
         }}
+        searchClientes={searchClientes}
       />
       
       {/* Diálogo de proformas guardadas */}
@@ -115,6 +83,7 @@ export default function ProformaDialogs({
         onClose={closeProformasDialog}
         onSelectProforma={handleSelectProforma}
         onLoadProformas={onLoadProformas} // Pasar la función de carga
+        proformas={proformas || []} // Pasar proformas explícitamente 
       />
 
       {/* Diálogo de confirmación para guardar proforma */}

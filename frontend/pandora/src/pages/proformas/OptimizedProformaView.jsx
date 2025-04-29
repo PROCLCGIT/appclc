@@ -260,19 +260,41 @@ const EnhancedProformaContent = () => {
   }, [handleSelectClient, closeClientSearch]);
 
   // Función para cargar proformas guardadas
-  const handleLoadProformas = useCallback(async () => {
+  const handleLoadProformas = useCallback(async (options = {}) => {
     try {
+      console.log("OptimizedProformaView: handleLoadProformas - Iniciando carga de proformas");
       setLoading(true);
 
-      const options = {
+      const defaultOptions = {
         showToasts: true,
         itemsLimit: 10,
         forceRefresh: true,
       };
 
-      const loadedProformas = await loadSavedProformas(options);
-      return loadedProformas || [];
+      const mergedOptions = { ...defaultOptions, ...options };
+      console.log("OptimizedProformaView: handleLoadProformas - Opciones:", mergedOptions);
+
+      // Llamar a la función de carga de proformas del contexto
+      const loadedProformas = await loadSavedProformas(mergedOptions);
+      
+      console.log("OptimizedProformaView: handleLoadProformas - Proformas cargadas:", 
+        Array.isArray(loadedProformas) ? loadedProformas.length : 'no es array');
+      
+      // Si el resultado es un array, devolver directamente para asegurar que llegan al componente de diálogo
+      if (Array.isArray(loadedProformas)) {
+        // Verificar estructura
+        console.log("OptimizedProformaView: Verificando estructura de proformas cargadas");
+        loadedProformas.forEach((p, idx) => {
+          console.log(`Proforma #${idx}: ID=${p.id}, Nombre=${p.nombre || 'sin nombre'}, Cliente=${p.cliente?.nombre || 'sin cliente'}`);
+        });
+        
+        return loadedProformas;
+      } else {
+        console.warn("OptimizedProformaView: handleLoadProformas - Resultado no es un array:", loadedProformas);
+        return [];
+      }
     } catch (error) {
+      console.error("OptimizedProformaView: handleLoadProformas - Error:", error);
       errorHandler.handleError(error, "handleLoadProformas");
       return [];
     } finally {
